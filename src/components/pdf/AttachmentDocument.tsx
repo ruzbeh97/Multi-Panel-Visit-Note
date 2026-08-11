@@ -1,5 +1,14 @@
 import type { ReactNode } from "react";
-import { ALLERGIES, CASE, CHART_TIMELINE, MEDICATIONS, PATIENT, PROVIDER, REFERRING_PROVIDER } from "../../data/chart";
+import {
+  ALLERGIES,
+  CASE,
+  CHART_TIMELINE,
+  MEDICATIONS,
+  PAST_ORDERS,
+  PATIENT,
+  PROVIDER,
+  REFERRING_PROVIDER,
+} from "../../data/chart";
 
 // Rendered at 2x the on-screen page size and scaled down by the viewer, so a
 // PDF page preview stays crisp at any zoom level.
@@ -1025,6 +1034,22 @@ for (const visit of CHART_TIMELINE) {
       DOCS[timelineDocKey(item)] = prescriptionPage(item, visit);
     }
   }
+}
+
+// Past orders store their creation stamp as "MM-DD-YYYY h:mm AM".
+function orderDate(created: string) {
+  return created.split(" ")[0].replaceAll("-", "/");
+}
+
+export function pastOrderDocKey(order: { title: string; created: string }) {
+  return timelineDocKey({ type: "order", title: order.title, date: orderDate(order.created) });
+}
+
+for (const order of PAST_ORDERS) {
+  DOCS[pastOrderDocKey(order)] = orderRequisition(
+    { title: order.title, detail: order.recipient, date: orderDate(order.created) },
+    { title: order.orderSet, provider: REFERRING_PROVIDER },
+  );
 }
 
 export default function AttachmentDocument({ fileName }: { fileName: string }) {
