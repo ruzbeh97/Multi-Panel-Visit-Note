@@ -1,3 +1,4 @@
+import { useEffect, useRef, type TextareaHTMLAttributes } from "react";
 import { useNoteReadOnly } from "../readOnly";
 
 type TextFieldProps = {
@@ -8,6 +9,38 @@ type TextFieldProps = {
   labelWidth?: number;
   fullWidth?: boolean;
 };
+
+function resizeTextarea(textarea: HTMLTextAreaElement | null) {
+  if (!textarea) return;
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+export function AutoGrowTextarea({
+  value,
+  className = "",
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { value: string }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    resizeTextarea(ref.current);
+  }, [value]);
+
+  return (
+    <textarea
+      {...props}
+      ref={ref}
+      value={value}
+      rows={props.rows ?? 2}
+      className={`overflow-hidden ${className}`}
+      onInput={(event) => {
+        resizeTextarea(event.currentTarget);
+        props.onInput?.(event);
+      }}
+    />
+  );
+}
 
 export default function TextField({
   label,
@@ -28,11 +61,10 @@ export default function TextField({
           {label}
         </span>
       </div>
-      <textarea
+      <AutoGrowTextarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        rows={2}
         readOnly={readOnly}
         className={`min-h-[40px] w-full resize-none rounded-lg px-1.5 py-0.5 font-body text-[14px] leading-[22px] outline-none transition-colors placeholder:text-[#808080] ${
           readOnly

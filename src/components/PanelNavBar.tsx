@@ -10,9 +10,11 @@ export const ATTACHMENTS_ICON = "file_present";
 export const MEDICAL_HISTORY_ICON = "stethoscope";
 export const ORDERS_ICON = "outgoing_mail";
 export const MESSAGES_ICON = "forum";
+export const ACTIVITY_ICON = "route";
+export const TIMELINE_ICON = "conversion_path";
 
-const TOP_ICONS = [PAST_NOTE_ICON, ATTACHMENTS_ICON, MEDICAL_HISTORY_ICON, ORDERS_ICON, "conversion_path"];
-const BOTTOM_ICONS = [CONTACT_BOOK_ICON, PINNED_NOTES_ICON, "route", MESSAGES_ICON];
+const TOP_ICONS = [PAST_NOTE_ICON, ATTACHMENTS_ICON, MEDICAL_HISTORY_ICON, ORDERS_ICON, TIMELINE_ICON];
+const BOTTOM_ICONS = [CONTACT_BOOK_ICON, PINNED_NOTES_ICON, ACTIVITY_ICON, MESSAGES_ICON];
 
 function NavIcon({
   icon,

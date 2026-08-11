@@ -2,6 +2,7 @@ import { useState } from "react";
 import Section, { SubHeading, Block } from "./Section";
 import RadioGroup from "./fields/RadioGroup";
 import MultiSelectGroup from "./fields/MultiSelectGroup";
+import { AutoGrowTextarea } from "./fields/TextField";
 import { useNoteReadOnly } from "./readOnly";
 import {
   CURRENT_VISIT,
@@ -13,7 +14,8 @@ import {
 } from "../../data/chart";
 
 export default function PlanSection() {
-  const { plan } = useNoteReadOnly() ? PREVIOUS_VISIT : CURRENT_VISIT;
+  const readOnly = useNoteReadOnly();
+  const { plan } = readOnly ? PREVIOUS_VISIT : CURRENT_VISIT;
   const [patientGoal, setPatientGoal] = useState(plan.patientGoal);
   const [educationTopics, setEducationTopics] = useState<string[]>(plan.educationTopics);
   const [goals, setGoals] = useState<string[]>(plan.goals);
@@ -30,12 +32,16 @@ export default function PlanSection() {
             <div className="flex items-start py-0.5" style={{ width: 160 }}>
               <span className="font-body text-[16px] font-medium leading-[20px] text-[#0a1e8f]">Patient Goal</span>
             </div>
-            <textarea
+            <AutoGrowTextarea
               value={patientGoal}
               onChange={(e) => setPatientGoal(e.target.value)}
               placeholder="Write something here..."
-              rows={2}
-              className="min-h-[40px] w-full resize-none rounded-lg px-1.5 py-0.5 font-body text-[14px] leading-[24px] text-[#1a1a1a] placeholder:text-[#808080] outline-none focus:ring-2 focus:ring-[#1132ee]/30"
+              readOnly={readOnly}
+              className={`min-h-[40px] w-full resize-none rounded-lg px-1.5 py-0.5 font-body text-[14px] leading-[24px] outline-none placeholder:text-[#808080] ${
+                readOnly
+                  ? "bg-transparent text-[#666]"
+                  : "text-[#1a1a1a] hover:bg-[#f7f7f7] focus:bg-white focus:ring-2 focus:ring-[#1132ee]/30"
+              }`}
             />
           </div>
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Icon from "../Icon";
-import PlanOfCareDocument, { DOC_HEIGHT, DOC_WIDTH } from "./PlanOfCareDocument";
+import AttachmentDocument, { DOC_HEIGHT, DOC_WIDTH } from "./AttachmentDocument";
 
 const PAGE_COUNT = 1;
 const ZOOM_LEVELS = [50, 75, 100, 125, 150, 200];
@@ -33,7 +33,7 @@ function ToolButton({ icon, label, onClick }: { icon: string; label: string; onC
   );
 }
 
-export default function PdfViewer() {
+export default function PdfViewer({ fileName }: { fileName: string }) {
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(100);
 
@@ -98,7 +98,7 @@ export default function PdfViewer() {
         <div className="shrink-0 rounded-md border border-[#e6e6e6] bg-white p-5">
           <div className="overflow-hidden" style={{ width: DOC_WIDTH * scale, height: DOC_HEIGHT * scale }}>
             <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
-              <PlanOfCareDocument />
+              <AttachmentDocument fileName={fileName} />
             </div>
           </div>
         </div>

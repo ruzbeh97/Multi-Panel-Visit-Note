@@ -64,7 +64,7 @@ function FileRow({
           <Icon name="visibility" size={20} className="text-[#1a1a1a]" />
         </button>
       </div>
-      {open && <PdfViewer />}
+      {open && <PdfViewer fileName={file.name} />}
     </div>
   );
 }

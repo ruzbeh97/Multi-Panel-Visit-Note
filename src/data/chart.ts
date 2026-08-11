@@ -378,6 +378,64 @@ export const SITE_CONTACTS = [
   },
 ];
 
+// Activity Tracker entries, newest first.
+export const ACTIVITY_EVENTS = [
+  {
+    date: "Aug 10, 2026",
+    time: "11:50 AM",
+    title: "Treatment Session Completed",
+    performedBy: PROVIDER.name,
+    description: "Visit 18 of 24. Manual therapy, closed-chain strengthening, and blood flow restriction training.",
+  },
+  {
+    date: "Aug 4, 2026",
+    time: "4:00 PM",
+    title: "Home Exercise Program Updated",
+    performedBy: "Alicia Nunez",
+    description: "Week 12 program sent to the patient portal and reviewed by phone.",
+  },
+  {
+    date: "Aug 3, 2026",
+    time: "3:40 PM",
+    title: "Outcome Measure Collected",
+    performedBy: PROVIDER.name,
+    description: "IKDC Subjective Knee Form scored 71.3%, improved from 48.3% at week 6.",
+  },
+  {
+    date: "Jul 27, 2026",
+    time: "9:15 AM",
+    title: "Hinged Brace Returned",
+    performedBy: "Alicia Nunez",
+    description: "Brace returned to Northside DME Supply and removed from the rental list.",
+  },
+];
+
+export const AUDIT_LOG = [
+  {
+    label: "Today",
+    entries: [
+      { user: PROVIDER.name, resource: "Appointments", when: "22 minutes ago" },
+      { user: PROVIDER.name, resource: "Pinned Notes", when: "35 minutes ago" },
+      { user: "Alicia Nunez", resource: "Attachments", when: "2 hours ago" },
+    ],
+  },
+  {
+    label: "Yesterday",
+    entries: [
+      { user: PROVIDER.name, resource: "Orders", when: "11 hours ago" },
+      { user: PROVIDER.name, resource: "Orders", when: "11 hours ago" },
+      { user: PROVIDER.name, resource: "Appointments", when: "11 hours ago" },
+      { user: "Alicia Nunez", resource: "Appointments", when: "12 hours ago" },
+      { user: "Alicia Nunez", resource: "Pinned Notes", when: "12 hours ago" },
+      { user: REFERRING_PROVIDER, resource: "Demographics", when: "14 hours ago" },
+      { user: REFERRING_PROVIDER, resource: "Attachments", when: "14 hours ago" },
+      { user: PROVIDER.name, resource: "Medications", when: "16 hours ago" },
+      { user: PROVIDER.name, resource: "Orders", when: "16 hours ago" },
+      { user: "Alicia Nunez", resource: "Demographics", when: "18 hours ago" },
+    ],
+  },
+];
+
 export const PINNED_NOTE = {
   body: "Jordan is 14 weeks post-op right ACL reconstruction. He is hard of hearing.",
   editedBy: PROVIDER.name,
@@ -477,3 +535,201 @@ export const ATTACHMENT_GROUPS = [
     ],
   },
 ];
+
+// Orthopedic care pathway for the ACL case: each appointment is a timeline
+// anchor, with the orders, prescriptions, and documents it generated beneath it.
+export const CHART_TIMELINE = [
+  {
+    id: "ortho-followup-14wk",
+    date: "08/10/2026",
+    time: "9:20 AM",
+    title: "ACL Tear Follow-up",
+    provider: REFERRING_PROVIDER,
+    status: "Completed",
+    items: [
+      {
+        type: "order",
+        title: "Functional return-to-sport testing",
+        detail: "Hale Orthopedics Sports Medicine",
+        date: "08/10/2026",
+      },
+      {
+        type: "attachment",
+        title: "Knee examination summary",
+        detail: "Ortho_Followup_14wk_08102026.pdf",
+        file: "Ortho_Followup_14wk_08102026.pdf",
+        date: "08/10/2026",
+      },
+    ],
+  },
+  {
+    id: "ortho-followup-12wk",
+    date: "08/03/2026",
+    time: "10:15 AM",
+    title: "ACL Tear Follow-up",
+    provider: REFERRING_PROVIDER,
+    status: "Completed",
+    items: [
+      { type: "medication", title: "Meloxicam 15mg tablet", detail: "30 tablets · 1 refill", date: "08/03/2026" },
+      {
+        type: "medication",
+        title: "Acetaminophen 500mg tablet",
+        detail: "60 tablets · No refills",
+        date: "08/03/2026",
+      },
+      {
+        type: "attachment",
+        title: "IKDC outcome survey",
+        detail: "IKDC_Outcome_Survey_08032026.pdf",
+        file: "IKDC_Outcome_Survey_08032026.pdf",
+        date: "08/03/2026",
+      },
+    ],
+  },
+  {
+    id: "ortho-followup-6wk",
+    date: "06/17/2026",
+    time: "11:00 AM",
+    title: "ACL Tear Follow-up",
+    provider: REFERRING_PROVIDER,
+    status: "Completed",
+    items: [
+      {
+        type: "order",
+        title: "Hinged brace unlocked to 0-90 degrees",
+        detail: "Northside DME Supply",
+        date: "06/17/2026",
+      },
+      {
+        type: "attachment",
+        title: "Post-op knee radiograph report",
+        detail: "XR_Right_Knee_Post_Op_06172026.pdf",
+        file: "XR_Right_Knee_Post_Op_06172026.pdf",
+        date: "06/17/2026",
+      },
+    ],
+  },
+  {
+    id: "postop-wound-check",
+    date: "05/13/2026",
+    time: "8:45 AM",
+    title: "ACL Tear Wound Check",
+    provider: REFERRING_PROVIDER,
+    status: "Completed",
+    items: [
+      { type: "order", title: "Suture removal", detail: "Hale Orthopedics", date: "05/13/2026" },
+      {
+        type: "order",
+        title: "Physical therapy referral",
+        detail: "2 visits per week for 12 weeks · Athelas Physical Therapy",
+        date: "05/13/2026",
+      },
+      {
+        type: "attachment",
+        title: "PT referral",
+        detail: "Ortho_PT_Referral_05132026.pdf",
+        file: "Ortho_PT_Referral_05132026.pdf",
+        date: "05/13/2026",
+      },
+      {
+        type: "attachment",
+        title: "PT authorization",
+        detail: "Priority Health · 24 visits",
+        file: "PT_Authorization_24_Visits_05182026.pdf",
+        date: "05/18/2026",
+      },
+    ],
+  },
+  {
+    id: "acl-reconstruction",
+    date: "05/06/2026",
+    time: "7:30 AM",
+    title: "Right ACL Reconstruction - Outpatient Surgery",
+    provider: REFERRING_PROVIDER,
+    status: "Completed",
+    items: [
+      {
+        type: "medication",
+        title: "Oxycodone-Acetaminophen 5-325mg",
+        detail: "20 tablets · No refills",
+        date: "05/06/2026",
+      },
+      { type: "medication", title: "Aspirin 81mg tablet", detail: "56 tablets · No refills", date: "05/06/2026" },
+      {
+        type: "order",
+        title: "Knee orthosis, elastic with joints",
+        detail: "Northside DME Supply",
+        date: "05/06/2026",
+      },
+      {
+        type: "attachment",
+        title: "Operative report",
+        detail: "Operative_Report_ACLR_05062026.pdf",
+        file: "Operative_Report_ACLR_05062026.pdf",
+        date: "05/07/2026",
+      },
+      {
+        type: "attachment",
+        title: "Post-op protocol",
+        detail: "Post_Op_Protocol_Weeks_0_12.pdf",
+        file: "Post_Op_Protocol_Weeks_0_12.pdf",
+        date: "05/07/2026",
+      },
+    ],
+  },
+  {
+    id: "pre-op-visit",
+    date: "04/29/2026",
+    time: "2:00 PM",
+    title: "ACL Tear Surgery Consultation",
+    provider: REFERRING_PROVIDER,
+    status: "Completed",
+    items: [
+      { type: "order", title: "Right knee arthrocentesis", detail: "Hale Orthopedics", date: "04/29/2026" },
+      { type: "order", title: "Pre-operative laboratory panel", detail: "Athelas Core Lab", date: "04/29/2026" },
+      {
+        type: "attachment",
+        title: "MRI addendum",
+        detail: "MRI_Right_Knee_Addendum_04242026.pdf",
+        file: "MRI_Right_Knee_Addendum_04242026.pdf",
+        date: "04/24/2026",
+      },
+    ],
+  },
+  {
+    id: "injury-evaluation",
+    date: "04/18/2026",
+    time: "5:30 PM",
+    title: "Acute Knee Injury Evaluation",
+    provider: REFERRING_PROVIDER,
+    status: "Completed",
+    items: [
+      {
+        type: "order",
+        title: "Right knee radiographs",
+        detail: "3 views · Riverside Imaging Center",
+        date: "04/18/2026",
+      },
+      {
+        type: "attachment",
+        title: "Right knee X-ray",
+        detail: "XR_Right_Knee_2_Views_04182026.pdf",
+        file: "XR_Right_Knee_2_Views_04182026.pdf",
+        date: "04/18/2026",
+      },
+      {
+        type: "order",
+        title: "MRI right knee without contrast",
+        detail: "Riverside Imaging Center",
+        date: "04/19/2026",
+      },
+      {
+        type: "attachment",
+        title: "Right knee MRI",
+        detail: "MRI_Right_Knee_04222026.pdf",
+        file: "MRI_Right_Knee_04222026.pdf",
+        date: "04/22/2026",
+      },
+    ],
+  },
+] as const;

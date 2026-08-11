@@ -3,17 +3,21 @@ import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import PatientHeader from "./components/PatientHeader";
 import PanelNavBar, {
+  ACTIVITY_ICON,
   ATTACHMENTS_ICON,
   MEDICAL_HISTORY_ICON,
   MESSAGES_ICON,
   ORDERS_ICON,
   PAST_NOTE_ICON,
+  TIMELINE_ICON,
 } from "./components/PanelNavBar";
 import PastNotePanel from "./components/PastNotePanel";
 import AttachmentsPanel from "./components/AttachmentsPanel";
 import MedicalHistoryPanel from "./components/MedicalHistoryPanel";
 import OrdersPanel from "./components/OrdersPanel";
 import MessagesPanel from "./components/MessagesPanel";
+import PatientActivityPanel from "./components/PatientActivityPanel";
+import ChartTimelinePanel from "./components/ChartTimelinePanel";
 import AssistantColumn from "./components/AssistantColumn";
 import NoteOutlineRail from "./components/NoteOutlineRail";
 import SubjectiveSection from "./components/notes/SubjectiveSection";
@@ -21,7 +25,15 @@ import ObjectiveSection from "./components/notes/ObjectiveSection";
 import AssessmentSection from "./components/notes/AssessmentSection";
 import PlanSection from "./components/notes/PlanSection";
 
-const SIDE_PANELS = [PAST_NOTE_ICON, ATTACHMENTS_ICON, MEDICAL_HISTORY_ICON, ORDERS_ICON, MESSAGES_ICON];
+const SIDE_PANELS = [
+  PAST_NOTE_ICON,
+  ATTACHMENTS_ICON,
+  MEDICAL_HISTORY_ICON,
+  ORDERS_ICON,
+  MESSAGES_ICON,
+  ACTIVITY_ICON,
+  TIMELINE_ICON,
+];
 
 function App() {
   const [activePanel, setActivePanel] = useState<string | null>(null);
@@ -87,6 +99,8 @@ function App() {
                     {activePanel === MEDICAL_HISTORY_ICON && <MedicalHistoryPanel />}
                     {activePanel === ORDERS_ICON && <OrdersPanel />}
                     {activePanel === MESSAGES_ICON && <MessagesPanel />}
+                    {activePanel === ACTIVITY_ICON && <PatientActivityPanel />}
+                    {activePanel === TIMELINE_ICON && <ChartTimelinePanel />}
                     <PanelNavBar active={activePanel} onSelect={selectPanel} />
                   </div>
                 </div>
