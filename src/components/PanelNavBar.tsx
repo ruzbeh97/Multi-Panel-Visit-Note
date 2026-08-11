@@ -64,10 +64,10 @@ export default function PanelNavBar({ active, onSelect }: PanelNavBarProps) {
   }
 
   return (
-    <div className="sticky top-0 flex h-full min-h-[724px] shrink-0 flex-col items-center overflow-clip border-[0.5px] border-[#e6e6e6] bg-white py-4">
-      <div className="flex w-16 flex-1 flex-col items-center">
-        <div className="flex w-full flex-1 flex-col items-start justify-between overflow-y-auto px-2">
-          <div className="flex w-full flex-col gap-1">
+    <div className="sticky top-0 flex h-full min-h-0 shrink-0 flex-col items-center overflow-clip border-[0.5px] border-[#e6e6e6] bg-white py-4">
+      <div className="flex min-h-0 w-16 flex-1 flex-col items-center">
+        <div className="scrollbar-thin flex min-h-0 w-full flex-1 flex-col items-start overflow-y-auto px-2">
+          <div className="flex w-full shrink-0 flex-col gap-1">
             {TOP_ICONS.map((icon) => (
               <NavIcon
                 key={icon}
@@ -77,7 +77,10 @@ export default function PanelNavBar({ active, onSelect }: PanelNavBarProps) {
               />
             ))}
           </div>
-          <div className="flex w-full flex-col gap-1">
+          {/* Grows to push the second group down, and collapses first when the
+              rail is too short for every icon so nothing scrolls out of reach. */}
+          <div className="min-h-4 w-full flex-1" aria-hidden="true" />
+          <div className="flex w-full shrink-0 flex-col gap-1">
             {BOTTOM_ICONS.map((icon) => (
               <NavIcon
                 key={icon}
