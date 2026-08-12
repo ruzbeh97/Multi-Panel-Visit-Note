@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import TopBar from "./components/TopBar";
 import PatientHeader from "./components/PatientHeader";
@@ -19,6 +19,7 @@ import MessagesPanel from "./components/MessagesPanel";
 import PatientActivityPanel from "./components/PatientActivityPanel";
 import ChartTimelinePanel from "./components/ChartTimelinePanel";
 import ResizableSidePanel, { SIDE_PANEL_MIN_WIDTH } from "./components/ResizableSidePanel";
+import OverlayScrollbar from "./components/OverlayScrollbar";
 import AssistantColumn from "./components/AssistantColumn";
 import NoteOutlineRail from "./components/NoteOutlineRail";
 import SubjectiveSection from "./components/notes/SubjectiveSection";
@@ -41,6 +42,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(SIDE_PANEL_MIN_WIDTH);
+  const noteScrollRef = useRef<HTMLDivElement>(null);
   const sidePanelOpen = activePanel !== null && SIDE_PANELS.includes(activePanel);
 
   function selectPanel(icon: string) {
@@ -68,33 +70,35 @@ function App() {
                 <PatientHeader />
 
                 <div className="flex min-h-0 w-full flex-1 flex-col items-start bg-[#f7f7f7]">
-                  <div
-                    className={`flex min-h-0 w-full flex-1 items-start bg-white ${
-                      sidePanelOpen ? "gap-0" : "gap-[60px]"
-                    }`}
-                  >
-                    <div
-                      data-note-scroll
-                      className={`scrollbar-thin flex min-h-0 min-w-0 flex-1 items-stretch self-stretch overflow-x-clip overflow-y-auto ${
-                        sidePanelOpen ? "gap-0" : "gap-[60px]"
-                      }`}
-                    >
-                      <NoteOutlineRail />
+                  <div className="flex min-h-0 w-full flex-1 items-start gap-0 bg-white">
+                    <div className="relative flex min-h-0 min-w-0 flex-1 self-stretch">
                       <div
-                        data-note-main
-                        className={`flex min-h-full min-w-0 flex-1 items-start ${sidePanelOpen ? "" : "justify-center"}`}
+                        ref={noteScrollRef}
+                        data-note-scroll
+                        className={`scrollbar-none flex h-full min-h-0 w-full items-stretch overflow-x-clip overflow-y-auto ${
+                          sidePanelOpen ? "gap-0" : "gap-[60px] pr-[60px]"
+                        }`}
                       >
-                        <main
-                          className={`flex w-full flex-col items-start gap-10 px-4 py-10 ${
-                            sidePanelOpen ? "" : "max-w-[900px]"
+                        <NoteOutlineRail />
+                        <div
+                          data-note-main
+                          className={`flex min-h-full min-w-0 flex-1 items-start ${
+                            sidePanelOpen ? "" : "justify-center"
                           }`}
                         >
-                          <SubjectiveSection />
-                          <ObjectiveSection />
-                          <AssessmentSection />
-                          <PlanSection />
-                        </main>
+                          <main
+                            className={`flex w-full flex-col items-start gap-10 px-4 py-10 ${
+                              sidePanelOpen ? "" : "max-w-[900px]"
+                            }`}
+                          >
+                            <SubjectiveSection />
+                            <ObjectiveSection />
+                            <AssessmentSection />
+                            <PlanSection />
+                          </main>
+                        </div>
                       </div>
+                      <OverlayScrollbar targetRef={noteScrollRef} />
                     </div>
                     {sidePanelOpen && (
                       <ResizableSidePanel width={panelWidth} onWidthChange={setPanelWidth}>
