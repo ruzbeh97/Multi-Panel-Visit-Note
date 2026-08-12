@@ -47,7 +47,7 @@ function FileRow({
     <div className="flex w-full flex-col border-b border-[#e6e6e6] py-4">
       <div className="flex w-full items-start gap-1">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <p className="truncate font-body text-[14px] leading-[22px] text-[#1a1a1a]">{file.name}</p>
+          <p className="truncate font-body text-[14px] font-medium leading-[22px] text-[#1a1a1a]">{file.name}</p>
           <div className="flex min-w-0 items-center gap-2">
             <span className="shrink-0 font-body text-[14px] leading-[22px] text-[#1a1a1a]">{file.date}</span>
             <Badge tone="grey" label={file.tag} className="shrink-0" />
