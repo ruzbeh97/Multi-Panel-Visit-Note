@@ -542,10 +542,10 @@ export const CHART_TIMELINE = [
   {
     id: "ortho-followup-14wk",
     date: "08/10/2026",
-    time: "9:20 AM",
-    title: "ACL Tear Follow-up",
+    time: "9:20am",
+    caseName: CASE.name,
+    visitType: "Established Patient",
     provider: REFERRING_PROVIDER,
-    status: "Completed",
     items: [
       {
         type: "order",
@@ -565,10 +565,10 @@ export const CHART_TIMELINE = [
   {
     id: "ortho-followup-12wk",
     date: "08/03/2026",
-    time: "10:15 AM",
-    title: "ACL Tear Follow-up",
+    time: "10:15am",
+    caseName: CASE.name,
+    visitType: "Established Patient",
     provider: REFERRING_PROVIDER,
-    status: "Completed",
     items: [
       { type: "medication", title: "Meloxicam 15mg tablet", detail: "30 tablets · 1 refill", date: "08/03/2026" },
       {
@@ -589,10 +589,10 @@ export const CHART_TIMELINE = [
   {
     id: "ortho-followup-6wk",
     date: "06/17/2026",
-    time: "11:00 AM",
-    title: "ACL Tear Follow-up",
+    time: "11:00am",
+    caseName: CASE.name,
+    visitType: "Post Operation",
     provider: REFERRING_PROVIDER,
-    status: "Completed",
     items: [
       {
         type: "order",
@@ -612,10 +612,10 @@ export const CHART_TIMELINE = [
   {
     id: "postop-wound-check",
     date: "05/13/2026",
-    time: "8:45 AM",
-    title: "ACL Tear Wound Check",
+    time: "8:45am",
+    caseName: CASE.name,
+    visitType: "Post Operation",
     provider: REFERRING_PROVIDER,
-    status: "Completed",
     items: [
       { type: "order", title: "Suture removal", detail: "Hale Orthopedics", date: "05/13/2026" },
       {
@@ -643,10 +643,10 @@ export const CHART_TIMELINE = [
   {
     id: "acl-reconstruction",
     date: "05/06/2026",
-    time: "7:30 AM",
-    title: "Right ACL Reconstruction - Outpatient Surgery",
+    time: "7:30am",
+    caseName: CASE.name,
+    visitType: "Surgery",
     provider: REFERRING_PROVIDER,
-    status: "Completed",
     items: [
       {
         type: "medication",
@@ -680,10 +680,10 @@ export const CHART_TIMELINE = [
   {
     id: "pre-op-visit",
     date: "04/29/2026",
-    time: "2:00 PM",
-    title: "ACL Tear Surgery Consultation",
+    time: "2:00pm",
+    caseName: CASE.name,
+    visitType: "Surgical Consultation",
     provider: REFERRING_PROVIDER,
-    status: "Completed",
     items: [
       { type: "order", title: "Right knee arthrocentesis", detail: "Hale Orthopedics", date: "04/29/2026" },
       { type: "order", title: "Pre-operative laboratory panel", detail: "Athelas Core Lab", date: "04/29/2026" },
@@ -699,10 +699,10 @@ export const CHART_TIMELINE = [
   {
     id: "injury-evaluation",
     date: "04/18/2026",
-    time: "5:30 PM",
-    title: "Acute Knee Injury Evaluation",
+    time: "5:30pm",
+    caseName: CASE.name,
+    visitType: "New Patient",
     provider: REFERRING_PROVIDER,
-    status: "Completed",
     items: [
       {
         type: "order",

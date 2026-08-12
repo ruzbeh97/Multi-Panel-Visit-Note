@@ -867,7 +867,7 @@ const DOCS: Record<string, AttachmentDoc> = {
 const ALLERGY_SUMMARY = ALLERGIES.map((allergy) => allergy.name).join(", ");
 
 type TimelineEntry = { title: string; detail: string; date: string };
-type TimelineVisit = { title: string; provider: string };
+type TimelineVisit = { caseName: string; visitType: string; provider: string };
 
 // Orders and prescriptions have no stored file in the chart, so their page is
 // generated from the timeline entry that created them.
@@ -899,7 +899,7 @@ function orderRequisition(item: TimelineEntry, visit: TimelineVisit): Attachment
     infoRight: [
       ["Order Date", item.date],
       ["Ordering Provider", visit.provider],
-      ["Encounter", visit.title],
+      ["Encounter", `${visit.caseName} - ${visit.visitType}`],
       ["Priority", "Routine"],
     ],
     sections: [
@@ -971,7 +971,7 @@ function prescriptionPage(item: TimelineEntry, visit: TimelineVisit): Attachment
       ["Written", item.date],
       ["Prescriber", visit.provider],
       ["Pharmacy", "Northside Pharmacy"],
-      ["Encounter", visit.title],
+      ["Encounter", `${visit.caseName} - ${visit.visitType}`],
     ],
     sections: [
       {
@@ -1048,7 +1048,7 @@ export function pastOrderDocKey(order: { title: string; created: string }) {
 for (const order of PAST_ORDERS) {
   DOCS[pastOrderDocKey(order)] = orderRequisition(
     { title: order.title, detail: order.recipient, date: orderDate(order.created) },
-    { title: order.orderSet, provider: REFERRING_PROVIDER },
+    { caseName: CASE.name, visitType: order.orderSet, provider: REFERRING_PROVIDER },
   );
 }
 
