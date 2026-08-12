@@ -94,8 +94,10 @@ export default function PdfViewer({ fileName }: { fileName: string }) {
         </div>
       </div>
 
-      <div className="scrollbar-thin flex w-full justify-center overflow-x-auto bg-[#f7f7f7] px-5 py-5">
-        <div className="shrink-0 rounded-md border border-[#e6e6e6] bg-white p-5">
+      {/* The page is centred with auto margins rather than justify-center, which
+          would push overflow past the left edge where it cannot be scrolled to. */}
+      <div className="scrollbar-thin flex w-full overflow-x-auto bg-[#f7f7f7] px-5 py-5">
+        <div className="mx-auto shrink-0 rounded-md border border-[#e6e6e6] bg-white p-5">
           <div className="overflow-hidden" style={{ width: DOC_WIDTH * scale, height: DOC_HEIGHT * scale }}>
             <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
               <AttachmentDocument fileName={fileName} />
