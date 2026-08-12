@@ -58,10 +58,10 @@ function FileRow({
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="flex shrink-0 items-start rounded-full p-1 hover:bg-black/5"
-          aria-label={`${open ? "Hide" : "Preview"} ${file.name}`}
+          className={`flex shrink-0 items-start rounded-full p-1 ${open ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
+          aria-label={`${open ? "Hide" : "Open"} ${file.name} as a PDF`}
         >
-          <Icon name="visibility" size={20} className="text-[#1a1a1a]" />
+          <Icon name="picture_as_pdf" size={20} className={open ? "text-[#1132ee]" : "text-[#1a1a1a]"} />
         </button>
       </div>
       {open && <PdfViewer fileName={file.name} />}

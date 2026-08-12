@@ -33,14 +33,14 @@ function ItemRow({ item }: { item: TimelineItem }) {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-label={`${open ? "Hide" : "View"} ${label}`}
-        className="flex w-full items-center rounded hover:bg-[#f7f7f7]"
+        className={`flex w-full items-center rounded ${open ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-[#f7f7f7]"}`}
       >
         <span className="flex shrink-0 items-start p-1">
           <Icon name={meta.icon} size={20} className={meta.color} />
         </span>
         <span className="min-w-0 truncate font-body text-[14px] leading-[22px] text-[#1a1a1a]">{label}</span>
         <span className="flex min-w-px flex-1 items-center justify-end p-1">
-          <Icon name={open ? "expand_less" : "expand_more"} size={20} className="text-[#1a1a1a]" />
+          <Icon name="picture_as_pdf" size={20} className={open ? "text-[#1132ee]" : "text-[#1a1a1a]"} />
         </span>
       </button>
 
