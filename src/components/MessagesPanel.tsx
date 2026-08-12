@@ -87,7 +87,7 @@ export default function MessagesPanel() {
     <aside className="sticky top-0 ml-4 flex h-full w-[484px] shrink-0 flex-col overflow-hidden border-l border-[#e6e6e6] bg-white px-6">
       <div
         ref={listRef}
-        className="scrollbar-thin flex min-h-0 w-full flex-1 flex-col gap-6 overflow-y-auto px-4 pt-4"
+        className="scrollbar-thin flex min-h-0 w-full flex-1 flex-col gap-6 overflow-y-auto px-4 pt-5"
       >
         {messages.map((message, i) => (
           <div key={i} className="flex w-full flex-col gap-3">
@@ -101,7 +101,7 @@ export default function MessagesPanel() {
         ))}
       </div>
 
-      <div className="mb-8 mt-4 flex w-full shrink-0 flex-col gap-4 rounded-xl border border-[#e6e6e6] px-4 pb-3 pt-4">
+      <div className="mb-10 mt-4 flex w-full shrink-0 flex-col gap-4 rounded-xl border border-[#e6e6e6] px-4 pb-3 pt-4">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

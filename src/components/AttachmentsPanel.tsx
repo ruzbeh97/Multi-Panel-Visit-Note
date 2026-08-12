@@ -89,8 +89,8 @@ export default function AttachmentsPanel() {
   })).filter((group) => group.files.length > 0 || !search);
 
   return (
-    <aside className="scrollbar-thin sticky top-0 ml-4 flex h-full w-[484px] shrink-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4">
-      <div className="flex w-full flex-col items-start gap-2 py-4">
+    <aside className="scrollbar-thin sticky top-0 ml-4 flex h-full w-[484px] shrink-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
+      <div className="flex w-full flex-col items-start gap-2 pb-4">
         <h2 className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">Attachments</h2>
         <div className="flex w-full items-center gap-1.5">
           <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">

@@ -62,7 +62,7 @@ function TimelineItemBlock({ visit, collapsed }: { visit: Visit; collapsed: bool
       <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
         <div className="flex w-full flex-col items-start">
           <div className="flex w-full items-start gap-2 font-body text-[16px] leading-[24px] text-[#1a1a1a]">
-            <span className="shrink-0 whitespace-nowrap font-bold">{visit.caseName}</span>
+            <span className="shrink-0 whitespace-nowrap font-medium">{visit.caseName}</span>
             <span className="min-w-0 truncate">{visit.visitType}</span>
           </div>
           <span className="w-full truncate font-body text-[14px] leading-[22px] text-[#666666]">
@@ -86,10 +86,10 @@ export default function ChartTimelinePanel() {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <aside className="scrollbar-thin sticky top-0 ml-4 flex h-full w-[484px] shrink-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-4">
+    <aside className="scrollbar-thin sticky top-0 ml-4 flex h-full w-[484px] shrink-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
       <div className="flex w-full flex-col items-start gap-2 pb-10">
         <div className="flex w-full items-center justify-between pb-4">
-          <h2 className="font-body text-[16px] font-bold text-[#1a1a1a]">Care Timeline</h2>
+          <h2 className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">Care Timeline</h2>
           <button
             type="button"
             onClick={() => setCollapsed((current) => !current)}

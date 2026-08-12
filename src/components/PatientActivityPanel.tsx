@@ -157,7 +157,7 @@ export default function PatientActivityPanel() {
 
   return (
     <aside className="scrollbar-thin sticky top-0 ml-4 flex h-full w-[484px] shrink-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white">
-      <div className="flex w-full shrink-0 items-center justify-between gap-3 border-b border-[#e6e6e6] px-4 py-4">
+      <div className="flex w-full shrink-0 items-center justify-between gap-3 border-b border-[#e6e6e6] px-4 pb-4 pt-5">
         <h2 className="font-body text-[22px] font-medium leading-[30px] text-[#1a1a1a]">Patient Activity</h2>
 
         {tab === "Activity Tracker" && (
