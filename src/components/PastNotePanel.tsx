@@ -40,7 +40,7 @@ export default function PastNotePanel() {
   return (
     <aside
       data-note-scroll
-      className="scrollbar-thin sticky top-0 ml-4 flex h-full w-[482px] shrink-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white pr-4 pt-5"
+      className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white pr-4 pt-5"
     >
       <div className="w-full pl-[49px]">
         <div className="flex w-full items-center gap-2 overflow-clip rounded-lg bg-[#f1f3fe] pr-3">

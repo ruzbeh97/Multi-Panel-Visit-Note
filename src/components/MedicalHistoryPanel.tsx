@@ -95,7 +95,7 @@ export default function MedicalHistoryPanel() {
   const isOpen = (title: string) => openSections.includes(title);
 
   return (
-    <aside className="scrollbar-thin sticky top-0 ml-4 flex h-full w-[484px] shrink-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
+    <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
       <h2 className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">Patient Medical History</h2>
 
       <div className="flex w-full flex-col items-start pt-4">

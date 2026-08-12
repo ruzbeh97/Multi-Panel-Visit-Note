@@ -84,7 +84,7 @@ export default function MessagesPanel() {
   }
 
   return (
-    <aside className="sticky top-0 ml-4 flex h-full w-[484px] shrink-0 flex-col overflow-hidden border-l border-[#e6e6e6] bg-white px-6">
+    <aside className="sticky top-0 flex h-full w-full min-w-0 flex-col overflow-hidden border-l border-[#e6e6e6] bg-white px-6">
       <div
         ref={listRef}
         className="scrollbar-thin flex min-h-0 w-full flex-1 flex-col gap-6 overflow-y-auto px-4 pt-5"

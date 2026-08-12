@@ -18,6 +18,7 @@ import OrdersPanel from "./components/OrdersPanel";
 import MessagesPanel from "./components/MessagesPanel";
 import PatientActivityPanel from "./components/PatientActivityPanel";
 import ChartTimelinePanel from "./components/ChartTimelinePanel";
+import ResizableSidePanel, { SIDE_PANEL_MIN_WIDTH } from "./components/ResizableSidePanel";
 import AssistantColumn from "./components/AssistantColumn";
 import NoteOutlineRail from "./components/NoteOutlineRail";
 import SubjectiveSection from "./components/notes/SubjectiveSection";
@@ -39,6 +40,7 @@ function App() {
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(SIDE_PANEL_MIN_WIDTH);
   const sidePanelOpen = activePanel !== null && SIDE_PANELS.includes(activePanel);
 
   function selectPanel(icon: string) {
@@ -94,13 +96,17 @@ function App() {
                         </main>
                       </div>
                     </div>
-                    {activePanel === PAST_NOTE_ICON && <PastNotePanel />}
-                    {activePanel === ATTACHMENTS_ICON && <AttachmentsPanel />}
-                    {activePanel === MEDICAL_HISTORY_ICON && <MedicalHistoryPanel />}
-                    {activePanel === ORDERS_ICON && <OrdersPanel />}
-                    {activePanel === MESSAGES_ICON && <MessagesPanel />}
-                    {activePanel === ACTIVITY_ICON && <PatientActivityPanel />}
-                    {activePanel === TIMELINE_ICON && <ChartTimelinePanel />}
+                    {sidePanelOpen && (
+                      <ResizableSidePanel width={panelWidth} onWidthChange={setPanelWidth}>
+                        {activePanel === PAST_NOTE_ICON && <PastNotePanel />}
+                        {activePanel === ATTACHMENTS_ICON && <AttachmentsPanel />}
+                        {activePanel === MEDICAL_HISTORY_ICON && <MedicalHistoryPanel />}
+                        {activePanel === ORDERS_ICON && <OrdersPanel />}
+                        {activePanel === MESSAGES_ICON && <MessagesPanel />}
+                        {activePanel === ACTIVITY_ICON && <PatientActivityPanel />}
+                        {activePanel === TIMELINE_ICON && <ChartTimelinePanel />}
+                      </ResizableSidePanel>
+                    )}
                     <PanelNavBar active={activePanel} onSelect={selectPanel} />
                   </div>
                 </div>
