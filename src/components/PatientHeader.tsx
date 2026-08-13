@@ -106,8 +106,8 @@ export default function PatientHeader() {
           <div className="flex w-full items-center justify-between gap-2">
             <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-5 overflow-x-auto">
               <span className="whitespace-nowrap font-body text-[14px] font-medium">
-                <span className="text-[#666]">Plan of care end date: </span>
-                <span className="text-[#303536]">{CASE.planOfCareEnd}</span>
+                <span className="text-[#666]">Next follow-up: </span>
+                <span className="text-[#303536]">{CASE.nextFollowUp}</span>
               </span>
               <span className="whitespace-nowrap font-body text-[14px] font-medium">
                 <span className="text-[#666]">Pending Visits </span>

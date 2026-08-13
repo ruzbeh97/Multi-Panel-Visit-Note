@@ -1,64 +1,27 @@
 import { useState } from "react";
+import Badge, { type Tone } from "./Badge";
 import Icon from "./Icon";
-import { ALLERGIES, MEDICATIONS, PAST_DIAGNOSES } from "../data/chart";
-
-type Tone = "grey" | "blue" | "red" | "green" | "yellow";
-
-const TONES: Record<Tone, string> = {
-  grey: "bg-[rgba(128,128,128,0.12)]",
-  blue: "bg-[rgba(27,131,228,0.12)]",
-  red: "bg-[rgba(230,25,42,0.12)]",
-  green: "bg-[rgba(79,176,115,0.12)]",
-  yellow: "bg-[rgba(255,204,0,0.16)]",
-};
+import MedicationDetails from "./MedicationDetails";
+import {
+  ALLERGIES,
+  DIAGNOSIS_ENCOUNTERS,
+  DIAGNOSIS_CODES,
+  DIAGNOSIS_HISTORY,
+  MEDICATIONS,
+  type DiagnosisRecord,
+} from "../data/chart";
 
 const SEVERITY_TONES: Record<string, Tone> = { Severe: "red", Moderate: "yellow", Mild: "grey" };
 
-const MEDICATION_TABS = ["Prescribed", "Medication History"];
+const DIAGNOSIS_TABS = ["By Diagnosis", "By Visit"];
+const DIAGNOSIS_PREVIEW_COUNT = 5;
 
-type Medication = (typeof MEDICATIONS)[number];
+const MEDICATION_TABS = ["Prescribed", "Medication History", "Pending Approvals"];
 
-function Badge({ tone, label, icon }: { tone: Tone; label: string; icon?: string }) {
-  return (
-    <span
-      className={`flex shrink-0 items-center gap-1 rounded-full py-[5px] font-body text-[12px] font-medium leading-[18px] text-[#0f0f0f] ${
-        icon ? "pl-2 pr-[14px]" : "px-3"
-      } ${TONES[tone]}`}
-    >
-      {icon && <Icon name={icon} size={16} filled className="text-[#454545]" />}
-      {label}
-    </span>
-  );
-}
-
-function InfoField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-1 flex-col items-start">
-      <span className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">{label}</span>
-      <span className="font-body text-[16px] leading-[24px] text-[#666666]">{value}</span>
-    </div>
-  );
-}
-
-function MedicationDetails({ medication }: { medication: Medication }) {
-  return (
-    <div className="flex w-full flex-col gap-3 pt-4">
-      <div className="flex w-full flex-col gap-2 rounded-xl border border-[#a0adf8] bg-[#f1f3fe] px-4 pb-3 pt-[14px]">
-        <div className="flex items-center gap-3">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#f1749d] to-[#ed457d] shadow-[0px_3px_4px_rgba(0,0,0,0.06)]">
-            <Icon name="auto_awesome" size={14} filled className="text-white" />
-          </span>
-          <span className="font-body text-[16px] font-medium leading-[24px] text-black">SIG</span>
-        </div>
-        <p className="font-body text-[14px] leading-[24px] text-[#1a1a1a]">{medication.sig}</p>
-      </div>
-      <div className="flex w-full items-start gap-4">
-        <InfoField label="Duration" value={medication.duration} />
-        <InfoField label="Dispense" value={medication.dispense} />
-      </div>
-      <InfoField label="Refills" value={medication.refills} />
-    </div>
-  );
+function medicationsForTab(tab: string) {
+  if (tab === "Prescribed") return MEDICATIONS.filter((med) => med.status === "Active");
+  if (tab === "Pending Approvals") return MEDICATIONS.filter((med) => med.pendingApproval);
+  return MEDICATIONS;
 }
 
 function SectionHeader({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
@@ -70,15 +33,176 @@ function SectionHeader({ title, open, onToggle }: { title: string; open: boolean
   );
 }
 
-function ShowMore() {
+function ShowMore({ label = "Show More", onClick }: { label?: string; onClick?: () => void }) {
   return (
     <div className="flex w-full items-center justify-end py-2">
       <button
         type="button"
+        onClick={onClick}
         className="flex h-7 items-center rounded-md px-2 font-body text-[14px] font-medium leading-[22px] text-[#1132ee] hover:bg-[rgba(17,50,238,0.08)]"
       >
-        Show More
+        {label}
       </button>
+    </div>
+  );
+}
+
+function TabGroup({ tabs, active, onSelect }: { tabs: string[]; active: string; onSelect: (tab: string) => void }) {
+  return (
+    <div className="flex items-center gap-[2px] rounded-lg bg-[#f2f2f2] p-[2px]">
+      {tabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          onClick={() => onSelect(tab)}
+          className={`flex h-7 items-center justify-center rounded-md px-[10px] font-body text-[14px] font-medium leading-[24px] ${
+            active === tab
+              ? "bg-white text-[#1132ee] shadow-[0px_0px_2px_rgba(0,0,0,0.03),0px_1px_0.5px_rgba(0,0,0,0.08)]"
+              : "text-[#666666]"
+          }`}
+        >
+          {tab}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const diagnosisRowId = (code: string) => `diagnosis-${code.replace(".", "-")}`;
+
+function CodeChip({ code, onSelect }: { code: string; onSelect: (code: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(code)}
+      title={DIAGNOSIS_CODES[code]?.description}
+      aria-label={`View ${code} history`}
+      className="flex shrink-0 items-center rounded-md bg-[#f2f2f2] px-2 py-[3px] font-body text-[12px] font-medium leading-[18px] text-[#0f0f0f] hover:bg-[rgba(17,50,238,0.08)] hover:text-[#1132ee]"
+    >
+      {code}
+    </button>
+  );
+}
+
+function DiagnosisRow({
+  record,
+  open,
+  onToggle,
+}: {
+  record: DiagnosisRecord;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const visitCount = record.encounters.length;
+
+  return (
+    <div id={diagnosisRowId(record.code)} className="flex w-full flex-col border-b border-[#e6e6e6] py-3">
+      <div className="flex w-full items-start gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="font-body text-[14px] font-medium leading-[22px] text-[#1a1a1a]">{record.code}</span>
+            {record.status === "Active" ? (
+              <Badge tone="green" label="Active" icon="check_circle" />
+            ) : (
+              <Badge tone="grey" label="Resolved" />
+            )}
+          </div>
+          <p className="font-body text-[14px] leading-[22px] text-[#1a1a1a]">{record.description}</p>
+          <span className="font-body text-[13px] leading-[18px] text-[#666666]">
+            First noted {record.firstNoted} · Last addressed {record.lastAddressed}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-label={`${open ? "Hide" : "Show"} the ${visitCount} visit${
+            visitCount === 1 ? "" : "s"
+          } that addressed ${record.code}`}
+          className={`flex shrink-0 items-center gap-0.5 rounded-md py-0.5 pl-2 pr-1 font-body text-[13px] font-medium leading-[18px] hover:bg-[rgba(17,50,238,0.08)] ${
+            open ? "bg-[rgba(17,50,238,0.08)] text-[#1132ee]" : "text-[#666666]"
+          }`}
+        >
+          {visitCount} {visitCount === 1 ? "visit" : "visits"}
+          <Icon name={open ? "expand_less" : "expand_more"} size={18} />
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-2 flex w-full flex-col gap-1 border-l-2 border-[#e6e6e6] pl-3">
+          {record.encounters.map((visit) => (
+            <div key={`${visit.date}-${visit.type}`} className="flex w-full items-baseline gap-2">
+              <span className="w-[86px] shrink-0 font-body text-[13px] leading-[20px] text-[#666666]">
+                {visit.date}
+              </span>
+              <span className="min-w-0 flex-1 font-body text-[13px] leading-[20px] text-[#1a1a1a]">
+                {visit.type} · {visit.provider}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DiagnosisByVisit({ onSelectCode }: { onSelectCode: (code: string) => void }) {
+  return (
+    <div className="flex w-full flex-col items-start">
+      {DIAGNOSIS_ENCOUNTERS.map((visit) => (
+        <div key={`${visit.date}-${visit.type}`} className="flex w-full flex-col gap-2 border-b border-[#e6e6e6] py-3">
+          <div className="flex w-full items-baseline justify-between gap-2">
+            <span className="min-w-0 truncate font-body text-[14px] font-medium leading-[22px] text-[#1a1a1a]">
+              {visit.type}
+            </span>
+            <span className="shrink-0 font-body text-[13px] leading-[20px] text-[#666666]">{visit.date}</span>
+          </div>
+          <span className="font-body text-[13px] leading-[18px] text-[#666666]">{visit.provider}</span>
+          <div className="flex w-full flex-wrap items-center gap-1.5">
+            {visit.codes.map((code) => (
+              <CodeChip key={code} code={code} onSelect={onSelectCode} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PastDiagnosisSection() {
+  const [tab, setTab] = useState(DIAGNOSIS_TABS[0]);
+  const [expanded, setExpanded] = useState(false);
+
+  const activeCount = DIAGNOSIS_HISTORY.filter((record) => record.status === "Active").length;
+  const visible = expanded ? DIAGNOSIS_HISTORY : DIAGNOSIS_HISTORY.slice(0, DIAGNOSIS_PREVIEW_COUNT);
+  const hidden = DIAGNOSIS_HISTORY.length - visible.length;
+
+  return (
+    <div className="flex w-full flex-col items-start gap-2">
+      <div className="flex w-full flex-wrap items-center justify-between gap-2">
+        <TabGroup tabs={DIAGNOSIS_TABS} active={tab} onSelect={setTab} />
+        <span className="shrink-0 font-body text-[13px] leading-[18px] text-[#666666]">
+          {DIAGNOSIS_HISTORY.length} codes · {activeCount} active
+        </span>
+      </div>
+
+      {tab === "By Diagnosis" ? (
+        <div className="flex w-full flex-col items-start">
+          {visible.map((record) => (
+            <DiagnosisRow key={record.code} record={record} />
+          ))}
+          {hidden > 0 ? (
+            <ShowMore label={`Show ${hidden} More`} onClick={() => setExpanded(true)} />
+          ) : (
+            DIAGNOSIS_HISTORY.length > DIAGNOSIS_PREVIEW_COUNT && (
+              <ShowMore label="Show Less" onClick={() => setExpanded(false)} />
+            )
+          )}
+        </div>
+      ) : (
+        <DiagnosisByVisit />
+      )}
     </div>
   );
 }
@@ -86,7 +210,7 @@ function ShowMore() {
 export default function MedicalHistoryPanel() {
   const [openSections, setOpenSections] = useState<string[]>(["Past Diagnosis", "Medications", "Allergies"]);
   const [medicationTab, setMedicationTab] = useState(MEDICATION_TABS[0]);
-  const [openMedication, setOpenMedication] = useState<number | null>(null);
+  const [openMedication, setOpenMedication] = useState<string | null>(null);
 
   function toggleSection(title: string) {
     setOpenSections((prev) => (prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]));
@@ -104,55 +228,19 @@ export default function MedicalHistoryPanel() {
           open={isOpen("Past Diagnosis")}
           onToggle={() => toggleSection("Past Diagnosis")}
         />
-        {isOpen("Past Diagnosis") && (
-          <div className="flex w-full flex-col items-start">
-            {PAST_DIAGNOSES.map((row, i) => (
-              <div
-                key={`${row.type}-${i}`}
-                className={`flex w-full items-start gap-2 py-2 ${
-                  i === PAST_DIAGNOSES.length - 1 ? "" : "border-b border-[#e6e6e6]"
-                }`}
-              >
-                <div className="flex w-[117px] shrink-0 flex-col">
-                  <span className="truncate font-body text-[14px] font-medium leading-[22px] text-[#1a1a1a]">
-                    {row.type}
-                  </span>
-                  <span className="truncate font-body text-[14px] leading-[22px] text-[#666666]">{row.provider}</span>
-                  <span className="truncate font-body text-[14px] leading-[22px] text-[#666666]">{row.date}</span>
-                </div>
-                <p className="min-w-0 flex-1 font-body text-[14px] leading-[22px] text-[#1a1a1a]">{row.diagnosis}</p>
-              </div>
-            ))}
-            <ShowMore />
-          </div>
-        )}
+        {isOpen("Past Diagnosis") && <PastDiagnosisSection />}
       </div>
 
       <div className="flex w-full flex-col items-start pt-2">
         <SectionHeader title="Medications" open={isOpen("Medications")} onToggle={() => toggleSection("Medications")} />
         {isOpen("Medications") && (
           <div className="flex w-full flex-col items-start">
-            <div className="flex items-center gap-[2px] rounded-lg bg-[#f2f2f2] p-[2px]">
-              {MEDICATION_TABS.map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setMedicationTab(tab)}
-                  className={`flex h-7 items-center justify-center rounded-md px-[10px] font-body text-[14px] font-medium leading-[24px] ${
-                    medicationTab === tab
-                      ? "bg-white text-[#1132ee] shadow-[0px_0px_2px_rgba(0,0,0,0.03),0px_1px_0.5px_rgba(0,0,0,0.08)]"
-                      : "text-[#666666]"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+            <TabGroup tabs={MEDICATION_TABS} active={medicationTab} onSelect={setMedicationTab} />
 
-            {MEDICATIONS.map((med, i) => {
-              const detailsOpen = openMedication === i;
+            {medicationsForTab(medicationTab).map((med) => {
+              const detailsOpen = openMedication === med.name;
               return (
-                <div key={`${med.name}-${i}`} className="flex w-full flex-col border-b border-[#e6e6e6] py-4">
+                <div key={med.name} className="flex w-full flex-col border-b border-[#e6e6e6] py-4">
                   <div className="flex w-full items-start gap-1">
                     <div className="flex min-w-0 flex-1 flex-col gap-2">
                       <div className="flex min-w-0 items-center gap-2">
@@ -169,7 +257,7 @@ export default function MedicalHistoryPanel() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setOpenMedication((current) => (current === i ? null : i))}
+                      onClick={() => setOpenMedication((current) => (current === med.name ? null : med.name))}
                       aria-expanded={detailsOpen}
                       className="flex shrink-0 items-start rounded-full p-1 hover:bg-black/5"
                       aria-label={`${detailsOpen ? "Hide" : "View"} ${med.name} details`}
@@ -181,6 +269,11 @@ export default function MedicalHistoryPanel() {
                 </div>
               );
             })}
+            {medicationsForTab(medicationTab).length === 0 && (
+              <p className="w-full py-4 font-body text-[14px] leading-[22px] text-[#666666]">
+                No medications to show.
+              </p>
+            )}
             <ShowMore />
           </div>
         )}

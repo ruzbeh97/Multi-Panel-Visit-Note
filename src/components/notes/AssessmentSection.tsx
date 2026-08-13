@@ -20,7 +20,7 @@ export default function AssessmentSection() {
         <Block>
           <TextField label="Primary Diagnosis" value={primaryDiagnosis} onChange={setPrimaryDiagnosis} />
           <DateField label="Date of Onset" value={dateOfOnset} onChange={setDateOfOnset} inline={false} disabled />
-          <TextField label="Rehab Potential" value={rehabPotential} onChange={setRehabPotential} />
+          <TextField label="Recovery Potential" value={rehabPotential} onChange={setRehabPotential} />
           <TextField label="Key Findings" value={keyFindings} onChange={setKeyFindings} />
         </Block>
       </div>

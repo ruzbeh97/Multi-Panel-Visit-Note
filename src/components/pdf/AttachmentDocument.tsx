@@ -328,11 +328,11 @@ const DOCS: Record<string, AttachmentDoc> = {
     signedAt: "Electronically signed 05/07/2026 at 7:14 AM",
   },
 
-  "Ortho_PT_Referral_05132026.pdf": {
-    idLabel: "Referral ID",
-    idValue: "REF-2026-0513-PT",
+  "Activity_Restrictions_05132026.pdf": {
+    idLabel: "Document ID",
+    idValue: "INST-2026-0513-ACLR",
     date: "05/13/2026",
-    title: "PHYSICAL THERAPY REFERRAL",
+    title: "ACTIVITY RESTRICTIONS",
     subtitle: "Post-Operative ACL Reconstruction",
     brand: "Hale Orthopedics",
     brandSub: "Sports Medicine",
@@ -340,41 +340,41 @@ const DOCS: Record<string, AttachmentDoc> = {
     infoLeft: [
       ["Patient Name", PATIENT.name],
       ["Date of Birth", PATIENT.dob],
-      ["Referring Provider", REFERRING_PROVIDER],
+      ["Surgeon", PROVIDER.short],
       ["Diagnosis", CASE.diagnosisShort],
     ],
     infoRight: [
-      ["Referral Date", "05/13/2026"],
+      ["Issued", "05/13/2026"],
       ["Surgery Date", CASE.surgeryDate],
-      ["Frequency", "2–3x / week"],
-      ["Duration", "12 weeks"],
+      ["Weight Bearing", "As tolerated"],
+      ["Brace", "Hinged knee brace"],
     ],
     sections: [
       {
-        title: "REASON FOR REFERRAL",
+        title: "ACTIVITY GUIDELINES",
         body: (
           <p>
-            Please evaluate and treat {PATIENT.name} following right ACL reconstruction with semitendinosus autograft
-            and partial medial meniscectomy performed on {CASE.surgeryDate}. Begin outpatient physical therapy when
-            cleared for weight bearing as tolerated.
+            The following restrictions apply after right ACL reconstruction with semitendinosus autograft and partial
+            medial meniscectomy performed on {CASE.surgeryDate}. Follow these guidelines until cleared at a future
+            clinic visit.
           </p>
         ),
       },
       {
-        title: "PRECAUTIONS / PROTOCOL",
+        title: "PRECAUTIONS",
         items: [
           "Hinged brace locked in extension for ambulation for 2 weeks, then unlock 0–90°",
           "No open-chain terminal extension against resistance for 12 weeks",
           "Weight bearing as tolerated with crutches until gait is normalized",
-          "Follow the attached Weeks 0–12 post-op ACL protocol",
+          "No running, cutting, or pivoting until cleared by the surgical team",
         ],
       },
       {
-        title: "GOALS",
+        title: "GOALS BEFORE NEXT VISIT",
         items: [
           "Full extension and flexion to 120° by week 6",
-          "Independent with home exercise program",
-          "Progress to closed-chain strengthening and neuromuscular control",
+          "Independent with daily home strengthening",
+          "Progress closed-chain strengthening and neuromuscular control",
           "Prepare for return-to-run testing after week 12",
         ],
       },
@@ -426,7 +426,7 @@ const DOCS: Record<string, AttachmentDoc> = {
         title: "PHASE 3 — WEEKS 6–12",
         items: [
           "Goals: full ROM, progressive strength, single-leg control",
-          "Exercises: leg press, lateral stepping, balance board, blood flow restriction as indicated",
+          "Exercises: leg press, lateral stepping, balance board, progressive closed-chain strengthening",
           "No running or cutting until cleared after week 12 testing",
         ],
       },
@@ -441,10 +441,10 @@ const DOCS: Record<string, AttachmentDoc> = {
     idValue: "INTAKE-2026-0520",
     date: "05/20/2026",
     title: "PATIENT INTAKE QUESTIONNAIRE",
-    subtitle: "Initial Physical Therapy Evaluation",
-    brand: "Athelas Physical Therapy",
-    brandSub: "Outpatient Rehabilitation",
-    brandInitials: "AP",
+    subtitle: "First Post-Operative Clinic Visit",
+    brand: "Hale Orthopedics",
+    brandSub: "Sports Medicine",
+    brandInitials: "HO",
     infoLeft: [
       ["Patient Name", PATIENT.name],
       ["Date of Birth", PATIENT.dob],
@@ -453,7 +453,7 @@ const DOCS: Record<string, AttachmentDoc> = {
     ],
     infoRight: [
       ["Visit Date", CASE.initialEval],
-      ["Referring MD", REFERRING_PROVIDER],
+      ["Surgeon", PROVIDER.short],
       ["Insurance", PATIENT.insurance],
       ["Emergency Contact", "Alex Reyes"],
     ],
@@ -497,9 +497,9 @@ const DOCS: Record<string, AttachmentDoc> = {
     date: "08/03/2026",
     title: "IKDC SUBJECTIVE KNEE FORM",
     subtitle: "Week 12 Outcome Measure",
-    brand: "Athelas Physical Therapy",
-    brandSub: "Outcomes",
-    brandInitials: "AP",
+    brand: "Hale Orthopedics",
+    brandSub: "Sports Medicine Outcomes",
+    brandInitials: "HO",
     infoLeft: [
       ["Patient Name", PATIENT.name],
       ["Date of Birth", PATIENT.dob],
@@ -538,7 +538,7 @@ const DOCS: Record<string, AttachmentDoc> = {
         body: (
           <p>
             Score improvement tracks with gains in extension and quadriceps strength. Remaining limitations are
-            deceleration confidence and single-leg hop symmetry, consistent with the current rehab phase.
+            deceleration confidence and single-leg hop symmetry, consistent with the current recovery phase.
           </p>
         ),
       },
@@ -548,12 +548,12 @@ const DOCS: Record<string, AttachmentDoc> = {
     signedAt: "Documented 08/03/2026 at 3:40 PM",
   },
 
-  "PT_Authorization_24_Visits_05182026.pdf": {
+  "DME_Authorization_Knee_Brace_05182026.pdf": {
     idLabel: "Auth ID",
     idValue: "AUTH-PH-551829",
     date: "05/18/2026",
     title: "PRIOR AUTHORIZATION",
-    subtitle: "Outpatient Physical Therapy — 24 Visits",
+    subtitle: "Knee Orthosis — Hinged Brace",
     brand: "Priority Health",
     brandSub: "Utilization Management",
     brandInitials: "PH",
@@ -566,7 +566,7 @@ const DOCS: Record<string, AttachmentDoc> = {
     infoRight: [
       ["Auth Number", "AUTH-PH-551829"],
       ["Decision Date", "05/18/2026"],
-      ["Effective", "05/20/2026 – 11/20/2026"],
+      ["Effective", "05/06/2026 – 08/06/2026"],
       ["Status", "Approved"],
     ],
     sections: [
@@ -575,18 +575,18 @@ const DOCS: Record<string, AttachmentDoc> = {
         body: (
           <>
             <p>
-              Priority Health has approved <span className="font-bold">24 outpatient physical therapy visits</span> for
-              diagnosis {CASE.diagnosisShort} related to right ACL reconstruction.
+              Priority Health has approved a <span className="font-bold">hinged knee orthosis</span> for diagnosis{" "}
+              {CASE.diagnosisShort} related to right ACL reconstruction.
             </p>
-            <p>Rendering facility: Athelas Physical Therapy. Rendering provider: {PROVIDER.display}.</p>
+            <p>Rendering facility: Northside DME Supply. Ordering provider: {PROVIDER.display}.</p>
           </>
         ),
       },
       {
         title: "CONDITIONS",
         items: [
-          "Visits must occur between 05/20/2026 and 11/20/2026",
-          "Additional visits require a concurrent review with updated clinical notes",
+          "Brace rental or purchase must occur between 05/06/2026 and 08/06/2026",
+          "Additional DME requires a concurrent review with updated clinical notes",
           "Member responsibility applies per plan benefits",
           "This authorization is not a guarantee of payment",
         ],
@@ -597,7 +597,7 @@ const DOCS: Record<string, AttachmentDoc> = {
       tone: "amber",
       body: (
         <p className="mt-2 font-bold">
-          Approved — 24 visits. Reference AUTH-PH-551829 on all claims and progress note submissions.
+          Approved — hinged knee brace. Reference AUTH-PH-551829 on all claims and DME documentation.
         </p>
       ),
     },
@@ -606,18 +606,18 @@ const DOCS: Record<string, AttachmentDoc> = {
     signedAt: "Issued 05/18/2026 at 2:06 PM",
   },
 
-  "Home_Exercise_Program_Week_12.pdf": {
-    idLabel: "HEP ID",
-    idValue: "HEP-W12-2026-0727",
+  "Activity_Progression_Handout_07272026.pdf": {
+    idLabel: "Handout ID",
+    idValue: "ACT-W12-2026-0727",
     date: "07/27/2026",
-    title: "HOME EXERCISE PROGRAM",
+    title: "ACTIVITY PROGRESSION",
     subtitle: "Week 12 — Strength & Control",
-    brand: "Athelas Physical Therapy",
+    brand: "Hale Orthopedics",
     brandSub: "Patient Handout",
-    brandInitials: "AP",
+    brandInitials: "HO",
     infoLeft: [
       ["Patient Name", PATIENT.name],
-      ["Therapist", PROVIDER.short],
+      ["Provider", PROVIDER.short],
       ["Side", "Right knee"],
       ["Phase", "Week 12 post-ACLR"],
     ],
@@ -651,47 +651,47 @@ const DOCS: Record<string, AttachmentDoc> = {
         body: (
           <p>
             Stop any exercise that increases swelling lasting more than 12 hours or that recreates sharp medial joint
-            pain. Ice 10–15 minutes after sessions. Bring this sheet to the next visit for progression to light jogging
-            drills.
+            pain. Ice 10–15 minutes after sessions. Bring this sheet to the next clinic visit for progression to light
+            jogging drills.
           </p>
         ),
       },
     ],
     signedBy: PROVIDER.display,
-    signedRole: "Home program prescribed",
+    signedRole: "Activity guidelines prescribed",
     signedAt: "Issued 07/27/2026",
   },
 
   "Plan_of_Care_08102026.pdf": {
-    idLabel: "Athelas Document ID",
-    idValue: "00000000-0000-4000-8000-000000000000",
+    idLabel: "Document ID",
+    idValue: "PLAN-2026-0810-4471",
     date: CASE.visitDateLong,
-    title: "PLAN OF CARE",
-    subtitle: "Addended — Visit Frequency Update",
-    brand: "Athelas",
-    brandSub: "Powered by Commure",
-    brandInitials: "A",
+    title: "VISIT PLAN",
+    subtitle: "14-Week Post-ACL Follow-Up",
+    brand: "Hale Orthopedics",
+    brandSub: "Sports Medicine",
+    brandInitials: "HO",
     infoLeft: [
       ["Patient Name", PATIENT.name],
       ["Date of Birth", PATIENT.dob],
-      ["Rendering Provider", PROVIDER.display],
-      ["Referring Provider", REFERRING_PROVIDER],
+      ["Provider", PROVIDER.display],
+      ["Diagnosis", CASE.diagnosisShort],
     ],
     infoRight: [
-      ["Plan of Care Begins", CASE.visitDateLong],
+      ["Visit Date", CASE.visitDateLong],
       ["Visit #", CASE.visitNumber],
-      ["Date of Original Visit", CASE.initialEval],
-      ["Diagnosis Code", CASE.diagnosisShort],
+      ["First Post-Op Visit", CASE.initialEval],
+      ["Next Follow-Up", CASE.nextFollowUp],
     ],
     sections: [
       {
         title: "PLAN",
         body: (
           <>
-            <p className="font-bold">I have recommended the following therapy plan:</p>
+            <p className="font-bold">I have recommended the following plan:</p>
             <p className="font-bold italic">
-              {PATIENT.name} will be seen 2 times per week for 6 weeks starting 08/12/2026 and ending 09/23/2026 for
-              post-operative ACL rehabilitation, progressing to plyometrics and return-to-sport testing.
+              {PATIENT.name} will continue home strengthening, begin a supervised return-to-run progression, and return
+              to Hale Orthopedics on {CASE.nextFollowUp} for functional return-to-sport testing.
             </p>
           </>
         ),
@@ -702,9 +702,9 @@ const DOCS: Record<string, AttachmentDoc> = {
       tone: "amber",
       body: (
         <div className="mt-2 flex flex-col gap-1">
-          <InfoRow label="Reason For Addendum:" value="Visit frequency updated after week 12 progression" />
-          <InfoRow label="Created By:" value={`${PROVIDER.short} (08/03/2026 07:18AM)`} />
-          <InfoRow label="Finalized By:" value={`${PROVIDER.short} (08/03/2026 09:42AM)`} />
+          <InfoRow label="Reason For Addendum:" value="Cleared for jogging progression at week 14" />
+          <InfoRow label="Created By:" value={`${PROVIDER.short} (08/10/2026 11:50AM)`} />
+          <InfoRow label="Finalized By:" value={`${PROVIDER.short} (08/10/2026 12:05PM)`} />
         </div>
       ),
     },
@@ -741,7 +741,7 @@ const DOCS: Record<string, AttachmentDoc> = {
           <p>
             Patient returns for routine follow-up after right ACL reconstruction with hamstring autograft. He reports a
             3/10 medial joint line ache after walking more than 30 minutes and tightness with stairs. No giving way,
-            locking, or new effusion. He is compliant with supervised therapy twice weekly and a daily home program.
+            locking, or new effusion. He is compliant with his home strengthening program and activity guidelines.
           </p>
         ),
       },
@@ -771,7 +771,7 @@ const DOCS: Record<string, AttachmentDoc> = {
       {
         title: "PLAN",
         items: [
-          "Continue supervised therapy twice weekly with progression to plyometrics",
+          "Continue home strengthening with progression to plyometrics",
           "Functional return-to-sport testing ordered for week 20",
           "Continue meloxicam as needed for activity-related soreness",
           "No cutting, pivoting, or contact sport until testing criteria are met",

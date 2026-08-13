@@ -26,7 +26,7 @@ export default function PlanSection() {
   return (
     <Section title="Plan">
       <div className="flex w-full flex-col items-start gap-4">
-        <SubHeading title="Plan of Care" />
+        <SubHeading title="Visit Plan" />
         <Block>
           <div className="flex w-full flex-col items-start gap-1">
             <div className="flex items-start py-0.5" style={{ width: 160 }}>
@@ -68,7 +68,7 @@ export default function PlanSection() {
             onChange={setPlanForward}
           />
 
-          <RadioGroup label="Plan of Care Agreement?" options={["Yes", "No"]} value={careAgreement} onChange={setCareAgreement} />
+          <RadioGroup label="Patient Agreement?" options={["Yes", "No"]} value={careAgreement} onChange={setCareAgreement} />
         </Block>
       </div>
     </Section>
