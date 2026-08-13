@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Icon from "../../Icon";
 import { useNoteReadOnly } from "../readOnly";
 
@@ -9,13 +8,13 @@ type GoalCardProps = {
   description: string;
   initialValue: string;
   previousVisit: string;
-  initialProgress: string;
+  progress: string;
+  onProgressChange: (value: string) => void;
   goalTarget: string;
 };
 
-export default function GoalCard({ title, description, initialValue, previousVisit, initialProgress, goalTarget }: GoalCardProps) {
+export default function GoalCard({ title, description, initialValue, previousVisit, progress, onProgressChange, goalTarget }: GoalCardProps) {
   const readOnly = useNoteReadOnly();
-  const [progress, setProgress] = useState(initialProgress);
 
   return (
     <div className="flex min-h-[132px] w-full items-start gap-4 rounded-lg">
@@ -54,7 +53,7 @@ export default function GoalCard({ title, description, initialValue, previousVis
                   key={option}
                   type="button"
                   disabled={readOnly}
-                  onClick={() => setProgress(option)}
+                  onClick={() => onProgressChange(option)}
                   className={`flex min-w-[28px] items-center justify-center rounded px-1.5 py-0.5 font-body text-[14px] leading-[24px] ${tone}`}
                 >
                   {option}

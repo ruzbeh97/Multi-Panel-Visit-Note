@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Icon from "./Icon";
 import { PAST_NOTES } from "../data/chart";
+import type { ImportAction } from "./notes/noteStore";
 
 const GAP = 8;
 
@@ -35,15 +36,23 @@ const ACTIONS = [
 type ImportContentModalProps = {
   anchor: HTMLElement;
   sectionTitle: string;
+  defaultNoteId?: string | null;
+  onImport?: (noteId: string, action: ImportAction) => void;
   onClose: () => void;
 };
 
-export default function ImportContentModal({ anchor, sectionTitle, onClose }: ImportContentModalProps) {
+export default function ImportContentModal({
+  anchor,
+  sectionTitle,
+  defaultNoteId = null,
+  onImport,
+  onClose,
+}: ImportContentModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
-  const [noteId, setNoteId] = useState<string | null>(null);
+  const [noteId, setNoteId] = useState<string | null>(defaultNoteId);
   const [listOpen, setListOpen] = useState(false);
-  const [action, setAction] = useState<(typeof ACTIONS)[number]["id"]>("overwrite");
+  const [action, setAction] = useState<ImportAction>("overwrite");
 
   const selected = PAST_NOTES.find((note) => note.id === noteId) ?? null;
   const helper = ACTIONS.find((option) => option.id === action)?.helper ?? "";
@@ -114,7 +123,7 @@ export default function ImportContentModal({ anchor, sectionTitle, onClose }: Im
           <span
             className={`min-w-0 truncate font-body text-[16px] ${selected ? "text-[#1a1a1a]" : "text-[#666666]"}`}
           >
-            {selected ? `${selected.caseName} · ${selected.provider} · ${selected.date}` : "Select a previous chart note"}
+            {selected ? `${selected.title} · ${selected.provider} · ${selected.date}` : "Select a previous chart note"}
           </span>
           <Icon
             name="keyboard_arrow_down"
@@ -150,10 +159,10 @@ export default function ImportContentModal({ anchor, sectionTitle, onClose }: Im
                       active ? "text-[#1132ee]" : "text-[#1a1a1a]"
                     }`}
                   >
-                    {note.caseName}
+                    {note.title}
                   </span>
                   <span className="font-body text-[13px] leading-[18px] text-[#666666]">
-                    {note.provider} · {note.date}
+                    {note.caseName} · {note.provider} · {note.date}
                   </span>
                 </button>
               );
@@ -210,7 +219,10 @@ export default function ImportContentModal({ anchor, sectionTitle, onClose }: Im
         <button
           type="button"
           disabled={!selected}
-          onClick={onClose}
+          onClick={() => {
+            if (selected) onImport?.(selected.id, action);
+            onClose();
+          }}
           className={`flex items-center justify-center rounded-3xl px-6 py-3 font-body text-[15px] font-bold ${
             selected ? "bg-[#1132ee] text-white hover:bg-[#0f2dd7]" : "bg-[#f5f5f7] text-[#c1c1cd]"
           }`}

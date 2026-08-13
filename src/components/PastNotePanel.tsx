@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import NoteOutlineRail from "./NoteOutlineRail";
 import { NoteReadOnlyProvider } from "./notes/readOnly";
+import { PastNoteSourceProvider } from "./notes/noteStore";
 import SubjectiveSection from "./notes/SubjectiveSection";
 import ObjectiveSection from "./notes/ObjectiveSection";
 import AssessmentSection from "./notes/AssessmentSection";
@@ -103,10 +104,10 @@ export default function PastNotePanel() {
                             active ? "text-[#1132ee]" : "text-[#1a1a1a]"
                           }`}
                         >
-                          {note.caseName}
+                          {note.title}
                         </span>
                         <span className="font-body text-[13px] leading-[18px] text-[#666666]">
-                          {note.provider} · {note.date}
+                          {note.caseName} · {note.provider} · {note.date}
                         </span>
                       </button>
                     );
@@ -125,12 +126,14 @@ export default function PastNotePanel() {
           </div>
 
           <NoteReadOnlyProvider>
-            <div className="flex w-full flex-col items-start gap-10">
-              <SubjectiveSection />
-              <ObjectiveSection />
-              <AssessmentSection />
-              <PlanSection />
-            </div>
+            <PastNoteSourceProvider noteId={selected.id}>
+              <div className="flex w-full flex-col items-start gap-10">
+                <SubjectiveSection />
+                <ObjectiveSection />
+                <AssessmentSection />
+                <PlanSection />
+              </div>
+            </PastNoteSourceProvider>
           </NoteReadOnlyProvider>
         </div>
       </div>

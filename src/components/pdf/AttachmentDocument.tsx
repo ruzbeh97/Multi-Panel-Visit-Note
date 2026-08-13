@@ -2,12 +2,14 @@ import type { ReactNode } from "react";
 import {
   ALLERGIES,
   CASE,
-  CHART_TIMELINE,
+  ENCOUNTERS,
   MEDICATIONS,
   PAST_ORDERS,
   PATIENT,
+  PRIOR_CASE,
   PROVIDER,
   REFERRING_PROVIDER,
+  ASSOCIATE_PROVIDER,
 } from "../../data/chart";
 
 // Rendered at 2x the on-screen page size and scaled down by the viewer, so a
@@ -83,7 +85,7 @@ const DOCS: Record<string, AttachmentDoc> = {
     ],
     infoRight: [
       ["Exam Date", "04/22/2026"],
-      ["Ordering Provider", "Marcus Hale, MD"],
+      ["Ordering Provider", "Priya Raman, MD"],
       ["Study Status", "Final"],
       ["Clinical Indication", "Right knee injury"],
     ],
@@ -363,7 +365,7 @@ const DOCS: Record<string, AttachmentDoc> = {
       {
         title: "PRECAUTIONS",
         items: [
-          "Hinged brace locked in extension for ambulation for 2 weeks, then unlock 0–90°",
+          "Hinged brace locked in extension for ambulation until the 2-week visit, then unlock 0–90°",
           "No open-chain terminal extension against resistance for 12 weeks",
           "Weight bearing as tolerated with crutches until gait is normalized",
           "No running, cutting, or pivoting until cleared by the surgical team",
@@ -379,8 +381,8 @@ const DOCS: Record<string, AttachmentDoc> = {
         ],
       },
     ],
-    signedBy: "Marcus Hale, MD",
-    signedRole: "Orthopedic Surgery — Sports Medicine",
+    signedBy: ASSOCIATE_PROVIDER,
+    signedRole: "Physician Assistant — Sports Medicine",
     signedAt: "Signed 05/13/2026 at 11:22 AM",
   },
 
@@ -436,14 +438,14 @@ const DOCS: Record<string, AttachmentDoc> = {
     signedAt: "Distributed 05/07/2026",
   },
 
-  "Patient_Intake_Questionnaire_05202026.pdf": {
+  "Patient_Intake_Questionnaire_04182026.pdf": {
     idLabel: "Form ID",
-    idValue: "INTAKE-2026-0520",
-    date: "05/20/2026",
+    idValue: "INTAKE-2026-0418",
+    date: "04/18/2026",
     title: "PATIENT INTAKE QUESTIONNAIRE",
-    subtitle: "First Post-Operative Clinic Visit",
+    subtitle: "Walk-In Injury Visit",
     brand: "Hale Orthopedics",
-    brandSub: "Sports Medicine",
+    brandSub: "Walk-In Injury Clinic",
     brandInitials: "HO",
     infoLeft: [
       ["Patient Name", PATIENT.name],
@@ -452,49 +454,307 @@ const DOCS: Record<string, AttachmentDoc> = {
       ["Preferred Name", "Jordan"],
     ],
     infoRight: [
-      ["Visit Date", CASE.initialEval],
-      ["Surgeon", PROVIDER.short],
+      ["Visit Date", CASE.dateOfInjury],
+      ["Seen By", "Priya Raman MD"],
       ["Insurance", PATIENT.insurance],
-      ["Emergency Contact", "Alex Reyes"],
+      ["Emergency Contact", "Maya Reyes (spouse)"],
     ],
     sections: [
       {
         title: "CHIEF CONCERN",
         body: (
           <p>
-            Right knee recovery after ACL surgery. Difficulty walking without a limp, limited bending, and weakness
-            with stairs. Goal is to return to recreational soccer.
+            Right knee injury this afternoon during a recreational soccer match. Felt a pop while planting to change
+            direction, could not continue play, and the knee swelled within an hour. Unable to bear full weight.
           </p>
         ),
       },
       {
         title: "CURRENT SYMPTOMS",
         items: [
-          "Pain: 4/10 aching at rest, 7/10 after activity",
-          "Swelling: mild after being on feet for more than 1 hour",
-          "Instability: none in brace; mild apprehension without brace",
-          "Sleep: interrupted by stiffness when changing positions",
+          "Pain: 7/10 with any weight bearing, 4/10 at rest",
+          "Swelling: rapid onset within the first hour",
+          "Instability: knee feels like it will buckle when turning",
+          "Locking or catching: none reported",
         ],
       },
       {
         title: "MEDICAL HISTORY",
         items: [
           "Allergies: Penicillin (severe), Latex (moderate), Shellfish (mild)",
-          "Medications: Meloxicam, Acetaminophen PRN, completed post-op aspirin course",
-          "Prior injuries: Left ankle sprain 11/2025, resolved",
-          "Hard of hearing — speak facing the patient",
+          "Medications: none daily",
+          `Prior care at this clinic: right lateral epicondylitis ${PRIOR_CASE.firstVisit} to ${PRIOR_CASE.dischargeDate}, resolved`,
+          "No prior surgery. Hard of hearing — speak facing the patient",
         ],
       },
     ],
     signedBy: PATIENT.name,
     signedRole: "Patient attestation",
-    signedAt: "Completed 05/20/2026 at 10:05 AM",
+    signedAt: "Completed 04/18/2026 at 5:34 PM",
   },
 
-  "IKDC_Outcome_Survey_08032026.pdf": {
+  "Surgical_Consent_ACLR_04292026.pdf": {
+    idLabel: "Consent ID",
+    idValue: "CONS-2026-0429-ACL",
+    date: "04/29/2026",
+    title: "SURGICAL CONSENT",
+    subtitle: "Right ACL Reconstruction with Hamstring Autograft",
+    brand: "Hale Orthopedics",
+    brandSub: "Surgical Services",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["MRN", PATIENT.mrn],
+      ["Surgeon", PROVIDER.display],
+    ],
+    infoRight: [
+      ["Consent Date", "04/29/2026"],
+      ["Planned Surgery", CASE.surgeryDate],
+      ["Facility", "Riverside Surgical Center"],
+      ["Laterality Confirmed", "Right"],
+    ],
+    sections: [
+      {
+        title: "PLANNED PROCEDURE",
+        body: (
+          <p>
+            Arthroscopic right anterior cruciate ligament reconstruction using a semitendinosus autograft, with
+            diagnostic arthroscopy and treatment of the posterior horn medial meniscus tear by repair or partial
+            meniscectomy depending on the tear pattern found at the time of surgery.
+          </p>
+        ),
+      },
+      {
+        title: "RISKS DISCUSSED",
+        items: [
+          "Bleeding, infection, and reaction to anesthesia",
+          "Graft failure or recurrent instability requiring revision",
+          "Persistent stiffness, quadriceps weakness, or kneeling discomfort",
+          "Deep vein thrombosis, nerve or vessel injury, and hardware irritation",
+        ],
+      },
+      {
+        title: "ALTERNATIVES AND EXPECTATIONS",
+        items: [
+          "Alternative: continued bracing and strengthening without reconstruction",
+          "Expected recovery of 9 to 12 months before return to cutting sports",
+          "Functional testing criteria must be met before clearance for contact sport",
+          "Patient questions answered and understanding confirmed in clinic",
+        ],
+      },
+    ],
+    callout: {
+      title: "PATIENT ATTESTATION",
+      tone: "amber",
+      body: (
+        <p className="mt-2">
+          I have read this consent, discussed the procedure, risks, and alternatives with {PROVIDER.display}, and I
+          authorize the operation on my right knee.
+        </p>
+      ),
+    },
+    signedBy: PATIENT.name,
+    signedRole: `Countersigned by ${PROVIDER.display}`,
+    signedAt: "Signed 04/29/2026 at 3:02 PM",
+  },
+
+  "PreOp_HP_05042026.pdf": {
+    idLabel: "Encounter ID",
+    idValue: "HP-2026-0504-ACL",
+    date: "05/04/2026",
+    title: "PRE-OPERATIVE HISTORY & PHYSICAL",
+    subtitle: "Clearance for Right ACL Reconstruction",
+    brand: "Hale Orthopedics",
+    brandSub: "Sports Medicine",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["MRN", PATIENT.mrn],
+      ["Provider", ASSOCIATE_PROVIDER],
+    ],
+    infoRight: [
+      ["Visit Date", "05/04/2026"],
+      ["Surgery Date", CASE.surgeryDate],
+      ["ASA Class", "I"],
+      ["Clearance", "Cleared"],
+    ],
+    sections: [
+      {
+        title: "HISTORY",
+        body: (
+          <p>
+            28-year-old man scheduled for right ACL reconstruction on {CASE.surgeryDate} after a noncontact pivoting
+            injury on {CASE.dateOfInjury}. MRI confirmed a complete ACL tear with a posterior horn medial meniscus
+            tear. No cardiopulmonary history, no prior anesthesia, and no bleeding disorder. Naproxen was discontinued
+            at the surgical consult.
+          </p>
+        ),
+      },
+      {
+        title: "EXAMINATION",
+        body: (
+          <>
+            <p>
+              <span className="font-bold">Vitals: </span>
+              BP 118/74, HR 62, RR 14, SpO2 99% on room air, BMI 24.1.
+            </p>
+            <p>
+              <span className="font-bold">Right knee: </span>
+              Trace effusion after aspiration, ROM 5-125 degrees, grade 2 Lachman, positive pivot shift, medial joint
+              line tenderness.
+            </p>
+            <p>
+              <span className="font-bold">General: </span>
+              Heart regular without murmur, lungs clear, airway Mallampati II, distal pulses intact.
+            </p>
+          </>
+        ),
+      },
+      {
+        title: "PRE-OPERATIVE PLAN",
+        items: [
+          "Laboratory panel drawn today at Athelas Core Lab; results within normal limits",
+          "Hinged knee orthosis and crutches dispensed and fitted",
+          "Nothing by mouth after midnight; arrive two hours before the scheduled start",
+          "Penicillin allergy documented — cefazolin avoided, clindamycin selected for prophylaxis",
+        ],
+      },
+    ],
+    callout: {
+      title: "ASSESSMENT",
+      tone: "blue",
+      body: (
+        <p className="mt-2">
+          Healthy patient cleared for outpatient arthroscopic ACL reconstruction under general anesthesia. No further
+          pre-operative testing indicated.
+        </p>
+      ),
+    },
+    signedBy: ASSOCIATE_PROVIDER,
+    signedRole: "Physician Assistant — Sports Medicine",
+    signedAt: "Signed 05/04/2026 at 9:26 AM",
+  },
+
+  "Work_Status_Note_05202026.pdf": {
+    idLabel: "Document ID",
+    idValue: "WORK-2026-0520",
+    date: "05/20/2026",
+    title: "WORK STATUS NOTE",
+    subtitle: "Modified Duty After Knee Surgery",
+    brand: "Hale Orthopedics",
+    brandSub: "Sports Medicine",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["Employer", "Cascade Logistics"],
+      ["Provider", PROVIDER.display],
+    ],
+    infoRight: [
+      ["Issued", "05/20/2026"],
+      ["Surgery Date", CASE.surgeryDate],
+      ["Status", "Modified duty"],
+      ["Recheck", "06/17/2026"],
+    ],
+    sections: [
+      {
+        title: "WORK STATUS",
+        body: (
+          <p>
+            {PATIENT.name} underwent right ACL reconstruction on {CASE.surgeryDate} and is two weeks post-operative.
+            He may return to work on modified duty effective 05/26/2026 with the restrictions below until his next
+            evaluation.
+          </p>
+        ),
+      },
+      {
+        title: "RESTRICTIONS",
+        items: [
+          "Seated work with the leg elevated as needed; stand no more than 15 minutes per hour",
+          "No lifting over 20 pounds and no carrying while using crutches",
+          "No ladders, uneven ground, kneeling, squatting, or driving a company vehicle",
+          "Hinged knee brace to be worn during all work hours",
+        ],
+      },
+      {
+        title: "NOTES TO EMPLOYER",
+        body: (
+          <p>
+            These restrictions are expected to ease after the six-week post-operative evaluation. Please contact the
+            clinic with questions about accommodation. No further documentation is required for this period.
+          </p>
+        ),
+      },
+    ],
+    signedBy: PROVIDER.display,
+    signedRole: "Orthopedic Surgery — Sports Medicine",
+    signedAt: "Signed 05/20/2026 at 10:02 AM",
+  },
+
+  "IKDC_Outcome_Survey_06172026.pdf": {
     idLabel: "Outcome ID",
-    idValue: "IKDC-2026-0803",
-    date: "08/03/2026",
+    idValue: "IKDC-2026-0617",
+    date: "06/17/2026",
+    title: "IKDC SUBJECTIVE KNEE FORM",
+    subtitle: "Week 6 Outcome Measure",
+    brand: "Hale Orthopedics",
+    brandSub: "Sports Medicine Outcomes",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["Involved Side", "Right"],
+      ["Administered By", PROVIDER.short],
+    ],
+    infoRight: [
+      ["Survey Date", "06/17/2026"],
+      ["Weeks Post-Op", "6"],
+      ["Prior Score", "Not collected"],
+      ["Current Score", "48.3"],
+    ],
+    sections: [
+      {
+        title: "SUMMARY",
+        body: (
+          <p>
+            {PATIENT.name} completed the IKDC Subjective Knee Evaluation Form at his six-week post-operative visit. The
+            raw score of 42 / 87 converts to an IKDC percentage of <span className="font-bold">48.3%</span>, which
+            establishes the baseline for this episode of care.
+          </p>
+        ),
+      },
+      {
+        title: "SELECTED RESPONSES",
+        items: [
+          "Highest activity without significant pain: Walking on level ground",
+          "Pain frequency over the past 4 weeks: Weekly",
+          "Knee stiffness / swelling: Moderate, worse in the morning",
+          "Giving way: Never since surgery",
+          "Difficulty with stairs: Moderate",
+          "Difficulty with kneeling: Extreme",
+        ],
+      },
+      {
+        title: "CLINICIAN NOTES",
+        body: (
+          <p>
+            Scores are consistent with expected six-week limitations after hamstring autograft reconstruction.
+            Extension lag and quadriceps inhibition are the main drivers. Repeat at the twelve-week visit.
+          </p>
+        ),
+      },
+    ],
+    signedBy: PROVIDER.display,
+    signedRole: "Scored and reviewed",
+    signedAt: "Documented 06/17/2026 at 11:32 AM",
+  },
+
+  "IKDC_Outcome_Survey_07272026.pdf": {
+    idLabel: "Outcome ID",
+    idValue: "IKDC-2026-0727",
+    date: "07/27/2026",
     title: "IKDC SUBJECTIVE KNEE FORM",
     subtitle: "Week 12 Outcome Measure",
     brand: "Hale Orthopedics",
@@ -507,7 +767,7 @@ const DOCS: Record<string, AttachmentDoc> = {
       ["Administered By", PROVIDER.short],
     ],
     infoRight: [
-      ["Survey Date", "08/03/2026"],
+      ["Survey Date", "07/27/2026"],
       ["Weeks Post-Op", "12"],
       ["Prior Score", "48.3 (Week 6)"],
       ["Current Score", "71.3"],
@@ -525,7 +785,7 @@ const DOCS: Record<string, AttachmentDoc> = {
       {
         title: "SELECTED RESPONSES",
         items: [
-          "Highest activity without significant pain: Light running / jogging",
+          "Highest activity without significant pain: Brisk walking and stationary cycling",
           "Pain frequency over the past 4 weeks: Monthly",
           "Knee stiffness / swelling: Mild after activity",
           "Giving way: Never since surgery",
@@ -537,15 +797,16 @@ const DOCS: Record<string, AttachmentDoc> = {
         title: "CLINICIAN NOTES",
         body: (
           <p>
-            Score improvement tracks with gains in extension and quadriceps strength. Remaining limitations are
-            deceleration confidence and single-leg hop symmetry, consistent with the current recovery phase.
+            The 23-point gain exceeds the minimal clinically important difference and tracks with gains in extension
+            and quadriceps strength. Remaining limitations are deceleration confidence and single-leg hop symmetry,
+            consistent with the current recovery phase.
           </p>
         ),
       },
     ],
     signedBy: PROVIDER.display,
     signedRole: "Scored and reviewed",
-    signedAt: "Documented 08/03/2026 at 3:40 PM",
+    signedAt: "Documented 07/27/2026 at 10:40 AM",
   },
 
   "DME_Authorization_Knee_Brace_05182026.pdf": {
@@ -680,7 +941,7 @@ const DOCS: Record<string, AttachmentDoc> = {
     infoRight: [
       ["Visit Date", CASE.visitDateLong],
       ["Visit #", CASE.visitNumber],
-      ["First Post-Op Visit", CASE.initialEval],
+      ["First Visit", CASE.initialEval],
       ["Next Follow-Up", CASE.nextFollowUp],
     ],
     sections: [
@@ -793,6 +1054,366 @@ const DOCS: Record<string, AttachmentDoc> = {
     signedAt: "Signed 08/10/2026 09:58 AM",
   },
 
+  "XR_Right_Elbow_2_Views_08252025.pdf": {
+    idLabel: "Imaging Report ID",
+    idValue: "XR-2025-0825-1140",
+    date: "08/25/2025",
+    title: "X-RAY RIGHT ELBOW",
+    subtitle: "2 Views — AP and Lateral",
+    brand: "Athelas Radiology",
+    brandSub: "Diagnostic Imaging",
+    brandInitials: "AR",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["Exam", "XR Right Elbow 2 Views"],
+      ["Accession", "XR-2025-0825-1140"],
+    ],
+    infoRight: [
+      ["Exam Date", "08/25/2025"],
+      ["Ordering Provider", PROVIDER.display],
+      ["Study Status", "Final"],
+      ["Clinical Indication", "Lateral elbow pain"],
+    ],
+    sections: [
+      {
+        title: "CLINICAL HISTORY",
+        body: (
+          <p>
+            Six weeks of right lateral elbow pain worse with gripping and lifting. No acute trauma. Evaluate for bony
+            abnormality or calcification.
+          </p>
+        ),
+      },
+      {
+        title: "FINDINGS",
+        body: (
+          <>
+            <p>
+              No acute fracture, dislocation, or joint effusion. Small enthesophyte at the lateral epicondyle at the
+              common extensor tendon origin. No loose body within the joint.
+            </p>
+            <p>
+              Radiocapitellar and ulnohumeral alignment is preserved. Joint spaces are maintained without erosive or
+              degenerative change. Soft tissues are unremarkable.
+            </p>
+          </>
+        ),
+      },
+    ],
+    callout: {
+      title: "IMPRESSION",
+      tone: "blue",
+      body: (
+        <ol className="mt-2 list-decimal space-y-1 pl-5 font-bold">
+          <li>No acute osseous abnormality of the right elbow.</li>
+          <li>Small lateral epicondylar enthesophyte, compatible with common extensor tendinopathy.</li>
+        </ol>
+      ),
+    },
+    signedBy: "Elena Park, MD",
+    signedRole: "Board Certified Diagnostic Radiology",
+    signedAt: "Finalized 08/25/2025 at 12:06 PM",
+  },
+
+  "Patient_Intake_Questionnaire_08252025.pdf": {
+    idLabel: "Form ID",
+    idValue: "INTAKE-2025-0825",
+    date: "08/25/2025",
+    title: "PATIENT INTAKE QUESTIONNAIRE",
+    subtitle: "New Patient Elbow Consultation",
+    brand: "Hale Orthopedics",
+    brandSub: "Upper Extremity",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["MRN", PATIENT.mrn],
+      ["Preferred Name", "Jordan"],
+    ],
+    infoRight: [
+      ["Visit Date", PRIOR_CASE.firstVisit],
+      ["Seen By", PROVIDER.short],
+      ["Insurance", PATIENT.insurance],
+      ["Referred By", "Bayview Family Medicine"],
+    ],
+    sections: [
+      {
+        title: "CHIEF CONCERN",
+        body: (
+          <p>
+            Right outer elbow pain for about six weeks. Started after a weekend of moving boxes and has not settled
+            with rest. Hurts most when gripping tools, carrying groceries, or lifting a coffee cup.
+          </p>
+        ),
+      },
+      {
+        title: "CURRENT SYMPTOMS",
+        items: [
+          "Pain: 5/10 with gripping, 2/10 at rest",
+          "Location: outer elbow, occasionally radiating into the forearm",
+          "Numbness or tingling: none",
+          "Aggravating factors: lifting with the palm down, shaking hands, using a screwdriver",
+        ],
+      },
+      {
+        title: "MEDICAL HISTORY",
+        items: [
+          "Allergies: Penicillin (severe), Latex (moderate), Shellfish (mild)",
+          "Medications: occasional ibuprofen from the store",
+          "Prior injuries or surgery: none",
+          "Hard of hearing — speak facing the patient",
+        ],
+      },
+    ],
+    signedBy: PATIENT.name,
+    signedRole: "Patient attestation",
+    signedAt: "Completed 08/25/2025 at 10:18 AM",
+  },
+
+  "Elbow_Home_Program_08252025.pdf": {
+    idLabel: "Handout ID",
+    idValue: "ELB-HOME-2025-0825",
+    date: "08/25/2025",
+    title: "ELBOW HOME PROGRAM",
+    subtitle: "Lateral Epicondylitis — Loading Program",
+    brand: "Hale Orthopedics",
+    brandSub: "Patient Handout",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Provider", PROVIDER.short],
+      ["Side", "Right elbow"],
+      ["Diagnosis", PRIOR_CASE.diagnosisShort],
+    ],
+    infoRight: [
+      ["Issued", "08/25/2025"],
+      ["Frequency", "Daily"],
+      ["Session Length", "10–15 minutes"],
+      ["Next Review", "09/22/2025"],
+    ],
+    sections: [
+      {
+        title: "LOADING EXERCISES",
+        items: [
+          "Eccentric wrist extension with a 2 lb weight — 3 x 15, lowering over 3 seconds",
+          "Forearm supination and pronation with a hammer — 3 x 15 each direction",
+          "Towel wring isometric hold — 3 x 30 sec",
+          "Grip squeeze with a soft ball — 3 x 20",
+        ],
+      },
+      {
+        title: "MOBILITY AND RECOVERY",
+        items: [
+          "Wrist flexor and extensor stretch — 3 x 30 sec, elbow straight",
+          "Ice massage over the outer elbow for 10 minutes after loading",
+          "Wear the counterforce brace during gripping and lifting tasks",
+        ],
+      },
+      {
+        title: "GUIDELINES",
+        body: (
+          <p>
+            Discomfort up to 4/10 during loading is expected and acceptable. Stop and call the clinic if pain lingers
+            above 5/10 the next morning. Avoid palm-down lifting and heavy tool use for the next four weeks. Expect
+            gradual improvement over six to twelve weeks.
+          </p>
+        ),
+      },
+    ],
+    signedBy: PROVIDER.display,
+    signedRole: "Home program prescribed",
+    signedAt: "Issued 08/25/2025",
+  },
+
+  "Procedure_Note_Elbow_Injection_09222025.pdf": {
+    idLabel: "Procedure Note ID",
+    idValue: "PROC-2025-0922-ELB",
+    date: "09/22/2025",
+    title: "PROCEDURE NOTE",
+    subtitle: "Right Lateral Elbow Corticosteroid Injection",
+    brand: "Hale Orthopedics",
+    brandSub: "Upper Extremity",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["MRN", PATIENT.mrn],
+      ["Performed By", ASSOCIATE_PROVIDER],
+    ],
+    infoRight: [
+      ["Procedure Date", "09/22/2025"],
+      ["Site", "Right lateral epicondyle"],
+      ["Consent", "Verbal, documented"],
+      ["Diagnosis", PRIOR_CASE.diagnosisShort],
+    ],
+    sections: [
+      {
+        title: "INDICATION",
+        body: (
+          <p>
+            Four weeks of continued right lateral elbow pain despite a counterforce brace, activity modification, a
+            daily eccentric loading program, and a completed naproxen course. Pain remains 5/10 with gripping and
+            limits work tasks.
+          </p>
+        ),
+      },
+      {
+        title: "PROCEDURE",
+        body: (
+          <>
+            <p>
+              The lateral epicondyle was identified by palpation at the point of maximal tenderness and marked. The
+              skin was prepared with chlorhexidine and anesthetized with 1% lidocaine without epinephrine.
+            </p>
+            <p>
+              Using a 25-gauge needle and a peppering technique at the common extensor origin, 1 mL of triamcinolone
+              acetonide 40 mg/mL was injected with 1 mL of 1% lidocaine. The patient tolerated the procedure well.
+              A bandage was applied. No immediate complications and no bleeding.
+            </p>
+          </>
+        ),
+      },
+      {
+        title: "POST-PROCEDURE INSTRUCTIONS",
+        items: [
+          "Relative rest from gripping and lifting for 72 hours",
+          "Expect a post-injection flare for 24 to 48 hours; ice as needed",
+          "Resume the eccentric loading program on day 4 and continue the brace",
+          "Return in six weeks, or sooner for fever, spreading redness, or worsening pain",
+        ],
+      },
+    ],
+    signedBy: ASSOCIATE_PROVIDER,
+    signedRole: "Physician Assistant — Upper Extremity",
+    signedAt: "Signed 09/22/2025 at 3:52 PM",
+  },
+
+  "QuickDASH_Outcome_11032025.pdf": {
+    idLabel: "Outcome ID",
+    idValue: "QDASH-2025-1103",
+    date: "11/03/2025",
+    title: "QUICKDASH OUTCOME MEASURE",
+    subtitle: "Post-Injection Follow Up — Right Elbow",
+    brand: "Hale Orthopedics",
+    brandSub: "Upper Extremity Outcomes",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["Involved Side", "Right"],
+      ["Administered By", PROVIDER.short],
+    ],
+    infoRight: [
+      ["Survey Date", "11/03/2025"],
+      ["Weeks Post-Injection", "6"],
+      ["Prior Score", "45.5 (08/25/2025)"],
+      ["Current Score", "9.1"],
+    ],
+    sections: [
+      {
+        title: "SUMMARY",
+        body: (
+          <p>
+            {PATIENT.name} completed the QuickDASH six weeks after the lateral elbow injection. The score improved from{" "}
+            <span className="font-bold">45.5</span> at the new patient visit to <span className="font-bold">9.1</span>,
+            a change well beyond the minimal clinically important difference.
+          </p>
+        ),
+      },
+      {
+        title: "SELECTED RESPONSES",
+        items: [
+          "Opening a tight jar: mild difficulty",
+          "Carrying a shopping bag or briefcase: no difficulty",
+          "Heavy household chores: mild difficulty",
+          "Pain at rest: none",
+          "Tingling or numbness: none",
+          "Work or hobby limitation: minimal",
+        ],
+      },
+      {
+        title: "CLINICIAN NOTES",
+        body: (
+          <p>
+            Reports roughly 80% improvement since the injection with no recurrence during work tasks. Continue the
+            eccentric loading program and taper brace use. Return as needed rather than on a fixed interval.
+          </p>
+        ),
+      },
+    ],
+    signedBy: PROVIDER.display,
+    signedRole: "Scored and reviewed",
+    signedAt: "Documented 11/03/2025 at 10:04 AM",
+  },
+
+  "Discharge_Summary_Elbow_12152025.pdf": {
+    idLabel: "Document ID",
+    idValue: "DISCH-2025-1215-ELB",
+    date: "12/15/2025",
+    title: "DISCHARGE SUMMARY",
+    subtitle: "Right Lateral Epicondylitis — Episode Closed",
+    brand: "Hale Orthopedics",
+    brandSub: "Upper Extremity",
+    brandInitials: "HO",
+    infoLeft: [
+      ["Patient Name", PATIENT.name],
+      ["Date of Birth", PATIENT.dob],
+      ["MRN", PATIENT.mrn],
+      ["Provider", ASSOCIATE_PROVIDER],
+    ],
+    infoRight: [
+      ["Discharge Date", PRIOR_CASE.dischargeDate],
+      ["Episode Start", PRIOR_CASE.firstVisit],
+      ["Visits", "4"],
+      ["Diagnosis", PRIOR_CASE.diagnosisShort],
+    ],
+    sections: [
+      {
+        title: "COURSE OF CARE",
+        body: (
+          <p>
+            {PATIENT.name} presented on {PRIOR_CASE.firstVisit} with six weeks of right lateral elbow pain and
+            examination findings consistent with common extensor tendinopathy. Radiographs showed only a small lateral
+            epicondylar enthesophyte. He was managed with a counterforce brace, activity modification, a daily
+            eccentric loading program, and a 14-day naproxen course.
+          </p>
+        ),
+      },
+      {
+        title: "INTERVENTIONS AND RESPONSE",
+        items: [
+          "08/25/2025 — Brace, home loading program, naproxen 500 mg twice daily for 14 days",
+          "09/22/2025 — Lateral epicondyle corticosteroid injection for persistent symptoms",
+          "11/03/2025 — QuickDASH improved from 45.5 to 9.1; roughly 80% symptom relief",
+          "12/15/2025 — Pain free with gripping and lifting; full strength and motion restored",
+        ],
+      },
+      {
+        title: "STATUS AT DISCHARGE",
+        items: [
+          "No tenderness at the lateral epicondyle, negative resisted wrist extension",
+          "Grip strength symmetric with the left side by dynamometry",
+          "Returned to unrestricted work and recreational activity",
+          "Continue the loading program twice weekly for maintenance",
+        ],
+      },
+    ],
+    callout: {
+      title: "DISPOSITION",
+      tone: "blue",
+      body: (
+        <p className="mt-2">
+          Episode of care closed as resolved. Released from scheduled follow-up with instructions to return as needed
+          if symptoms recur.
+        </p>
+      ),
+    },
+    signedBy: ASSOCIATE_PROVIDER,
+    signedRole: "Physician Assistant — Upper Extremity",
+    signedAt: "Signed 12/15/2025 at 4:38 PM",
+  },
+
   "XR_Right_Knee_Post_Op_06172026.pdf": {
     idLabel: "Imaging Report ID",
     idValue: "XR-2026-0617-2290",
@@ -858,7 +1479,7 @@ const DOCS: Record<string, AttachmentDoc> = {
         </p>
       ),
     },
-    signedBy: "Priya Raman, MD",
+    signedBy: "Elena Park, MD",
     signedRole: "Diagnostic Radiology",
     signedAt: "Signed 06/17/2026 02:11 PM",
   },
@@ -878,6 +1499,18 @@ export function timelineDocKey(item: { type: string; title: string; date: string
 function documentNumber(prefix: string, date: string) {
   const [month, day, year] = date.split("/");
   return `${prefix}-${year}-${month}${day}`;
+}
+
+// Requisitions and prescriptions span two episodes of care and, within the knee
+// case, both sides of the operation, so the indication has to follow the date.
+function clinicalIndication(caseName: string, date: string) {
+  if (caseName === PRIOR_CASE.name) {
+    return `${PRIOR_CASE.diagnosisShort}. Symptom onset ${PRIOR_CASE.onset} with lateral elbow pain on gripping and resisted wrist extension. Managed conservatively at Hale Orthopedics.`;
+  }
+  if (new Date(date) < new Date(CASE.surgeryDate)) {
+    return `Acute right knee injury sustained ${CASE.dateOfInjury} during a noncontact pivoting event. Evaluate and treat suspected internal derangement of the right knee.`;
+  }
+  return `${CASE.diagnosisShort}. Date of injury ${CASE.dateOfInjury}, right ACL reconstruction performed ${CASE.surgeryDate}. Ordered as part of the ongoing management of the right knee.`;
 }
 
 function orderRequisition(item: TimelineEntry, visit: TimelineVisit): AttachmentDoc {
@@ -916,12 +1549,7 @@ function orderRequisition(item: TimelineEntry, visit: TimelineVisit): Attachment
       },
       {
         title: "CLINICAL INDICATION",
-        body: (
-          <p>
-            {CASE.diagnosisShort}. Date of injury {CASE.dateOfInjury}, right ACL reconstruction performed{" "}
-            {CASE.surgeryDate}. Ordered as part of the ongoing management of the right knee.
-          </p>
-        ),
+        body: <p>{clinicalIndication(visit.caseName, item.date)}</p>,
       },
       {
         title: "INSTRUCTIONS TO PERFORMING SITE",
@@ -991,12 +1619,7 @@ function prescriptionPage(item: TimelineEntry, visit: TimelineVisit): Attachment
       },
       {
         title: "INDICATION",
-        body: (
-          <p>
-            {CASE.diagnosisShort}. Prescribed in connection with the right ACL reconstruction performed{" "}
-            {CASE.surgeryDate}.
-          </p>
-        ),
+        body: <p>{clinicalIndication(visit.caseName, item.date)}</p>,
       },
     ],
     callout: controlled
@@ -1026,7 +1649,7 @@ function prescriptionPage(item: TimelineEntry, visit: TimelineVisit): Attachment
   };
 }
 
-for (const visit of CHART_TIMELINE) {
+for (const visit of ENCOUNTERS) {
   for (const item of visit.items) {
     if (item.type === "order") {
       DOCS[timelineDocKey(item)] = orderRequisition(item, visit);
@@ -1045,8 +1668,13 @@ export function pastOrderDocKey(order: { title: string; created: string }) {
   return timelineDocKey({ type: "order", title: order.title, date: orderDate(order.created) });
 }
 
+// Past orders are derived from the same encounter items, so their keys already
+// resolve to the requisition generated above with the full encounter context.
 for (const order of PAST_ORDERS) {
-  DOCS[pastOrderDocKey(order)] = orderRequisition(
+  const key = pastOrderDocKey(order);
+  if (DOCS[key]) continue;
+
+  DOCS[key] = orderRequisition(
     { title: order.title, detail: order.recipient, date: orderDate(order.created) },
     { caseName: CASE.name, visitType: order.orderSet, provider: REFERRING_PROVIDER },
   );

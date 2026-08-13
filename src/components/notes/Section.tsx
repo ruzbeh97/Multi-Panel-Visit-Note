@@ -2,6 +2,7 @@ import { useState, type MouseEvent, type ReactNode } from "react";
 import Icon from "../Icon";
 import ImportContentModal from "../ImportContentModal";
 import { useNoteReadOnly } from "./readOnly";
+import { useNoteStore, usePastNoteSource, type ImportAction } from "./noteStore";
 
 export function headingId(title: string, readOnly = false) {
   const slug = title
@@ -30,12 +31,28 @@ export function SectionHeading({ title }: { title: string }) {
 
 export function SubHeading({ title }: { title: string }) {
   const readOnly = useNoteReadOnly();
+  const store = useNoteStore();
+  const activePastNoteId = usePastNoteSource();
   const [importAnchor, setImportAnchor] = useState<HTMLElement | null>(null);
 
   function toggleImport(event: MouseEvent<HTMLButtonElement>) {
     const button = event.currentTarget;
     setImportAnchor((current) => (current ? null : button));
   }
+
+  function handleImport(_noteId: string, action: ImportAction) {
+    store.importSection(title, action);
+  }
+
+  const modal = importAnchor ? (
+    <ImportContentModal
+      anchor={importAnchor}
+      sectionTitle={title}
+      defaultNoteId={readOnly ? activePastNoteId : null}
+      onImport={handleImport}
+      onClose={() => setImportAnchor(null)}
+    />
+  ) : null;
 
   if (readOnly) {
     return (
@@ -51,12 +68,17 @@ export function SubHeading({ title }: { title: string }) {
         <div className="flex shrink-0 items-center rounded-lg border border-[#e6e6e6] bg-white px-1 py-0.5 shadow-[0px_4px_5px_rgba(0,0,0,0.06)]">
           <button
             type="button"
-            className="flex items-start rounded-full p-1 hover:bg-black/5"
-            aria-label={`Copy ${title} into the current note`}
+            onClick={toggleImport}
+            aria-haspopup="dialog"
+            aria-expanded={importAnchor !== null}
+            className={`flex items-start rounded-full p-1 ${importAnchor ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
+            aria-label={`Carry ${title} forward into the current note`}
           >
             <Icon name="move_up" size={20} className="text-[#1132ee]" />
           </button>
         </div>
+
+        {modal}
       </div>
     );
   }
@@ -76,7 +98,12 @@ export function SubHeading({ title }: { title: string }) {
           importAnchor ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
-        <button type="button" className="flex w-[46px] flex-col items-start px-1.5">
+        <button
+          type="button"
+          onClick={() => store.clearSection(title)}
+          aria-label={`Clear ${title}`}
+          className="flex w-[46px] flex-col items-start px-1.5"
+        >
           <span className="font-body text-[14px] font-medium leading-[20px] text-[#1132ee]">Clear</span>
         </button>
         <div className="h-5 w-px bg-[#e6e6e6]" />
@@ -95,9 +122,7 @@ export function SubHeading({ title }: { title: string }) {
         </button>
       </div>
 
-      {importAnchor && (
-        <ImportContentModal anchor={importAnchor} sectionTitle={title} onClose={() => setImportAnchor(null)} />
-      )}
+      {modal}
     </div>
   );
 }

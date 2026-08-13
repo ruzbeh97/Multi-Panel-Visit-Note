@@ -2,7 +2,7 @@ import { useState } from "react";
 import Icon from "./Icon";
 import PdfViewer from "./pdf/PdfViewer";
 import { timelineDocKey } from "./pdf/AttachmentDocument";
-import { CHART_TIMELINE } from "../data/chart";
+import { ENCOUNTERS, type Encounter, type EncounterItem } from "../data/chart";
 
 const ROW_ICONS = {
   attachment: { icon: "attach_file", color: "text-[#1a1a1a]" },
@@ -10,18 +10,15 @@ const ROW_ICONS = {
   order: { icon: "science", color: "text-[#479e4c]" },
 } as const;
 
-type Visit = (typeof CHART_TIMELINE)[number];
-type TimelineItem = Visit["items"][number];
-
-function rowLabel(item: TimelineItem) {
+function rowLabel(item: EncounterItem) {
   return item.type === "attachment" ? item.file : item.title;
 }
 
-function documentFor(item: TimelineItem) {
+function documentFor(item: EncounterItem) {
   return item.type === "attachment" ? item.file : timelineDocKey(item);
 }
 
-function ItemRow({ item }: { item: TimelineItem }) {
+function ItemRow({ item }: { item: EncounterItem }) {
   const [open, setOpen] = useState(false);
   const meta = ROW_ICONS[item.type];
   const label = rowLabel(item);
@@ -49,7 +46,7 @@ function ItemRow({ item }: { item: TimelineItem }) {
   );
 }
 
-function TimelineItemBlock({ visit, collapsed }: { visit: Visit; collapsed: boolean }) {
+function TimelineItemBlock({ visit, collapsed }: { visit: Encounter; collapsed: boolean }) {
   return (
     <div className="flex w-full items-start gap-4">
       <div className="flex w-3 shrink-0 flex-col items-center gap-2 self-stretch pt-1.5">
@@ -63,10 +60,10 @@ function TimelineItemBlock({ visit, collapsed }: { visit: Visit; collapsed: bool
         <div className="flex w-full flex-col items-start">
           <div className="flex w-full items-start gap-2 font-body text-[16px] leading-[24px] text-[#1a1a1a]">
             <span className="shrink-0 whitespace-nowrap font-medium">{visit.caseName}</span>
-            <span className="min-w-0 truncate">{visit.visitType}</span>
+            <span className="min-w-0 truncate">{visit.title}</span>
           </div>
           <span className="w-full truncate font-body text-[14px] leading-[22px] text-[#666666]">
-            {visit.date} | {visit.time}
+            {visit.date} | {visit.time} · {visit.visitType}
           </span>
         </div>
 
@@ -106,7 +103,7 @@ export default function ChartTimelinePanel() {
         </div>
 
         <div className="flex w-full flex-col items-start gap-4">
-          {CHART_TIMELINE.map((visit) => (
+          {ENCOUNTERS.map((visit) => (
             <TimelineItemBlock key={visit.id} visit={visit} collapsed={collapsed} />
           ))}
         </div>

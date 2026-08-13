@@ -26,6 +26,7 @@ import SubjectiveSection from "./components/notes/SubjectiveSection";
 import ObjectiveSection from "./components/notes/ObjectiveSection";
 import AssessmentSection from "./components/notes/AssessmentSection";
 import PlanSection from "./components/notes/PlanSection";
+import { NoteStoreProvider } from "./components/notes/noteStore";
 
 const SIDE_PANELS = [
   PAST_NOTE_ICON,
@@ -70,6 +71,7 @@ function App() {
                 <PatientHeader />
 
                 <div className="flex min-h-0 w-full flex-1 flex-col items-start bg-[#f7f7f7]">
+                  <NoteStoreProvider>
                   <div className="flex min-h-0 w-full flex-1 items-start gap-0 bg-white">
                     <div className="relative flex min-h-0 min-w-0 flex-1 self-stretch">
                       <div
@@ -113,6 +115,7 @@ function App() {
                     )}
                     <PanelNavBar active={activePanel} onSelect={selectPanel} />
                   </div>
+                  </NoteStoreProvider>
                 </div>
               </div>
 

@@ -4,17 +4,54 @@ import Icon from "./Icon";
 import MedicationDetails from "./MedicationDetails";
 import {
   ALLERGIES,
+  CASE,
   DIAGNOSIS_ENCOUNTERS,
   DIAGNOSIS_CODES,
   DIAGNOSIS_HISTORY,
+  DIAGNOSIS_RECENT_WINDOW_DAYS,
   MEDICATIONS,
   type DiagnosisRecord,
+  type DiagnosisRelevance,
 } from "../data/chart";
 
 const SEVERITY_TONES: Record<string, Tone> = { Severe: "red", Moderate: "yellow", Mild: "grey" };
 
 const DIAGNOSIS_TABS = ["By Diagnosis", "By Visit"];
-const DIAGNOSIS_PREVIEW_COUNT = 5;
+
+// The left rail is the at-a-glance signal for how much a code matters today.
+const RELEVANCE_GROUPS: {
+  key: DiagnosisRelevance;
+  label: string;
+  hint: string;
+  rail: string;
+  labelColor: string;
+  collapsible: boolean;
+}[] = [
+  {
+    key: "current",
+    label: "On Today's Note",
+    hint: `Coded on this visit · ${CASE.visitDateLong}`,
+    rail: "bg-[#1132ee]",
+    labelColor: "text-[#1132ee]",
+    collapsible: false,
+  },
+  {
+    key: "recent",
+    label: "Recently Coded",
+    hint: `Within the last ${DIAGNOSIS_RECENT_WINDOW_DAYS} days`,
+    rail: "bg-[#9aa4b2]",
+    labelColor: "text-[#1a1a1a]",
+    collapsible: false,
+  },
+  {
+    key: "earlier",
+    label: "Earlier History",
+    hint: `Not coded in over ${DIAGNOSIS_RECENT_WINDOW_DAYS} days`,
+    rail: "bg-[#e0e0e0]",
+    labelColor: "text-[#666666]",
+    collapsible: true,
+  },
+];
 
 const MEDICATION_TABS = ["Prescribed", "Medication History", "Pending Approvals"];
 
@@ -33,15 +70,14 @@ function SectionHeader({ title, open, onToggle }: { title: string; open: boolean
   );
 }
 
-function ShowMore({ label = "Show More", onClick }: { label?: string; onClick?: () => void }) {
+function ShowMore() {
   return (
     <div className="flex w-full items-center justify-end py-2">
       <button
         type="button"
-        onClick={onClick}
         className="flex h-7 items-center rounded-md px-2 font-body text-[14px] font-medium leading-[22px] text-[#1132ee] hover:bg-[rgba(17,50,238,0.08)]"
       >
-        {label}
+        Show More
       </button>
     </div>
   );
@@ -71,13 +107,17 @@ function TabGroup({ tabs, active, onSelect }: { tabs: string[]; active: string; 
 const diagnosisRowId = (code: string) => `diagnosis-${code.replace(".", "-")}`;
 
 function CodeChip({ code, onSelect }: { code: string; onSelect: (code: string) => void }) {
+  const onCurrentNote = CASE.diagnosisCodes.includes(code);
+
   return (
     <button
       type="button"
       onClick={() => onSelect(code)}
       title={DIAGNOSIS_CODES[code]?.description}
       aria-label={`View ${code} history`}
-      className="flex shrink-0 items-center rounded-md bg-[#f2f2f2] px-2 py-[3px] font-body text-[12px] font-medium leading-[18px] text-[#0f0f0f] hover:bg-[rgba(17,50,238,0.08)] hover:text-[#1132ee]"
+      className={`flex shrink-0 items-center rounded-md px-2 py-[3px] font-body text-[12px] font-medium leading-[18px] hover:bg-[rgba(17,50,238,0.16)] ${
+        onCurrentNote ? "bg-[rgba(17,50,238,0.08)] text-[#1132ee]" : "bg-[#f2f2f2] text-[#0f0f0f] hover:text-[#1132ee]"
+      }`}
     >
       {code}
     </button>
@@ -94,56 +134,108 @@ function DiagnosisRow({
   onToggle: () => void;
 }) {
   const visitCount = record.encounters.length;
+  const rail = RELEVANCE_GROUPS.find((group) => group.key === record.relevance)?.rail ?? "bg-transparent";
+  const muted = record.relevance === "earlier";
 
   return (
-    <div id={diagnosisRowId(record.code)} className="flex w-full flex-col border-b border-[#e6e6e6] py-3">
-      <div className="flex w-full items-start gap-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="font-body text-[14px] font-medium leading-[22px] text-[#1a1a1a]">{record.code}</span>
-            {record.status === "Active" ? (
-              <Badge tone="green" label="Active" icon="check_circle" />
-            ) : (
-              <Badge tone="grey" label="Resolved" />
-            )}
-          </div>
-          <p className="font-body text-[14px] leading-[22px] text-[#1a1a1a]">{record.description}</p>
-          <span className="font-body text-[13px] leading-[18px] text-[#666666]">
-            First noted {record.firstNoted} · Last addressed {record.lastAddressed}
-          </span>
-        </div>
+    <div id={diagnosisRowId(record.code)} className="flex w-full items-stretch gap-3 border-b border-[#e6e6e6]">
+      <span aria-hidden className={`w-[2px] shrink-0 rounded-full ${rail}`} />
 
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          aria-label={`${open ? "Hide" : "Show"} the ${visitCount} visit${
-            visitCount === 1 ? "" : "s"
-          } that addressed ${record.code}`}
-          className={`flex shrink-0 items-center gap-0.5 rounded-md py-0.5 pl-2 pr-1 font-body text-[13px] font-medium leading-[18px] hover:bg-[rgba(17,50,238,0.08)] ${
-            open ? "bg-[rgba(17,50,238,0.08)] text-[#1132ee]" : "text-[#666666]"
-          }`}
-        >
-          {visitCount} {visitCount === 1 ? "visit" : "visits"}
-          <Icon name={open ? "expand_less" : "expand_more"} size={18} />
-        </button>
-      </div>
-
-      {open && (
-        <div className="mt-2 flex w-full flex-col gap-1 border-l-2 border-[#e6e6e6] pl-3">
-          {record.encounters.map((visit) => (
-            <div key={`${visit.date}-${visit.type}`} className="flex w-full items-baseline gap-2">
-              <span className="w-[86px] shrink-0 font-body text-[13px] leading-[20px] text-[#666666]">
-                {visit.date}
+      <div className="flex min-w-0 flex-1 flex-col py-3">
+        <div className="flex w-full items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span
+                className={`font-body text-[14px] font-medium leading-[22px] ${muted ? "text-[#454545]" : "text-[#1a1a1a]"}`}
+              >
+                {record.code}
               </span>
-              <span className="min-w-0 flex-1 font-body text-[13px] leading-[20px] text-[#1a1a1a]">
-                {visit.type} · {visit.provider}
+              <span className="shrink-0 font-body text-[13px] leading-[18px] text-[#666666]">
+                {record.recencyLabel}
               </span>
             </div>
-          ))}
+            <p className={`font-body text-[14px] leading-[22px] ${muted ? "text-[#454545]" : "text-[#1a1a1a]"}`}>
+              {record.description}
+            </p>
+            <span className="font-body text-[13px] leading-[18px] text-[#666666]">
+              First noted {record.firstNoted} · Last coded {record.lastAddressed}
+              {record.caseName !== CASE.name && ` · ${record.caseName}`}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            aria-label={`${open ? "Hide" : "Show"} the ${visitCount} visit${
+              visitCount === 1 ? "" : "s"
+            } that addressed ${record.code}`}
+            className={`flex shrink-0 items-center gap-0.5 rounded-md py-0.5 pl-2 pr-1 font-body text-[13px] font-medium leading-[18px] hover:bg-[rgba(17,50,238,0.08)] ${
+              open ? "bg-[rgba(17,50,238,0.08)] text-[#1132ee]" : "text-[#666666]"
+            }`}
+          >
+            {visitCount} {visitCount === 1 ? "visit" : "visits"}
+            <Icon name={open ? "expand_less" : "expand_more"} size={18} />
+          </button>
         </div>
-      )}
+
+        {open && (
+          <div className="mt-2 flex w-full flex-col gap-1 border-l-2 border-[#e6e6e6] pl-3">
+            {record.encounters.map((visit) => (
+              <div key={`${visit.date}-${visit.type}`} className="flex w-full items-baseline gap-2">
+                <span className="w-[86px] shrink-0 font-body text-[13px] leading-[20px] text-[#666666]">
+                  {visit.date}
+                </span>
+                <span className="min-w-0 flex-1 font-body text-[13px] leading-[20px] text-[#1a1a1a]">
+                  {visit.type} · {visit.provider}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+function RelevanceHeader({
+  label,
+  hint,
+  count,
+  rail,
+  labelColor,
+  open,
+  onToggle,
+}: {
+  label: string;
+  hint: string;
+  count: number;
+  rail: string;
+  labelColor: string;
+  open?: boolean;
+  onToggle?: () => void;
+}) {
+  const content = (
+    <>
+      <span aria-hidden className={`h-[14px] w-[2px] shrink-0 rounded-full ${rail}`} />
+      <span className={`font-body text-[13px] font-medium leading-[18px] ${labelColor}`}>
+        {label} ({count})
+      </span>
+      <span className="min-w-0 flex-1 truncate text-left font-body text-[13px] leading-[18px] text-[#666666]">
+        {hint}
+      </span>
+      {onToggle && <Icon name={open ? "expand_less" : "expand_more"} size={18} className="text-[#666666]" />}
+    </>
+  );
+
+  if (!onToggle) {
+    return <div className="flex w-full items-center gap-2 pb-1 pt-4">{content}</div>;
+  }
+
+  return (
+    <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-2 pb-1 pt-4">
+      {content}
+    </button>
   );
 }
 
@@ -172,36 +264,67 @@ function DiagnosisByVisit({ onSelectCode }: { onSelectCode: (code: string) => vo
 
 function PastDiagnosisSection() {
   const [tab, setTab] = useState(DIAGNOSIS_TABS[0]);
-  const [expanded, setExpanded] = useState(false);
+  const [showEarlier, setShowEarlier] = useState(false);
+  const [openCodes, setOpenCodes] = useState<string[]>([]);
 
-  const activeCount = DIAGNOSIS_HISTORY.filter((record) => record.status === "Active").length;
-  const visible = expanded ? DIAGNOSIS_HISTORY : DIAGNOSIS_HISTORY.slice(0, DIAGNOSIS_PREVIEW_COUNT);
-  const hidden = DIAGNOSIS_HISTORY.length - visible.length;
+  const currentCount = DIAGNOSIS_HISTORY.filter((record) => record.relevance === "current").length;
+
+  function toggleCode(code: string) {
+    setOpenCodes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
+  }
+
+  // Chips in the visit view are shortcuts into that code's full history.
+  function focusCode(code: string) {
+    setTab(DIAGNOSIS_TABS[0]);
+    setShowEarlier(true);
+    setOpenCodes([code]);
+    requestAnimationFrame(() => {
+      document.getElementById(diagnosisRowId(code))?.scrollIntoView({ block: "nearest" });
+    });
+  }
 
   return (
     <div className="flex w-full flex-col items-start gap-2">
       <div className="flex w-full flex-wrap items-center justify-between gap-2">
         <TabGroup tabs={DIAGNOSIS_TABS} active={tab} onSelect={setTab} />
         <span className="shrink-0 font-body text-[13px] leading-[18px] text-[#666666]">
-          {DIAGNOSIS_HISTORY.length} codes · {activeCount} active
+          {DIAGNOSIS_HISTORY.length} codes · {currentCount} on this visit
         </span>
       </div>
 
       {tab === "By Diagnosis" ? (
         <div className="flex w-full flex-col items-start">
-          {visible.map((record) => (
-            <DiagnosisRow key={record.code} record={record} />
-          ))}
-          {hidden > 0 ? (
-            <ShowMore label={`Show ${hidden} More`} onClick={() => setExpanded(true)} />
-          ) : (
-            DIAGNOSIS_HISTORY.length > DIAGNOSIS_PREVIEW_COUNT && (
-              <ShowMore label="Show Less" onClick={() => setExpanded(false)} />
-            )
-          )}
+          {RELEVANCE_GROUPS.map((group) => {
+            const records = DIAGNOSIS_HISTORY.filter((record) => record.relevance === group.key);
+            if (records.length === 0) return null;
+            const collapsed = group.collapsible && !showEarlier;
+
+            return (
+              <div key={group.key} className="flex w-full flex-col">
+                <RelevanceHeader
+                  label={group.label}
+                  hint={group.hint}
+                  count={records.length}
+                  rail={group.rail}
+                  labelColor={group.labelColor}
+                  open={group.collapsible ? !collapsed : undefined}
+                  onToggle={group.collapsible ? () => setShowEarlier((current) => !current) : undefined}
+                />
+                {!collapsed &&
+                  records.map((record) => (
+                    <DiagnosisRow
+                      key={record.code}
+                      record={record}
+                      open={openCodes.includes(record.code)}
+                      onToggle={() => toggleCode(record.code)}
+                    />
+                  ))}
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <DiagnosisByVisit />
+        <DiagnosisByVisit onSelectCode={focusCode} />
       )}
     </div>
   );

@@ -1,21 +1,14 @@
-import { useState } from "react";
 import { useNoteReadOnly } from "../readOnly";
 
 type MuscleTableProps = {
   rows: string[];
-  initialLeft: string[];
-  initialRight: string[];
+  left: string[];
+  right: string[];
+  onChange: (side: "left" | "right", index: number, value: string) => void;
 };
 
-export default function MuscleTable({ rows, initialLeft, initialRight }: MuscleTableProps) {
+export default function MuscleTable({ rows, left, right, onChange }: MuscleTableProps) {
   const readOnly = useNoteReadOnly();
-  const [left, setLeft] = useState(initialLeft);
-  const [right, setRight] = useState(initialRight);
-
-  function update(side: "left" | "right", index: number, value: string) {
-    const setter = side === "left" ? setLeft : setRight;
-    setter((prev) => prev.map((v, i) => (i === index ? value : v)));
-  }
 
   return (
     <div className="flex w-full items-start gap-4">
@@ -43,7 +36,7 @@ export default function MuscleTable({ rows, initialLeft, initialRight }: MuscleT
                 <div key={row} className="flex h-8 w-full shrink-0 items-center border-b border-[#e6e6e6] py-0.5 pl-3 pr-[18px]">
                   <input
                     value={side === "left" ? left[i] : right[i]}
-                    onChange={(e) => update(side, i, e.target.value)}
+                    onChange={(e) => onChange(side, i, e.target.value)}
                     placeholder="add"
                     readOnly={readOnly}
                     className={`h-7 w-full min-w-[40px] rounded-lg px-1.5 font-body text-[14px] leading-[24px] outline-none placeholder:text-[#808080] ${

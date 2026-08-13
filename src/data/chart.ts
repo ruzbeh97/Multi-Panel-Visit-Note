@@ -30,27 +30,26 @@ export const CASE = {
   dateOfInjury: "04/18/2026",
   surgeryDate: "05/06/2026",
   surgery: "Right ACL reconstruction with semitendinosus autograft and partial medial meniscectomy",
-  initialEval: "05/20/2026",
+  initialEval: "04/18/2026",
   visitDate: "08/10/26 - 11:50am",
   visitDateLong: "08/10/2026",
   previousVisitDate: "07/27/2026",
-  nextFollowUp: "09/14/2026",
+  nextFollowUp: "09/21/2026",
   pendingVisits: "2",
-  visitNumber: "6",
+  visitNumber: "8",
   diagnosisCode: "S83.511D",
   diagnosisShort: "S83.511D - Sprain of ACL, right knee",
+  diagnosisCodes: ["S83.511D", "M25.661", "M62.561"],
 };
 
-// Prior signed visit notes available in the past-note panel picker. Ordered
-// newest-first so the most recent visit is selected by default.
-export const PAST_NOTES = [
-  { id: "visit-17", caseName: "ACL Tear", provider: PROVIDER.short, date: "07/27/2026" },
-  { id: "visit-16", caseName: "ACL Tear", provider: PROVIDER.short, date: "07/13/2026" },
-  { id: "visit-15", caseName: "ACL Tear", provider: ASSOCIATE_PROVIDER, date: "06/29/2026" },
-  { id: "visit-12", caseName: "ACL Tear", provider: PROVIDER.short, date: "06/08/2026" },
-  { id: "visit-08", caseName: "ACL Tear", provider: PROVIDER.short, date: "05/20/2026" },
-  { id: "eval-ankle", caseName: "Left Ankle Sprain", provider: PROVIDER.short, date: "11/02/2025" },
-];
+// The patient's earlier episode of care, closed out before the knee injury.
+export const PRIOR_CASE = {
+  name: "Right Elbow Pain",
+  onset: "07/14/2025",
+  firstVisit: "08/25/2025",
+  dischargeDate: "12/15/2025",
+  diagnosisShort: "M77.11 - Lateral epicondylitis, right elbow",
+};
 
 const HIP_MOVEMENTS = ["Hip Flexion", "Hip Extension", "Hip Abduction", "Hip Adduction", "Hip IR", "Hip ER"];
 const KNEE_MOVEMENTS = ["Knee Flexion", "Knee Extension"];
@@ -80,7 +79,8 @@ export const TREATMENT_OPTIONS = [
 ];
 
 export const PLAN_FORWARD_OPTIONS = [
-  "Follow Up in 4 Weeks",
+  "Follow Up in 2 Weeks",
+  "Follow Up in 6 Weeks",
   "Clear for Jogging Progression",
   "Return-to-Sport Testing at Week 20",
   "Repeat MRI if Symptoms Persist",
@@ -95,38 +95,43 @@ const SURGICAL_HISTORY = {
   sideOfIssue: "Right",
 };
 
+const blank = (rows: string[]) => rows.map(() => "");
+
+// Today's note opens blank and is documented during the visit. The only values
+// present are chart context the clinician cannot type: the onset date, which the
+// form renders disabled, and the plan-of-care goals carried forward from the
+// last visit awaiting today's progress score.
 export const CURRENT_VISIT = {
   subjective: {
-    ...SURGICAL_HISTORY,
-    chiefComplaint:
-      "Right knee pain and stiffness 14 weeks after ACL reconstruction. Reports a 3/10 ache along the medial joint line after walking more than 30 minutes and tightness with stairs. Denies giving way, locking, or new swelling, and wants to return to recreational soccer this fall.",
-    historyOfCondition:
-      "Non-contact pivoting injury during a recreational soccer match on 04/18/2026 with immediate swelling and inability to bear weight. MRI on 04/22/2026 showed a complete ACL tear with a posterior horn medial meniscus tear. Reconstruction was performed 05/06/2026 at Hale Orthopedics. He has progressed through range of motion and closed-chain strengthening without complication and was cleared for straight-line jogging at week 12.",
+    previousSurgery: "",
+    surgeryName: "",
+    surgeryDate: "",
+    dateOfOnset: "",
+    stateOfCondition: "",
+    sideOfIssue: "",
+    chiefComplaint: "",
+    historyOfCondition: "",
   },
   objective: {
-    currentPain: "3",
-    worstPain: "6",
-    bestPain: "1",
-    painDescription:
-      "Intermittent aching along the medial joint line and at the hamstring graft site, 3/10 at rest and up to 6/10 after stairs or 30 or more minutes of walking. Relieved by rest, ice, and elevation. No night pain and no catching or locking.",
-    hip: { rows: HIP_MOVEMENTS, left: ["5/5", "5/5", "5/5", "5/5", "5/5", "5/5"], right: ["4+/5", "4/5", "4/5", "4+/5", "4+/5", "4/5"] },
-    knee: { rows: KNEE_MOVEMENTS, left: ["5/5", "5/5"], right: ["4+/5", "4/5"] },
+    currentPain: "",
+    worstPain: "",
+    bestPain: "",
+    painDescription: "",
+    hip: { rows: HIP_MOVEMENTS, left: blank(HIP_MOVEMENTS), right: blank(HIP_MOVEMENTS) },
+    knee: { rows: KNEE_MOVEMENTS, left: blank(KNEE_MOVEMENTS), right: blank(KNEE_MOVEMENTS) },
   },
   assessment: {
-    primaryDiagnosis:
-      "S83.511D - Sprain of anterior cruciate ligament of right knee, subsequent encounter. Status post ACL reconstruction 05/06/2026 with residual quadriceps weakness (M62.561) and stiffness of the right knee (M25.661).",
+    primaryDiagnosis: "",
     dateOfOnset: CASE.dateOfInjury,
-    rehabPotential:
-      "Good to excellent. He is 28 years old with no comorbidities, is compliant with his home strengthening program, and is progressing on schedule for a hamstring autograft. Limiting factors are a 22% quadriceps strength deficit on the involved side and apprehension with deceleration and cutting.",
-    keyFindings:
-      "Right knee AROM 3-132 degrees versus 0-140 degrees on the left. Quadriceps index 78% by handheld dynamometry and single-leg hop symmetry 81%. Trace effusion, negative Lachman and pivot shift, non-tender graft site.",
+    rehabPotential: "",
+    keyFindings: "",
     goals: [
       {
         title: "Restore right knee active extension to 0 degrees to normalize gait",
         description: "0 degrees extension",
         initialValue: "12 degree extension lag",
         previousVisit: "75%",
-        initialProgress: "90%",
+        initialProgress: "",
         goalTarget: "09/07/2026",
       },
       {
@@ -134,7 +139,7 @@ export const CURRENT_VISIT = {
         description: "Quad index >90%",
         initialValue: "42% quad index",
         previousVisit: "50%",
-        initialProgress: "75%",
+        initialProgress: "",
         goalTarget: "10/05/2026",
       },
       {
@@ -142,24 +147,18 @@ export const CURRENT_VISIT = {
         description: "2 miles pain free",
         initialValue: "Unable to jog",
         previousVisit: "25%",
-        initialProgress: "50%",
+        initialProgress: "",
         goalTarget: "10/19/2026",
       },
     ],
   },
   plan: {
-    patientGoal:
-      "Return to recreational 7v7 soccer without a brace by December and be able to run three miles pain free.",
-    educationTopics: ["Graft Healing Timeline", "Return-to-Sport Criteria"],
-    goals: ["Full Knee Extension", "Restore Quad Strength >90%", "Return to Running"],
-    treatments: [
-      "Clinical Examination",
-      "Imaging Review",
-      "Medication Management",
-      "Activity Progression Counseling",
-    ],
-    planForward: ["Follow Up in 4 Weeks", "Clear for Jogging Progression"],
-    careAgreement: "Yes",
+    patientGoal: "",
+    educationTopics: [] as string[],
+    goals: [] as string[],
+    treatments: [] as string[],
+    planForward: [] as string[],
+    careAgreement: "",
   },
 };
 
@@ -169,7 +168,7 @@ export const PREVIOUS_VISIT = {
     chiefComplaint:
       "Right knee soreness and stiffness 12 weeks after ACL reconstruction. Reports 4/10 pain with stairs and after 15 minutes of walking, along with tightness behind the knee each morning. Asking when he can begin jogging.",
     historyOfCondition:
-      "Non-contact pivoting injury during a recreational soccer match on 04/18/2026 with immediate swelling and inability to bear weight. MRI on 04/22/2026 showed a complete ACL tear with a posterior horn medial meniscus tear. Reconstruction was performed 05/06/2026 at Hale Orthopedics. He weaned off crutches at week 4 and tolerated bilateral leg press and stationary cycling by week 8.",
+      "Non-contact pivoting injury during a recreational soccer match on 04/18/2026 with immediate swelling and inability to bear weight. MRI on 04/22/2026 showed a complete ACL tear with a posterior horn medial meniscus tear. Reconstruction was performed 05/06/2026 at Hale Orthopedics. The brace was unlocked to 0-90 degrees at two weeks, he weaned off crutches at week 4, and he tolerated bilateral leg press and stationary cycling by week 8.",
   },
   objective: {
     currentPain: "4",
@@ -220,124 +219,740 @@ export const PREVIOUS_VISIT = {
     educationTopics: ["Graft Healing Timeline"],
     goals: ["Full Knee Extension", "Restore Quad Strength >90%"],
     treatments: ["Clinical Examination", "Medication Management", "Activity Progression Counseling"],
-    planForward: ["Follow Up in 4 Weeks"],
+    planForward: ["Follow Up in 2 Weeks"],
     careAgreement: "Yes",
   },
 };
 
 // Diagnoses are stored once per ICD-10 code and referenced by each encounter
-// that addressed them, so the same code is never described twice.
-export const DIAGNOSIS_CODES: Record<
-  string,
-  { description: string; status: "Active" | "Resolved"; caseName: string }
-> = {
+// that addressed them, so the same code is never described twice. There is no
+// clinician-maintained active/resolved flag; relevance is derived below from
+// coding history alone.
+export const DIAGNOSIS_CODES: Record<string, { description: string; caseName: string }> = {
   "S83.511D": {
     description: "Sprain of anterior cruciate ligament of right knee, subsequent encounter",
-    status: "Active",
     caseName: CASE.name,
   },
   "M25.661": {
     description: "Stiffness of right knee, not elsewhere classified",
-    status: "Active",
     caseName: CASE.name,
   },
   "M62.561": {
     description: "Muscle wasting and atrophy of right lower leg",
-    status: "Active",
     caseName: CASE.name,
   },
   "Z47.89": {
     description: "Encounter for other orthopedic aftercare",
-    status: "Active",
     caseName: CASE.name,
   },
   "G89.18": {
     description: "Other acute postprocedural pain",
-    status: "Resolved",
     caseName: CASE.name,
   },
   "S83.511A": {
     description: "Sprain of anterior cruciate ligament of right knee, initial encounter",
-    status: "Resolved",
     caseName: CASE.name,
   },
   "S83.241A": {
     description: "Other tear of medial meniscus, current injury, right knee, initial encounter",
-    status: "Resolved",
+    caseName: CASE.name,
+  },
+  "Z01.818": {
+    description: "Encounter for other preprocedural examination",
     caseName: CASE.name,
   },
   "M25.561": {
     description: "Pain in right knee",
-    status: "Resolved",
     caseName: CASE.name,
   },
   "M25.461": {
     description: "Effusion, right knee",
-    status: "Resolved",
     caseName: CASE.name,
   },
-  "S93.402A": {
-    description: "Sprain of unspecified ligament of left ankle, initial encounter",
-    status: "Resolved",
-    caseName: "Left Ankle Sprain",
+  "M77.11": {
+    description: "Lateral epicondylitis, right elbow",
+    caseName: PRIOR_CASE.name,
+  },
+  "M25.521": {
+    description: "Pain in right elbow",
+    caseName: PRIOR_CASE.name,
   },
 };
 
-// Prior encounters, newest first. Each lists every code addressed that day.
-export const DIAGNOSIS_ENCOUNTERS = [
+function chartDateValue(date: string) {
+  const [month, day, year] = date.split("/").map(Number);
+  return new Date(year, month - 1, day).getTime();
+}
+
+const ACL_TAG = `${CASE.name} - DOI ${CASE.dateOfInjury}`;
+const ELBOW_TAG = `${PRIOR_CASE.name} - Onset ${PRIOR_CASE.onset}`;
+
+type OrderItem = {
+  type: "order";
+  title: string;
+  detail: string;
+  date: string;
+  time: string;
+  icon: string;
+  tone: "blue" | "orange";
+  orderSet: string;
+};
+
+type MedicationItem = {
+  type: "medication";
+  title: string;
+  detail: string;
+  date: string;
+};
+
+type AttachmentItem = {
+  type: "attachment";
+  title: string;
+  file: string;
+  date: string;
+  source: "Imaging" | "Fax" | "Patient" | "Other";
+  tag: string;
+  caseTag: string;
+};
+
+export type EncounterItem = OrderItem | MedicationItem | AttachmentItem;
+
+export type Encounter = {
+  id: string;
+  date: string;
+  time: string;
+  caseName: string;
+  visitType: string;
+  title: string;
+  provider: string;
+  codes: string[];
+  items: EncounterItem[];
+};
+
+// The single source of truth for this patient's history. Every panel that shows
+// past activity — the care timeline, past diagnoses, past orders, attachments,
+// and the past-note picker — is derived from this list, so the story cannot
+// drift between them. Newest encounter first.
+export const ENCOUNTERS: Encounter[] = [
   {
-    type: "Post-Op Follow Up",
+    id: "acl-followup-14wk",
+    date: "08/10/2026",
+    time: "11:50am",
+    caseName: CASE.name,
+    visitType: "Established Patient",
+    title: "14-Week Post-Op Follow Up",
     provider: PROVIDER.short,
+    codes: CASE.diagnosisCodes,
+    items: [
+      {
+        type: "order",
+        title: "Functional return-to-sport testing",
+        detail: "Hale Orthopedics Sports Medicine",
+        date: "08/10/2026",
+        time: "11:55 AM",
+        icon: "assignment",
+        tone: "blue",
+        orderSet: "Sports Medicine Follow-Up",
+      },
+      {
+        type: "attachment",
+        title: "Office note",
+        file: "Ortho_Followup_14wk_08102026.pdf",
+        date: "08/10/2026",
+        source: "Fax",
+        tag: "Office Note",
+        caseTag: ACL_TAG,
+      },
+      {
+        type: "attachment",
+        title: "Visit plan",
+        file: "Plan_of_Care_08102026.pdf",
+        date: "08/10/2026",
+        source: "Other",
+        tag: "Visit Plan",
+        caseTag: ACL_TAG,
+      },
+    ],
+  },
+  {
+    id: "acl-followup-12wk",
     date: "07/27/2026",
-    codes: ["S83.511D", "M25.661", "M62.561"],
-  },
-  {
-    type: "Post-Op Follow Up",
-    provider: ASSOCIATE_PROVIDER,
-    date: "06/29/2026",
-    codes: ["S83.511D", "M25.661", "M62.561"],
-  },
-  {
-    type: "Post-Op Follow Up",
+    time: "10:15am",
+    caseName: CASE.name,
+    visitType: "Post Operation",
+    title: "12-Week Post-Op Follow Up",
     provider: PROVIDER.short,
+    codes: ["S83.511D", "M25.661", "M62.561"],
+    items: [
+      { type: "medication", title: "Meloxicam 15mg tablet", detail: "30 tablets · 1 refill", date: "07/27/2026" },
+      {
+        type: "medication",
+        title: "Acetaminophen 500mg tablet",
+        detail: "60 tablets · No refills",
+        date: "07/27/2026",
+      },
+      {
+        type: "order",
+        title: "Discontinue hinged knee brace and return DME",
+        detail: "Northside DME Supply",
+        date: "07/27/2026",
+        time: "10:40 AM",
+        icon: "personal_injury",
+        tone: "orange",
+        orderSet: "Post-Op DME",
+      },
+      {
+        type: "attachment",
+        title: "IKDC outcome survey",
+        file: "IKDC_Outcome_Survey_07272026.pdf",
+        date: "07/27/2026",
+        source: "Patient",
+        tag: "Outcome Measure",
+        caseTag: ACL_TAG,
+      },
+      {
+        type: "attachment",
+        title: "Activity progression handout",
+        file: "Activity_Progression_Handout_07272026.pdf",
+        date: "07/27/2026",
+        source: "Other",
+        tag: "Handout",
+        caseTag: ACL_TAG,
+      },
+    ],
+  },
+  {
+    id: "acl-followup-6wk",
     date: "06/17/2026",
+    time: "11:00am",
+    caseName: CASE.name,
+    visitType: "Post Operation",
+    title: "6-Week Post-Op Follow Up",
+    provider: PROVIDER.short,
     codes: ["S83.511D", "M25.661", "Z47.89"],
+    items: [
+      {
+        type: "order",
+        title: "Radiologic examination, knee; 2 views, post-operative",
+        detail: "Riverside Imaging Center",
+        date: "06/17/2026",
+        time: "11:20 AM",
+        icon: "radiology",
+        tone: "blue",
+        orderSet: "Post-Op Surveillance",
+      },
+      {
+        type: "attachment",
+        title: "Post-op knee radiograph report",
+        file: "XR_Right_Knee_Post_Op_06172026.pdf",
+        date: "06/17/2026",
+        source: "Imaging",
+        tag: "X-Ray",
+        caseTag: ACL_TAG,
+      },
+      {
+        type: "attachment",
+        title: "IKDC outcome survey",
+        file: "IKDC_Outcome_Survey_06172026.pdf",
+        date: "06/17/2026",
+        source: "Patient",
+        tag: "Outcome Measure",
+        caseTag: ACL_TAG,
+      },
+    ],
   },
   {
-    type: "First Post-Op Visit",
-    provider: PROVIDER.short,
+    id: "acl-followup-2wk",
     date: "05/20/2026",
-    codes: ["S83.511D", "Z47.89", "G89.18"],
+    time: "9:30am",
+    caseName: CASE.name,
+    visitType: "Post Operation",
+    title: "2-Week Post-Op Follow Up",
+    provider: PROVIDER.short,
+    codes: ["Z47.89", "S83.511D"],
+    items: [
+      {
+        type: "order",
+        title: "Suture removal",
+        detail: "Hale Orthopedics",
+        date: "05/20/2026",
+        time: "9:45 AM",
+        icon: "healing",
+        tone: "orange",
+        orderSet: "Post-Op Care",
+      },
+      {
+        type: "order",
+        title: "Unlock hinged knee brace to 0-90 degrees",
+        detail: "Northside DME Supply",
+        date: "05/20/2026",
+        time: "9:50 AM",
+        icon: "personal_injury",
+        tone: "orange",
+        orderSet: "Post-Op DME",
+      },
+      {
+        type: "attachment",
+        title: "Work status note",
+        file: "Work_Status_Note_05202026.pdf",
+        date: "05/20/2026",
+        source: "Fax",
+        tag: "Work Note",
+        caseTag: ACL_TAG,
+      },
+    ],
   },
   {
-    type: "Post-Operative Visit",
-    provider: PROVIDER.short,
+    id: "acl-wound-check",
     date: "05/13/2026",
-    codes: ["S83.511D", "Z47.89"],
+    time: "8:45am",
+    caseName: CASE.name,
+    visitType: "Post Operation",
+    title: "1-Week Post-Op Wound Check",
+    provider: ASSOCIATE_PROVIDER,
+    codes: ["Z47.89", "G89.18"],
+    items: [
+      {
+        type: "order",
+        title: "Continuous passive motion unit rental",
+        detail: "Northside DME Supply",
+        date: "05/13/2026",
+        time: "9:05 AM",
+        icon: "personal_injury",
+        tone: "orange",
+        orderSet: "Post-Op DME",
+      },
+      {
+        type: "attachment",
+        title: "Activity restrictions",
+        file: "Activity_Restrictions_05132026.pdf",
+        date: "05/13/2026",
+        source: "Fax",
+        tag: "Instructions",
+        caseTag: ACL_TAG,
+      },
+      {
+        type: "attachment",
+        title: "DME authorization",
+        file: "DME_Authorization_Knee_Brace_05182026.pdf",
+        date: "05/18/2026",
+        source: "Other",
+        tag: "Prior Auth",
+        caseTag: "Priority Health - Knee brace",
+      },
+    ],
   },
   {
-    type: "Surgical Consult",
+    id: "acl-reconstruction",
+    date: "05/06/2026",
+    time: "7:30am",
+    caseName: CASE.name,
+    visitType: "Surgery",
+    title: "Right ACL Reconstruction",
     provider: PROVIDER.short,
+    codes: ["S83.511A", "S83.241A"],
+    items: [
+      {
+        type: "medication",
+        title: "Oxycodone-Acetaminophen 5-325mg",
+        detail: "20 tablets · No refills",
+        date: "05/06/2026",
+      },
+      { type: "medication", title: "Aspirin 81mg tablet", detail: "56 tablets · No refills", date: "05/06/2026" },
+      {
+        type: "attachment",
+        title: "Operative report",
+        file: "Operative_Report_ACLR_05062026.pdf",
+        date: "05/07/2026",
+        source: "Fax",
+        tag: "Operative Report",
+        caseTag: ACL_TAG,
+      },
+      {
+        type: "attachment",
+        title: "Post-op protocol",
+        file: "Post_Op_Protocol_Weeks_0_12.pdf",
+        date: "05/07/2026",
+        source: "Fax",
+        tag: "Protocol",
+        caseTag: ACL_TAG,
+      },
+    ],
+  },
+  {
+    id: "acl-pre-op",
+    date: "05/04/2026",
+    time: "8:30am",
+    caseName: CASE.name,
+    visitType: "Pre-Operative",
+    title: "Pre-Operative Visit",
+    provider: ASSOCIATE_PROVIDER,
+    codes: ["Z01.818", "S83.511A"],
+    items: [
+      {
+        type: "order",
+        title: "Pre-operative laboratory panel",
+        detail: "Athelas Core Lab",
+        date: "05/04/2026",
+        time: "8:50 AM",
+        icon: "science",
+        tone: "blue",
+        orderSet: "Pre-Op Clearance",
+      },
+      {
+        type: "order",
+        title: "Knee orthosis, elastic with joints, prefabricated",
+        detail: "Northside DME Supply",
+        date: "05/04/2026",
+        time: "9:05 AM",
+        icon: "personal_injury",
+        tone: "orange",
+        orderSet: "Post-Op DME",
+      },
+      {
+        type: "attachment",
+        title: "Pre-operative history and physical",
+        file: "PreOp_HP_05042026.pdf",
+        date: "05/04/2026",
+        source: "Fax",
+        tag: "Pre-Op H&P",
+        caseTag: ACL_TAG,
+      },
+    ],
+  },
+  {
+    id: "acl-surgical-consult",
     date: "04/29/2026",
-    codes: ["S83.511A", "S83.241A", "M25.561"],
-  },
-  {
-    type: "Urgent Care Visit",
-    provider: "Priya Raman MD",
-    date: "04/18/2026",
-    codes: ["M25.561", "M25.461"],
-  },
-  {
-    type: "Injury Evaluation",
+    time: "2:00pm",
+    caseName: CASE.name,
+    visitType: "Surgical Consultation",
+    title: "Surgical Consultation",
     provider: PROVIDER.short,
-    date: "11/02/2025",
-    codes: ["S93.402A"],
+    codes: ["S83.511A", "S83.241A", "M25.561"],
+    items: [
+      {
+        type: "order",
+        title: "Arthrocentesis, aspiration and/or injection; major joint (knee)",
+        detail: "Hale Orthopedics",
+        date: "04/29/2026",
+        time: "2:30 PM",
+        icon: "syringe",
+        tone: "orange",
+        orderSet: "Ortho Consult Orders",
+      },
+      {
+        type: "order",
+        title: "Surgical scheduling - right ACL reconstruction",
+        detail: "Riverside Surgical Center",
+        date: "04/29/2026",
+        time: "3:10 PM",
+        icon: "assignment",
+        tone: "blue",
+        orderSet: "Ortho Consult Orders",
+      },
+      {
+        type: "attachment",
+        title: "MRI addendum",
+        file: "MRI_Right_Knee_Addendum_04242026.pdf",
+        date: "04/24/2026",
+        source: "Imaging",
+        tag: "MRI Report",
+        caseTag: ACL_TAG,
+      },
+      {
+        type: "attachment",
+        title: "Surgical consent",
+        file: "Surgical_Consent_ACLR_04292026.pdf",
+        date: "04/29/2026",
+        source: "Patient",
+        tag: "Consent",
+        caseTag: ACL_TAG,
+      },
+    ],
+  },
+  {
+    id: "acl-injury-visit",
+    date: "04/18/2026",
+    time: "5:30pm",
+    caseName: CASE.name,
+    visitType: "Walk-In Injury",
+    title: "Acute Knee Injury Visit",
+    provider: "Priya Raman MD",
+    codes: ["M25.561", "M25.461"],
+    items: [
+      {
+        type: "order",
+        title: "Radiologic examination, knee; 2 views",
+        detail: "Riverside Imaging Center",
+        date: "04/18/2026",
+        time: "6:12 PM",
+        icon: "radiology",
+        tone: "blue",
+        orderSet: "Knee Injury Workup",
+      },
+      {
+        type: "attachment",
+        title: "Right knee X-ray",
+        file: "XR_Right_Knee_2_Views_04182026.pdf",
+        date: "04/18/2026",
+        source: "Imaging",
+        tag: "X-Ray",
+        caseTag: ACL_TAG,
+      },
+      {
+        type: "order",
+        title: "Knee immobilizer and axillary crutches",
+        detail: "Northside DME Supply",
+        date: "04/18/2026",
+        time: "6:20 PM",
+        icon: "personal_injury",
+        tone: "orange",
+        orderSet: "Walk-In Injury",
+      },
+      {
+        type: "medication",
+        title: "Naproxen Sodium 550mg tablet",
+        detail: "20 tablets · No refills",
+        date: "04/18/2026",
+      },
+      {
+        type: "order",
+        title: "MRI right knee without contrast",
+        detail: "Riverside Imaging Center",
+        date: "04/19/2026",
+        time: "9:05 AM",
+        icon: "radiology",
+        tone: "blue",
+        orderSet: "Knee Injury Workup",
+      },
+      {
+        type: "attachment",
+        title: "Right knee MRI",
+        file: "MRI_Right_Knee_04222026.pdf",
+        date: "04/22/2026",
+        source: "Imaging",
+        tag: "MRI Report",
+        caseTag: ACL_TAG,
+      },
+      {
+        type: "attachment",
+        title: "Intake questionnaire",
+        file: "Patient_Intake_Questionnaire_04182026.pdf",
+        date: "04/18/2026",
+        source: "Patient",
+        tag: "Intake Form",
+        caseTag: ACL_TAG,
+      },
+    ],
+  },
+  {
+    id: "elbow-discharge",
+    date: "12/15/2025",
+    time: "4:15pm",
+    caseName: PRIOR_CASE.name,
+    visitType: "Established Patient",
+    title: "Elbow Discharge Visit",
+    provider: ASSOCIATE_PROVIDER,
+    codes: ["M77.11"],
+    items: [
+      {
+        type: "attachment",
+        title: "Discharge summary",
+        file: "Discharge_Summary_Elbow_12152025.pdf",
+        date: "12/15/2025",
+        source: "Other",
+        tag: "Discharge Summary",
+        caseTag: ELBOW_TAG,
+      },
+    ],
+  },
+  {
+    id: "elbow-injection-followup",
+    date: "11/03/2025",
+    time: "9:45am",
+    caseName: PRIOR_CASE.name,
+    visitType: "Established Patient",
+    title: "Post-Injection Follow Up",
+    provider: PROVIDER.short,
+    codes: ["M77.11"],
+    items: [
+      {
+        type: "attachment",
+        title: "QuickDASH outcome survey",
+        file: "QuickDASH_Outcome_11032025.pdf",
+        date: "11/03/2025",
+        source: "Patient",
+        tag: "Outcome Measure",
+        caseTag: ELBOW_TAG,
+      },
+    ],
+  },
+  {
+    id: "elbow-injection",
+    date: "09/22/2025",
+    time: "3:20pm",
+    caseName: PRIOR_CASE.name,
+    visitType: "Established Patient",
+    title: "Elbow Follow Up with Injection",
+    provider: ASSOCIATE_PROVIDER,
+    codes: ["M77.11", "M25.521"],
+    items: [
+      {
+        type: "order",
+        title: "Injection, single tendon origin/insertion; lateral elbow",
+        detail: "Hale Orthopedics",
+        date: "09/22/2025",
+        time: "3:40 PM",
+        icon: "syringe",
+        tone: "orange",
+        orderSet: "Elbow Injection",
+      },
+      {
+        type: "attachment",
+        title: "Injection procedure note",
+        file: "Procedure_Note_Elbow_Injection_09222025.pdf",
+        date: "09/22/2025",
+        source: "Fax",
+        tag: "Procedure Note",
+        caseTag: ELBOW_TAG,
+      },
+    ],
+  },
+  {
+    id: "elbow-new-patient",
+    date: "08/25/2025",
+    time: "10:30am",
+    caseName: PRIOR_CASE.name,
+    visitType: "New Patient",
+    title: "New Patient Elbow Consultation",
+    provider: PROVIDER.short,
+    codes: ["M77.11", "M25.521"],
+    items: [
+      {
+        type: "order",
+        title: "Radiologic examination, elbow; 2 views",
+        detail: "Riverside Imaging Center",
+        date: "08/25/2025",
+        time: "10:55 AM",
+        icon: "radiology",
+        tone: "blue",
+        orderSet: "Elbow Pain Workup",
+      },
+      {
+        type: "attachment",
+        title: "Right elbow X-ray",
+        file: "XR_Right_Elbow_2_Views_08252025.pdf",
+        date: "08/25/2025",
+        source: "Imaging",
+        tag: "X-Ray",
+        caseTag: ELBOW_TAG,
+      },
+      {
+        type: "order",
+        title: "Counterforce elbow brace",
+        detail: "Northside DME Supply",
+        date: "08/25/2025",
+        time: "11:05 AM",
+        icon: "personal_injury",
+        tone: "orange",
+        orderSet: "Elbow Pain Workup",
+      },
+      {
+        type: "medication",
+        title: "Naproxen 500mg tablet",
+        detail: "28 tablets · No refills",
+        date: "08/25/2025",
+      },
+      {
+        type: "attachment",
+        title: "Intake questionnaire",
+        file: "Patient_Intake_Questionnaire_08252025.pdf",
+        date: "08/25/2025",
+        source: "Patient",
+        tag: "Intake Form",
+        caseTag: ELBOW_TAG,
+      },
+      {
+        type: "attachment",
+        title: "Elbow home program",
+        file: "Elbow_Home_Program_08252025.pdf",
+        date: "08/25/2025",
+        source: "Other",
+        tag: "Handout",
+        caseTag: ELBOW_TAG,
+      },
+    ],
   },
 ];
 
-function diagnosisDateValue(date: string) {
-  const [month, day, year] = date.split("/").map(Number);
-  return new Date(year, month - 1, day).getTime();
+const isOrderItem = (item: EncounterItem): item is OrderItem => item.type === "order";
+const isAttachmentItem = (item: EncounterItem): item is AttachmentItem => item.type === "attachment";
+
+const PAST_ENCOUNTERS = ENCOUNTERS.filter((visit) => visit.date !== CASE.visitDateLong);
+
+// Signed notes available in the past-note picker. The operating room encounter
+// produces an operative report rather than an office note, so it is excluded.
+export const PAST_NOTES = PAST_ENCOUNTERS.filter((visit) => visit.visitType !== "Surgery").map((visit) => ({
+  id: visit.id,
+  caseName: visit.caseName,
+  title: visit.title,
+  provider: visit.provider,
+  date: visit.date,
+}));
+
+export const PAST_ORDERS = ENCOUNTERS.flatMap((visit) => visit.items.filter(isOrderItem))
+  .map((item) => ({
+    title: item.title,
+    icon: item.icon,
+    tone: item.tone,
+    status: "Submitted",
+    orderSet: item.orderSet,
+    created: `${item.date.replaceAll("/", "-")} ${item.time}`,
+    recipient: item.detail,
+  }))
+  .sort((a, b) => chartDateValue(orderCreatedDate(b)) - chartDateValue(orderCreatedDate(a)));
+
+function orderCreatedDate(order: { created: string }) {
+  return order.created.split(" ")[0].replaceAll("-", "/");
+}
+
+const ATTACHMENT_SOURCES = ["Imaging", "Fax", "Patient", "Other"] as const;
+
+export const ATTACHMENT_GROUPS = ATTACHMENT_SOURCES.map((label) => ({
+  label,
+  files: ENCOUNTERS.flatMap((visit) => visit.items.filter(isAttachmentItem))
+    .filter((item) => item.source === label)
+    .map((item) => ({ name: item.file, date: item.date, tag: item.tag, case: item.caseTag }))
+    .sort((a, b) => chartDateValue(b.date) - chartDateValue(a.date)),
+}));
+
+// Past encounters as the diagnosis panel needs them: the clinical visit name
+// plus every code billed that day.
+export const DIAGNOSIS_ENCOUNTERS = PAST_ENCOUNTERS.map(({ title, provider, date, codes }) => ({
+  type: title,
+  provider,
+  date,
+  codes,
+}));
+
+const diagnosisDateValue = chartDateValue;
+
+const DAY_MS = 86400000;
+
+// A code coded at any visit inside this window is still part of the active
+// episode of care; older codes fall back to history.
+export const DIAGNOSIS_RECENT_WINDOW_DAYS = 90;
+
+export type DiagnosisRelevance = "current" | "recent" | "earlier";
+
+const RELEVANCE_ORDER: Record<DiagnosisRelevance, number> = { current: 0, recent: 1, earlier: 2 };
+
+function diagnosisAgeLabel(days: number) {
+  if (days <= 0) return "Today";
+  if (days < 14) return `${days} d ago`;
+  if (days < 60) return `${Math.round(days / 7)} wk ago`;
+  if (days < 365) return `${Math.round(days / 30.44)} mo ago`;
+  return `${Math.round((days / 365) * 10) / 10} yr ago`;
 }
 
 export type DiagnosisEncounter = { type: string; provider: string; date: string };
@@ -345,31 +960,61 @@ export type DiagnosisEncounter = { type: string; provider: string; date: string 
 export type DiagnosisRecord = {
   code: string;
   description: string;
-  status: "Active" | "Resolved";
   caseName: string;
   encounters: DiagnosisEncounter[];
   firstNoted: string;
   lastAddressed: string;
+  onCurrentNote: boolean;
+  daysSinceLastAddressed: number;
+  relevance: DiagnosisRelevance;
+  recencyLabel: string;
 };
 
-// One row per unique code, carrying the encounters that addressed it. Active
-// codes sort first, then by most recently addressed.
+const visitDateValue = diagnosisDateValue(CASE.visitDateLong);
+const lastVisitDate = DIAGNOSIS_ENCOUNTERS.map((visit) => visit.date).sort(
+  (a, b) => diagnosisDateValue(b) - diagnosisDateValue(a),
+)[0];
+
+// One row per unique code. Relevance is derived from coding history: codes on
+// today's note rank first, then anything coded inside the recent window, then
+// older history.
 export const DIAGNOSIS_HISTORY: DiagnosisRecord[] = Object.entries(DIAGNOSIS_CODES)
   .map(([code, detail]) => {
     const encounters = DIAGNOSIS_ENCOUNTERS.filter((visit) => visit.codes.includes(code))
       .map(({ type, provider, date }) => ({ type, provider, date }))
       .sort((a, b) => diagnosisDateValue(b.date) - diagnosisDateValue(a.date));
 
+    const lastAddressed = encounters[0]?.date ?? CASE.visitDateLong;
+    const daysSinceLastAddressed = Math.round((visitDateValue - diagnosisDateValue(lastAddressed)) / DAY_MS);
+    const onCurrentNote = CASE.diagnosisCodes.includes(code);
+
+    const relevance: DiagnosisRelevance = onCurrentNote
+      ? "current"
+      : daysSinceLastAddressed <= DIAGNOSIS_RECENT_WINDOW_DAYS
+        ? "recent"
+        : "earlier";
+
     return {
       code,
       ...detail,
       encounters,
-      firstNoted: encounters[encounters.length - 1]?.date ?? "-",
-      lastAddressed: encounters[0]?.date ?? "-",
+      firstNoted: encounters[encounters.length - 1]?.date ?? CASE.visitDateLong,
+      lastAddressed,
+      onCurrentNote,
+      daysSinceLastAddressed,
+      relevance,
+      // Always describes the previous time the code was used, so the label adds
+      // information the relevance grouping does not already state.
+      recencyLabel:
+        encounters.length === 0
+          ? "New this visit"
+          : lastAddressed === lastVisitDate
+            ? "At last visit"
+            : diagnosisAgeLabel(daysSinceLastAddressed),
     };
   })
   .sort((a, b) => {
-    if (a.status !== b.status) return a.status === "Active" ? -1 : 1;
+    if (a.relevance !== b.relevance) return RELEVANCE_ORDER[a.relevance] - RELEVANCE_ORDER[b.relevance];
     return diagnosisDateValue(b.lastAddressed) - diagnosisDateValue(a.lastAddressed);
   });
 
@@ -381,13 +1026,13 @@ export const PHARMACY = {
 export const MEDICATIONS = [
   {
     name: "Meloxicam 15mg tablet",
-    date: "08/03/2026",
+    date: "07/27/2026",
     status: "Active" as const,
     sig: "Take 1 tablet by mouth once daily with food for pain and swelling.",
     duration: "30 days",
     dispense: "30 tablets",
     refills: "1",
-    appointment: "08/03/2026 – 10:15 AM",
+    appointment: "07/27/2026 – 10:15 AM",
     prescriber: REFERRING_PROVIDER,
     pharmacy: PHARMACY,
     unitCode: "68180-521-06",
@@ -401,25 +1046,25 @@ export const MEDICATIONS = [
     pharmacyNotes: "Patient counseled on GI precautions. No interactions found with the current medication list.",
     log: [
       {
-        date: "08/03/2026",
+        date: "07/27/2026",
         title: "Prescribed",
-        detail: `${REFERRING_PROVIDER} prescribed meloxicam 15mg for post-operative knee pain and swelling.`,
+        detail: `${REFERRING_PROVIDER} prescribed meloxicam 15mg at the 12-week post-op visit for activity-related knee pain and swelling.`,
         status: "completed" as const,
       },
       {
-        date: "08/03/2026",
+        date: "07/27/2026",
         title: "Submitted",
         detail: "e-Prescription transmitted to Northside Pharmacy.",
         status: "completed" as const,
       },
       {
-        date: "08/04/2026",
+        date: "07/28/2026",
         title: "Dispensed",
         detail: "Pharmacy filled 30 tablets and notified the patient for pickup.",
         status: "completed" as const,
       },
       {
-        date: "08/10/2026",
+        date: "08/06/2026",
         title: "Refill request",
         detail: "Patient requested the remaining refill through the portal.",
         status: "completed" as const,
@@ -434,13 +1079,13 @@ export const MEDICATIONS = [
   },
   {
     name: "Acetaminophen 500mg tablet",
-    date: "08/03/2026",
+    date: "07/27/2026",
     status: "Active" as const,
     sig: "Take 1 to 2 tablets by mouth every 6 hours as needed for pain. Do not exceed 3,000mg in 24 hours.",
     duration: "As needed",
     dispense: "60 tablets",
     refills: "0",
-    appointment: "08/03/2026 – 10:15 AM",
+    appointment: "07/27/2026 – 10:15 AM",
     prescriber: REFERRING_PROVIDER,
     pharmacy: PHARMACY,
     unitCode: "50580-449-73",
@@ -454,31 +1099,31 @@ export const MEDICATIONS = [
     pharmacyNotes: "Reviewed the total daily acetaminophen load with the patient at pickup.",
     log: [
       {
-        date: "08/03/2026",
+        date: "07/27/2026",
         title: "Prescribed",
         detail: `${REFERRING_PROVIDER} prescribed acetaminophen 500mg for breakthrough pain between meloxicam doses.`,
         status: "completed" as const,
       },
       {
-        date: "08/03/2026",
+        date: "07/27/2026",
         title: "Submitted",
         detail: "e-Prescription transmitted to Northside Pharmacy.",
         status: "completed" as const,
       },
       {
-        date: "08/04/2026",
+        date: "07/28/2026",
         title: "Dispensed",
         detail: "Pharmacy filled 60 tablets and counseled the patient on the 24-hour maximum.",
         status: "completed" as const,
       },
       {
-        date: "08/11/2026",
+        date: "08/07/2026",
         title: "Pharmacy request",
         detail: "Northside Pharmacy requested authorization for an additional 60-tablet fill.",
         status: "completed" as const,
       },
       {
-        date: "08/11/2026",
+        date: "08/07/2026",
         title: "Pending approval",
         detail: `Awaiting approval from ${REFERRING_PROVIDER}.`,
         status: "pending" as const,
@@ -579,12 +1224,94 @@ export const MEDICATIONS = [
       },
     ],
   },
+  {
+    name: "Naproxen Sodium 550mg tablet",
+    date: "04/18/2026",
+    status: "Expired" as const,
+    sig: "Take 1 tablet by mouth twice daily with food for pain and swelling for up to 10 days.",
+    duration: "10 days",
+    dispense: "20 tablets",
+    refills: "0",
+    appointment: "04/18/2026 – 5:30 PM",
+    prescriber: "Priya Raman MD",
+    pharmacy: PHARMACY,
+    unitCode: "00093-0148-01",
+    fillStatus: "Completed",
+    dose: "550mg",
+    route: "Oral",
+    frequency: "2 x Daily",
+    pendingApproval: false,
+    externalNotes:
+      "Started at the walk-in injury visit. Stop 7 days before surgery if an operation is scheduled and switch to acetaminophen.",
+    pharmacyNotes: "Counseled on GI precautions and the pre-operative hold instruction.",
+    log: [
+      {
+        date: "04/18/2026",
+        title: "Prescribed",
+        detail: "Priya Raman MD prescribed naproxen sodium at the walk-in visit for acute right knee pain and effusion.",
+        status: "completed" as const,
+      },
+      {
+        date: "04/18/2026",
+        title: "Dispensed",
+        detail: "Pharmacy filled 20 tablets the same evening.",
+        status: "completed" as const,
+      },
+      {
+        date: "04/29/2026",
+        title: "Held for surgery",
+        detail: `Discontinued at the surgical consult in preparation for reconstruction on ${CASE.surgeryDate}.`,
+        status: "completed" as const,
+      },
+    ],
+  },
+  {
+    name: "Naproxen 500mg tablet",
+    date: "08/25/2025",
+    status: "Expired" as const,
+    sig: "Take 1 tablet by mouth twice daily with food for 14 days for elbow pain.",
+    duration: "14 days",
+    dispense: "28 tablets",
+    refills: "0",
+    appointment: "08/25/2025 – 10:30 AM",
+    prescriber: REFERRING_PROVIDER,
+    pharmacy: PHARMACY,
+    unitCode: "00093-0147-01",
+    fillStatus: "Completed",
+    dose: "500mg",
+    route: "Oral",
+    frequency: "2 x Daily",
+    pendingApproval: false,
+    externalNotes:
+      "Taken with the counterforce brace and the home loading program for lateral elbow tendinopathy. Take with food.",
+    pharmacyNotes: "First NSAID course for this patient. No interactions identified.",
+    log: [
+      {
+        date: "08/25/2025",
+        title: "Prescribed",
+        detail: `${REFERRING_PROVIDER} prescribed naproxen at the new patient elbow consultation.`,
+        status: "completed" as const,
+      },
+      {
+        date: "08/26/2025",
+        title: "Dispensed",
+        detail: "Pharmacy filled 28 tablets for the 14-day course.",
+        status: "completed" as const,
+      },
+      {
+        date: "09/22/2025",
+        title: "Course completed",
+        detail: "Limited relief reported, so a lateral elbow injection was performed at the follow-up visit.",
+        status: "completed" as const,
+      },
+    ],
+  },
 ];
 
 export const ALLERGIES = [
-  { name: "Penicillin", status: "Active", severity: "Severe" as const, date: "05/02/2026" },
-  { name: "Latex", status: "Active", severity: "Moderate" as const, date: "05/02/2026" },
-  { name: "Shellfish", status: "Active", severity: "Mild" as const, date: "05/02/2026" },
+  { name: "Penicillin", status: "Active", severity: "Severe" as const, date: PRIOR_CASE.firstVisit },
+  { name: "Latex", status: "Active", severity: "Moderate" as const, date: PRIOR_CASE.firstVisit },
+  { name: "Shellfish", status: "Active", severity: "Mild" as const, date: PRIOR_CASE.firstVisit },
 ];
 
 export const PATIENT_CONTACTS = [
@@ -597,7 +1324,7 @@ export const PATIENT_CONTACTS = [
     email: "records@bayviewfm.example",
     fax: "+1 (415) 555-0143",
     patient: "Jordan Reyes",
-    notes: "Copy operative report and 09/14 follow-up summary",
+    notes: "Copy operative report and 09/21 follow-up summary",
   },
   {
     type: "Imaging",
@@ -619,7 +1346,7 @@ export const PATIENT_CONTACTS = [
     email: "orders@northsidedme.example",
     fax: "+1 (312) 555-0149",
     patient: "Jordan Reyes + 1 other",
-    notes: "Hinged brace returned 07/13",
+    notes: "Hinged brace returned 07/27",
   },
   {
     type: "Other",
@@ -677,28 +1404,63 @@ export const ACTIVITY_EVENTS = [
     time: "11:50 AM",
     title: "Clinic Visit Completed",
     performedBy: PROVIDER.name,
-    description: "14-week post-ACL follow-up. Exam, imaging review, and return-to-run clearance counseling.",
+    description: "14-week post-ACL follow-up. Exam, outcome review, and return-to-run clearance counseling.",
   },
   {
-    date: "Aug 4, 2026",
-    time: "4:00 PM",
-    title: "Activity Guidelines Sent",
+    date: "Aug 6, 2026",
+    time: "9:20 AM",
+    title: "Refill Requested",
     performedBy: CLINIC_ASSISTANT,
-    description: "Week 12 activity progression handout sent to the patient portal and reviewed by phone.",
+    description: "Patient requested the remaining meloxicam refill through the portal. Routed for approval.",
   },
   {
-    date: "Aug 3, 2026",
-    time: "3:40 PM",
+    date: "Jul 27, 2026",
+    time: "10:15 AM",
+    title: "Clinic Visit Completed",
+    performedBy: PROVIDER.name,
+    description: "12-week post-op visit. Cleared for straight-line jogging and given the week 12 activity handout.",
+  },
+  {
+    date: "Jul 27, 2026",
+    time: "10:40 AM",
     title: "Outcome Measure Collected",
     performedBy: PROVIDER.name,
     description: "IKDC Subjective Knee Form scored 71.3%, improved from 48.3% at week 6.",
   },
   {
     date: "Jul 27, 2026",
-    time: "9:15 AM",
+    time: "11:05 AM",
     title: "Hinged Brace Returned",
     performedBy: CLINIC_ASSISTANT,
-    description: "Brace returned to Northside DME Supply and removed from the rental list.",
+    description: "Brace discontinued and returned to Northside DME Supply, then removed from the rental list.",
+  },
+  {
+    date: "Jun 17, 2026",
+    time: "11:00 AM",
+    title: "Clinic Visit Completed",
+    performedBy: PROVIDER.name,
+    description: "6-week post-op visit. Post-op radiographs reviewed and the brace was unlocked to 0-90 degrees.",
+  },
+  {
+    date: "May 20, 2026",
+    time: "9:45 AM",
+    title: "Sutures Removed",
+    performedBy: ASSOCIATE_PROVIDER,
+    description: "Portal incisions fully healed at 2 weeks. Work status note issued for modified duty.",
+  },
+  {
+    date: "May 6, 2026",
+    time: "7:30 AM",
+    title: "Surgery Completed",
+    performedBy: PROVIDER.name,
+    description: `${CASE.surgery} at Riverside Surgical Center without complication.`,
+  },
+  {
+    date: "Dec 15, 2025",
+    time: "4:15 PM",
+    title: "Case Closed",
+    performedBy: ASSOCIATE_PROVIDER,
+    description: "Right elbow lateral epicondylitis resolved. Patient released from care with a home program.",
   },
 ];
 
@@ -729,7 +1491,7 @@ export const AUDIT_LOG = [
 ];
 
 export const PINNED_NOTE = {
-  body: "Jordan is 14 weeks post-op right ACL reconstruction. He is hard of hearing.",
+  body: "Jordan is 14 weeks post-op right ACL reconstruction. Prior right elbow epicondylitis resolved in 2025 after a single injection. He is hard of hearing.",
   editedBy: PROVIDER.name,
   editedAt: "08/10/2026 08:59 PM",
 };
@@ -744,284 +1506,7 @@ export const CARE_TEAM_THREAD = [
     date: "08/10/2026",
     time: "03:33 PM",
     mention: "@Marcus Hale",
-    body: "Priority Health approved the functional testing order. Want me to book the return-to-sport testing slot for 09/14?",
+    body: `Priority Health approved the functional testing order. Want me to book the return-to-sport testing slot for ${CASE.nextFollowUp}?`,
   },
 ];
 
-export const PAST_ORDERS = [
-  {
-    title: "Radiologic examination, knee; 3 views",
-    icon: "radiology",
-    tone: "blue" as const,
-    status: "Submitted",
-    orderSet: "Knee Injury Workup",
-    created: "04-18-2026 6:12 PM",
-    recipient: "Riverside Imaging Center",
-  },
-  {
-    title: "Arthrocentesis, aspiration and/or injection; major joint (knee)",
-    icon: "syringe",
-    tone: "orange" as const,
-    status: "Submitted",
-    orderSet: "Ortho Consult Orders",
-    created: "04-29-2026 2:30 PM",
-    recipient: "Hale Orthopedics",
-  },
-  {
-    title: "Knee orthosis, elastic with joints, prefabricated",
-    icon: "personal_injury",
-    tone: "orange" as const,
-    status: "Submitted",
-    orderSet: "Post-Op DME",
-    created: "05-06-2026 9:15 AM",
-    recipient: "Northside DME Supply",
-  },
-  {
-    title: "Functional return-to-sport testing",
-    icon: "assignment",
-    tone: "blue" as const,
-    status: "Submitted",
-    orderSet: "Sports Medicine Follow-Up",
-    created: "08-10-2026 11:55 AM",
-    recipient: "Hale Orthopedics Sports Medicine",
-  },
-];
-
-const CASE_TAG = "ACL Tear - DOI 04/18/2026";
-
-export const ATTACHMENT_GROUPS = [
-  {
-    label: "Imaging",
-    files: [
-      { name: "MRI_Right_Knee_04222026.pdf", date: "04/22/2026", tag: "MRI Report", case: CASE_TAG },
-      { name: "XR_Right_Knee_2_Views_04182026.pdf", date: "04/18/2026", tag: "X-Ray", case: CASE_TAG },
-      { name: "MRI_Right_Knee_Addendum_04242026.pdf", date: "04/24/2026", tag: "MRI Report", case: CASE_TAG },
-    ],
-  },
-  {
-    label: "Fax",
-    files: [
-      { name: "Operative_Report_ACLR_05062026.pdf", date: "05/07/2026", tag: "Operative Report", case: CASE_TAG },
-      { name: "Activity_Restrictions_05132026.pdf", date: "05/13/2026", tag: "Instructions", case: CASE_TAG },
-      { name: "Post_Op_Protocol_Weeks_0_12.pdf", date: "05/07/2026", tag: "Protocol", case: CASE_TAG },
-    ],
-  },
-  {
-    label: "Patient",
-    files: [
-      { name: "Patient_Intake_Questionnaire_05202026.pdf", date: "05/20/2026", tag: "Intake Form", case: CASE_TAG },
-      { name: "IKDC_Outcome_Survey_08032026.pdf", date: "08/03/2026", tag: "Outcome Measure", case: CASE_TAG },
-    ],
-  },
-  {
-    label: "Other",
-    files: [
-      {
-        name: "DME_Authorization_Knee_Brace_05182026.pdf",
-        date: "05/18/2026",
-        tag: "Prior Auth",
-        case: "Priority Health - Knee brace",
-      },
-      { name: "Activity_Progression_Handout_07272026.pdf", date: "07/27/2026", tag: "Handout", case: CASE_TAG },
-      { name: "Plan_of_Care_08102026.pdf", date: "08/10/2026", tag: "Visit Plan", case: CASE_TAG },
-    ],
-  },
-];
-
-// Orthopedic care pathway for the ACL case: each appointment is a timeline
-// anchor, with the orders, prescriptions, and documents it generated beneath it.
-export const CHART_TIMELINE = [
-  {
-    id: "ortho-followup-14wk",
-    date: "08/10/2026",
-    time: "9:20am",
-    caseName: CASE.name,
-    visitType: "Established Patient",
-    provider: REFERRING_PROVIDER,
-    items: [
-      {
-        type: "order",
-        title: "Functional return-to-sport testing",
-        detail: "Hale Orthopedics Sports Medicine",
-        date: "08/10/2026",
-      },
-      {
-        type: "attachment",
-        title: "Knee examination summary",
-        detail: "Ortho_Followup_14wk_08102026.pdf",
-        file: "Ortho_Followup_14wk_08102026.pdf",
-        date: "08/10/2026",
-      },
-    ],
-  },
-  {
-    id: "ortho-followup-12wk",
-    date: "08/03/2026",
-    time: "10:15am",
-    caseName: CASE.name,
-    visitType: "Established Patient",
-    provider: REFERRING_PROVIDER,
-    items: [
-      { type: "medication", title: "Meloxicam 15mg tablet", detail: "30 tablets · 1 refill", date: "08/03/2026" },
-      {
-        type: "medication",
-        title: "Acetaminophen 500mg tablet",
-        detail: "60 tablets · No refills",
-        date: "08/03/2026",
-      },
-      {
-        type: "attachment",
-        title: "IKDC outcome survey",
-        detail: "IKDC_Outcome_Survey_08032026.pdf",
-        file: "IKDC_Outcome_Survey_08032026.pdf",
-        date: "08/03/2026",
-      },
-    ],
-  },
-  {
-    id: "ortho-followup-6wk",
-    date: "06/17/2026",
-    time: "11:00am",
-    caseName: CASE.name,
-    visitType: "Post Operation",
-    provider: REFERRING_PROVIDER,
-    items: [
-      {
-        type: "order",
-        title: "Hinged brace unlocked to 0-90 degrees",
-        detail: "Northside DME Supply",
-        date: "06/17/2026",
-      },
-      {
-        type: "attachment",
-        title: "Post-op knee radiograph report",
-        detail: "XR_Right_Knee_Post_Op_06172026.pdf",
-        file: "XR_Right_Knee_Post_Op_06172026.pdf",
-        date: "06/17/2026",
-      },
-    ],
-  },
-  {
-    id: "postop-wound-check",
-    date: "05/13/2026",
-    time: "8:45am",
-    caseName: CASE.name,
-    visitType: "Post Operation",
-    provider: REFERRING_PROVIDER,
-    items: [
-      { type: "order", title: "Suture removal", detail: "Hale Orthopedics", date: "05/13/2026" },
-      {
-        type: "order",
-        title: "Activity progression counseling",
-        detail: "Hale Orthopedics Sports Medicine",
-        date: "05/13/2026",
-      },
-      {
-        type: "attachment",
-        title: "Activity restrictions",
-        detail: "Activity_Restrictions_05132026.pdf",
-        file: "Activity_Restrictions_05132026.pdf",
-        date: "05/13/2026",
-      },
-      {
-        type: "attachment",
-        title: "DME authorization",
-        detail: "Priority Health · Knee brace",
-        file: "DME_Authorization_Knee_Brace_05182026.pdf",
-        date: "05/18/2026",
-      },
-    ],
-  },
-  {
-    id: "acl-reconstruction",
-    date: "05/06/2026",
-    time: "7:30am",
-    caseName: CASE.name,
-    visitType: "Surgery",
-    provider: REFERRING_PROVIDER,
-    items: [
-      {
-        type: "medication",
-        title: "Oxycodone-Acetaminophen 5-325mg",
-        detail: "20 tablets · No refills",
-        date: "05/06/2026",
-      },
-      { type: "medication", title: "Aspirin 81mg tablet", detail: "56 tablets · No refills", date: "05/06/2026" },
-      {
-        type: "order",
-        title: "Knee orthosis, elastic with joints",
-        detail: "Northside DME Supply",
-        date: "05/06/2026",
-      },
-      {
-        type: "attachment",
-        title: "Operative report",
-        detail: "Operative_Report_ACLR_05062026.pdf",
-        file: "Operative_Report_ACLR_05062026.pdf",
-        date: "05/07/2026",
-      },
-      {
-        type: "attachment",
-        title: "Post-op protocol",
-        detail: "Post_Op_Protocol_Weeks_0_12.pdf",
-        file: "Post_Op_Protocol_Weeks_0_12.pdf",
-        date: "05/07/2026",
-      },
-    ],
-  },
-  {
-    id: "pre-op-visit",
-    date: "04/29/2026",
-    time: "2:00pm",
-    caseName: CASE.name,
-    visitType: "Surgical Consultation",
-    provider: REFERRING_PROVIDER,
-    items: [
-      { type: "order", title: "Right knee arthrocentesis", detail: "Hale Orthopedics", date: "04/29/2026" },
-      { type: "order", title: "Pre-operative laboratory panel", detail: "Athelas Core Lab", date: "04/29/2026" },
-      {
-        type: "attachment",
-        title: "MRI addendum",
-        detail: "MRI_Right_Knee_Addendum_04242026.pdf",
-        file: "MRI_Right_Knee_Addendum_04242026.pdf",
-        date: "04/24/2026",
-      },
-    ],
-  },
-  {
-    id: "injury-evaluation",
-    date: "04/18/2026",
-    time: "5:30pm",
-    caseName: CASE.name,
-    visitType: "New Patient",
-    provider: REFERRING_PROVIDER,
-    items: [
-      {
-        type: "order",
-        title: "Right knee radiographs",
-        detail: "3 views · Riverside Imaging Center",
-        date: "04/18/2026",
-      },
-      {
-        type: "attachment",
-        title: "Right knee X-ray",
-        detail: "XR_Right_Knee_2_Views_04182026.pdf",
-        file: "XR_Right_Knee_2_Views_04182026.pdf",
-        date: "04/18/2026",
-      },
-      {
-        type: "order",
-        title: "MRI right knee without contrast",
-        detail: "Riverside Imaging Center",
-        date: "04/19/2026",
-      },
-      {
-        type: "attachment",
-        title: "Right knee MRI",
-        detail: "MRI_Right_Knee_04222026.pdf",
-        file: "MRI_Right_Knee_04222026.pdf",
-        date: "04/22/2026",
-      },
-    ],
-  },
-] as const;

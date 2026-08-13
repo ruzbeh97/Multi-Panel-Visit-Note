@@ -55,7 +55,7 @@ export default function OrdersPanel() {
 
       <div className="flex w-full flex-col gap-2 pb-10 pt-4">
         {PAST_ORDERS.map((order) => (
-          <OrderRow key={order.title} order={order} />
+          <OrderRow key={`${order.title}-${order.created}`} order={order} />
         ))}
       </div>
     </aside>
