@@ -8,7 +8,8 @@ import {
   DIAGNOSIS_ENCOUNTERS,
   DIAGNOSIS_CODES,
   DIAGNOSIS_HISTORY,
-  DIAGNOSIS_RECENT_WINDOW_DAYS,
+  LATEST_DIAGNOSIS_VISIT_COUNT,
+  LATEST_DIAGNOSIS_VISITS,
   MEDICATIONS,
   type DiagnosisRecord,
   type DiagnosisRelevance,
@@ -18,7 +19,15 @@ const SEVERITY_TONES: Record<string, Tone> = { Severe: "red", Moderate: "yellow"
 
 const DIAGNOSIS_TABS = ["By Diagnosis", "By Visit"];
 
-// The left rail is the at-a-glance signal for how much a code matters today.
+const latestVisitHint = (() => {
+  const newest = LATEST_DIAGNOSIS_VISITS[0]?.date;
+  const oldest = LATEST_DIAGNOSIS_VISITS[LATEST_DIAGNOSIS_VISITS.length - 1]?.date;
+  if (!newest || !oldest) return `Coded in the last ${LATEST_DIAGNOSIS_VISIT_COUNT} visits`;
+  if (newest === oldest) return `Last coded on ${newest}`;
+  return `Last coded ${oldest} – ${newest}`;
+})();
+
+// The left rail is the at-a-glance signal for how recently a code was used.
 const RELEVANCE_GROUPS: {
   key: DiagnosisRelevance;
   label: string;
@@ -28,27 +37,19 @@ const RELEVANCE_GROUPS: {
   collapsible: boolean;
 }[] = [
   {
-    key: "current",
-    label: "On Today's Note",
-    hint: `Coded on this visit · ${CASE.visitDateLong}`,
+    key: "latest",
+    label: "Used In Latest Notes",
+    hint: latestVisitHint,
     rail: "bg-[#1132ee]",
     labelColor: "text-[#1132ee]",
     collapsible: false,
   },
   {
-    key: "recent",
-    label: "Recently Coded",
-    hint: `Within the last ${DIAGNOSIS_RECENT_WINDOW_DAYS} days`,
+    key: "older",
+    label: "Older Diagnosis",
+    hint: `Not coded in the last ${LATEST_DIAGNOSIS_VISIT_COUNT} visits`,
     rail: "bg-[#9aa4b2]",
     labelColor: "text-[#1a1a1a]",
-    collapsible: false,
-  },
-  {
-    key: "earlier",
-    label: "Earlier History",
-    hint: `Not coded in over ${DIAGNOSIS_RECENT_WINDOW_DAYS} days`,
-    rail: "bg-[#e0e0e0]",
-    labelColor: "text-[#666666]",
     collapsible: true,
   },
 ];
@@ -107,7 +108,7 @@ function TabGroup({ tabs, active, onSelect }: { tabs: string[]; active: string; 
 const diagnosisRowId = (code: string) => `diagnosis-${code.replace(".", "-")}`;
 
 function CodeChip({ code, onSelect }: { code: string; onSelect: (code: string) => void }) {
-  const onCurrentNote = CASE.diagnosisCodes.includes(code);
+  const inLatestNotes = DIAGNOSIS_HISTORY.find((record) => record.code === code)?.relevance === "latest";
 
   return (
     <button
@@ -116,7 +117,7 @@ function CodeChip({ code, onSelect }: { code: string; onSelect: (code: string) =
       title={DIAGNOSIS_CODES[code]?.description}
       aria-label={`View ${code} history`}
       className={`flex shrink-0 items-center rounded-md px-2 py-[3px] font-body text-[12px] font-medium leading-[18px] hover:bg-[rgba(17,50,238,0.16)] ${
-        onCurrentNote ? "bg-[rgba(17,50,238,0.08)] text-[#1132ee]" : "bg-[#f2f2f2] text-[#0f0f0f] hover:text-[#1132ee]"
+        inLatestNotes ? "bg-[rgba(17,50,238,0.08)] text-[#1132ee]" : "bg-[#f2f2f2] text-[#0f0f0f] hover:text-[#1132ee]"
       }`}
     >
       {code}
@@ -135,7 +136,7 @@ function DiagnosisRow({
 }) {
   const visitCount = record.encounters.length;
   const rail = RELEVANCE_GROUPS.find((group) => group.key === record.relevance)?.rail ?? "bg-transparent";
-  const muted = record.relevance === "earlier";
+  const muted = record.relevance === "older";
 
   return (
     <div id={diagnosisRowId(record.code)} className="flex w-full items-stretch gap-3 border-b border-[#e6e6e6]">
@@ -264,10 +265,10 @@ function DiagnosisByVisit({ onSelectCode }: { onSelectCode: (code: string) => vo
 
 function PastDiagnosisSection() {
   const [tab, setTab] = useState(DIAGNOSIS_TABS[0]);
-  const [showEarlier, setShowEarlier] = useState(false);
+  const [showOlder, setShowOlder] = useState(false);
   const [openCodes, setOpenCodes] = useState<string[]>([]);
 
-  const currentCount = DIAGNOSIS_HISTORY.filter((record) => record.relevance === "current").length;
+  const latestCount = DIAGNOSIS_HISTORY.filter((record) => record.relevance === "latest").length;
 
   function toggleCode(code: string) {
     setOpenCodes((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
@@ -276,7 +277,7 @@ function PastDiagnosisSection() {
   // Chips in the visit view are shortcuts into that code's full history.
   function focusCode(code: string) {
     setTab(DIAGNOSIS_TABS[0]);
-    setShowEarlier(true);
+    setShowOlder(true);
     setOpenCodes([code]);
     requestAnimationFrame(() => {
       document.getElementById(diagnosisRowId(code))?.scrollIntoView({ block: "nearest" });
@@ -288,7 +289,7 @@ function PastDiagnosisSection() {
       <div className="flex w-full flex-wrap items-center justify-between gap-2">
         <TabGroup tabs={DIAGNOSIS_TABS} active={tab} onSelect={setTab} />
         <span className="shrink-0 font-body text-[13px] leading-[18px] text-[#666666]">
-          {DIAGNOSIS_HISTORY.length} codes · {currentCount} on this visit
+          {DIAGNOSIS_HISTORY.length} codes · {latestCount} in latest notes
         </span>
       </div>
 
@@ -297,7 +298,7 @@ function PastDiagnosisSection() {
           {RELEVANCE_GROUPS.map((group) => {
             const records = DIAGNOSIS_HISTORY.filter((record) => record.relevance === group.key);
             if (records.length === 0) return null;
-            const collapsed = group.collapsible && !showEarlier;
+            const collapsed = group.collapsible && !showOlder;
 
             return (
               <div key={group.key} className="flex w-full flex-col">
@@ -308,7 +309,7 @@ function PastDiagnosisSection() {
                   rail={group.rail}
                   labelColor={group.labelColor}
                   open={group.collapsible ? !collapsed : undefined}
-                  onToggle={group.collapsible ? () => setShowEarlier((current) => !current) : undefined}
+                  onToggle={group.collapsible ? () => setShowOlder((current) => !current) : undefined}
                 />
                 {!collapsed &&
                   records.map((record) => (

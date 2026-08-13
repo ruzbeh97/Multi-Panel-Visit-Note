@@ -939,13 +939,13 @@ const diagnosisDateValue = chartDateValue;
 
 const DAY_MS = 86400000;
 
-// A code coded at any visit inside this window is still part of the active
-// episode of care; older codes fall back to history.
-export const DIAGNOSIS_RECENT_WINDOW_DAYS = 90;
+// Codes last addressed in any of these prior visits surface under
+// "Used In Latest Notes"; everything older falls under "Older Diagnosis".
+export const LATEST_DIAGNOSIS_VISIT_COUNT = 3;
 
-export type DiagnosisRelevance = "current" | "recent" | "earlier";
+export type DiagnosisRelevance = "latest" | "older";
 
-const RELEVANCE_ORDER: Record<DiagnosisRelevance, number> = { current: 0, recent: 1, earlier: 2 };
+const RELEVANCE_ORDER: Record<DiagnosisRelevance, number> = { latest: 0, older: 1 };
 
 function diagnosisAgeLabel(days: number) {
   if (days <= 0) return "Today";
@@ -964,20 +964,22 @@ export type DiagnosisRecord = {
   encounters: DiagnosisEncounter[];
   firstNoted: string;
   lastAddressed: string;
-  onCurrentNote: boolean;
   daysSinceLastAddressed: number;
   relevance: DiagnosisRelevance;
   recencyLabel: string;
 };
 
 const visitDateValue = diagnosisDateValue(CASE.visitDateLong);
-const lastVisitDate = DIAGNOSIS_ENCOUNTERS.map((visit) => visit.date).sort(
-  (a, b) => diagnosisDateValue(b) - diagnosisDateValue(a),
-)[0];
 
-// One row per unique code. Relevance is derived from coding history: codes on
-// today's note rank first, then anything coded inside the recent window, then
-// older history.
+// Newest first — DIAGNOSIS_ENCOUNTERS is already ordered that way.
+export const LATEST_DIAGNOSIS_VISITS = DIAGNOSIS_ENCOUNTERS.slice(0, LATEST_DIAGNOSIS_VISIT_COUNT);
+
+const latestDiagnosisDates = new Set(LATEST_DIAGNOSIS_VISITS.map((visit) => visit.date));
+const lastVisitDate = LATEST_DIAGNOSIS_VISITS[0]?.date;
+
+// One row per unique code. A code belongs in "Used In Latest Notes" when its
+// most recent coding falls on one of the last three prior appointments —
+// first-noted date does not matter.
 export const DIAGNOSIS_HISTORY: DiagnosisRecord[] = Object.entries(DIAGNOSIS_CODES)
   .map(([code, detail]) => {
     const encounters = DIAGNOSIS_ENCOUNTERS.filter((visit) => visit.codes.includes(code))
@@ -986,13 +988,7 @@ export const DIAGNOSIS_HISTORY: DiagnosisRecord[] = Object.entries(DIAGNOSIS_COD
 
     const lastAddressed = encounters[0]?.date ?? CASE.visitDateLong;
     const daysSinceLastAddressed = Math.round((visitDateValue - diagnosisDateValue(lastAddressed)) / DAY_MS);
-    const onCurrentNote = CASE.diagnosisCodes.includes(code);
-
-    const relevance: DiagnosisRelevance = onCurrentNote
-      ? "current"
-      : daysSinceLastAddressed <= DIAGNOSIS_RECENT_WINDOW_DAYS
-        ? "recent"
-        : "earlier";
+    const relevance: DiagnosisRelevance = latestDiagnosisDates.has(lastAddressed) ? "latest" : "older";
 
     return {
       code,
@@ -1000,11 +996,8 @@ export const DIAGNOSIS_HISTORY: DiagnosisRecord[] = Object.entries(DIAGNOSIS_COD
       encounters,
       firstNoted: encounters[encounters.length - 1]?.date ?? CASE.visitDateLong,
       lastAddressed,
-      onCurrentNote,
       daysSinceLastAddressed,
       relevance,
-      // Always describes the previous time the code was used, so the label adds
-      // information the relevance grouping does not already state.
       recencyLabel:
         encounters.length === 0
           ? "New this visit"
