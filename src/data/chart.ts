@@ -224,6 +224,30 @@ export const PREVIOUS_VISIT = {
   },
 };
 
+// Generated summary of the last signed note, shown above Subjective so the
+// provider can orient without opening the past-note panel.
+export const PREVIOUS_VISIT_SUMMARY = {
+  heading: "Previous Visit",
+  rows: [
+    {
+      label: "Reason for the visit",
+      body: `The patient presented for a 12-week post-operative follow-up after right ACL reconstruction with residual knee stiffness and quadriceps weakness (diagnoses include S83.511D, M25.661, M62.561).`,
+    },
+    {
+      label: "Subjective",
+      body: `The patient reported 4/10 right knee pain with stairs and after 15 minutes of walking, with morning tightness behind the knee and no giving way. The goal "Restore right knee active extension to 0 degrees" was in progress at 75% with a target date of 09/07/2026.`,
+    },
+    {
+      label: "Progress",
+      body: `Examination showed right knee active motion of 6-126 degrees versus 0-140 degrees on the left, a quadriceps index of 71%, and a 1+ effusion after activity with a negative Lachman. Clinical examination, medication management, and activity progression counseling were performed, and the IKDC score improved from 48.3% at week 6 to 71.3%.`,
+    },
+    {
+      label: "Care plan",
+      body: `Continue the daily home strengthening program with meloxicam and acetaminophen as needed for activity-related soreness, hold jogging until quadriceps strength improves, and return in 2 weeks to reassess extension and readiness for a return-to-run progression.`,
+    },
+  ],
+};
+
 // Diagnoses are stored once per ICD-10 code and referenced by each encounter
 // that addressed them, so the same code is never described twice. There is no
 // clinician-maintained active/resolved flag; relevance is derived below from
@@ -890,6 +914,10 @@ const isAttachmentItem = (item: EncounterItem): item is AttachmentItem => item.t
 
 const PAST_ENCOUNTERS = ENCOUNTERS.filter((visit) => visit.date !== CASE.visitDateLong);
 
+function formatAppointmentTime(time: string) {
+  return time.replace(/\s*(am|pm)$/i, (_, period: string) => ` ${period.toUpperCase()}`);
+}
+
 // Signed notes available in the past-note picker. The operating room encounter
 // produces an operative report rather than an office note, so it is excluded.
 export const PAST_NOTES = PAST_ENCOUNTERS.filter((visit) => visit.visitType !== "Surgery").map((visit) => ({
@@ -898,6 +926,7 @@ export const PAST_NOTES = PAST_ENCOUNTERS.filter((visit) => visit.visitType !== 
   title: visit.title,
   provider: visit.provider,
   date: visit.date,
+  time: formatAppointmentTime(visit.time),
 }));
 
 export const PAST_ORDERS = ENCOUNTERS.flatMap((visit) => visit.items.filter(isOrderItem))

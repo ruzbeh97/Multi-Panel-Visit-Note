@@ -1,7 +1,6 @@
-import { useState, type MouseEvent } from "react";
+import { useLayoutEffect, useRef, useState, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import Icon from "./Icon";
-import PinnedNotesPopover from "./PinnedNotesPopover";
-import ContactBookModal from "./ContactBookModal";
 
 export const PAST_NOTE_ICON = "note_alt";
 export const PINNED_NOTES_ICON = "keep";
@@ -13,27 +12,98 @@ export const MESSAGES_ICON = "forum";
 export const ACTIVITY_ICON = "route";
 export const TIMELINE_ICON = "conversion_path";
 
-const TOP_ICONS = [PAST_NOTE_ICON, ATTACHMENTS_ICON, MEDICAL_HISTORY_ICON, ORDERS_ICON, TIMELINE_ICON];
-const BOTTOM_ICONS = [CONTACT_BOOK_ICON, PINNED_NOTES_ICON, ACTIVITY_ICON, MESSAGES_ICON];
+const NAV_ICONS = [PAST_NOTE_ICON, ATTACHMENTS_ICON, MEDICAL_HISTORY_ICON, ORDERS_ICON, TIMELINE_ICON];
+
+export const ICON_LABELS: Record<string, string> = {
+  [PAST_NOTE_ICON]: "Past Notes",
+  [ATTACHMENTS_ICON]: "Attachments",
+  [MEDICAL_HISTORY_ICON]: "Medical History",
+  [ORDERS_ICON]: "Orders",
+  [TIMELINE_ICON]: "Care Timeline",
+  [CONTACT_BOOK_ICON]: "Contact Book",
+  [PINNED_NOTES_ICON]: "Pinned Notes",
+  [ACTIVITY_ICON]: "Activity",
+  [MESSAGES_ICON]: "Messages",
+};
+
+function NavTooltip({ label, top, left }: { label: string; top: number; left: number }) {
+  return createPortal(
+    <div
+      role="tooltip"
+      className="pointer-events-none fixed z-50 flex items-center"
+      style={{ top, left, transform: "translate(-100%, -50%)" }}
+    >
+      <span className="whitespace-nowrap rounded-md bg-[#292929] px-2.5 py-1.5 font-body text-[12px] font-medium leading-[16px] text-white shadow-[0px_4px_12px_rgba(0,0,0,0.18)]">
+        {label}
+      </span>
+      <span
+        aria-hidden
+        className="h-0 w-0 border-y-[5px] border-y-transparent border-l-[6px] border-l-[#292929]"
+      />
+    </div>,
+    document.body,
+  );
+}
 
 function NavIcon({
   icon,
+  label,
   active,
   onClick,
 }: {
   icon: string;
+  label: string;
   active: boolean;
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!hovered || !buttonRef.current) {
+      setPosition(null);
+      return;
+    }
+
+    function update() {
+      const button = buttonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      setPosition({
+        top: rect.top + rect.height / 2,
+        left: rect.left - 6,
+      });
+    }
+
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [hovered]);
+
   return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-1.5 rounded-lg p-3 ${active ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
-    >
-      <div className="flex flex-1 items-center gap-3">
-        <Icon name={icon} size={24} className={active ? "text-[#1132ee]" : "text-[#333]"} />
-      </div>
-    </button>
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onFocus={() => setHovered(true)}
+        onBlur={() => setHovered(false)}
+        className={`flex w-full items-center gap-1.5 rounded-lg p-3 ${active ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
+      >
+        <div className="flex flex-1 items-center gap-3">
+          <Icon name={icon} size={24} className={active ? "text-[#1132ee]" : "text-[#333]"} />
+        </div>
+      </button>
+      {hovered && position && <NavTooltip label={label} top={position.top} left={position.left} />}
+    </>
   );
 }
 
@@ -43,60 +113,23 @@ type PanelNavBarProps = {
 };
 
 export default function PanelNavBar({ active, onSelect }: PanelNavBarProps) {
-  const [pinnedAnchor, setPinnedAnchor] = useState<HTMLElement | null>(null);
-  const [contactBookOpen, setContactBookOpen] = useState(false);
-
-  function handleClick(icon: string, event: MouseEvent<HTMLButtonElement>) {
-    if (icon === PINNED_NOTES_ICON) {
-      const button = event.currentTarget;
-      setPinnedAnchor((current) => (current ? null : button));
-      return;
-    }
-    if (icon === CONTACT_BOOK_ICON) {
-      setContactBookOpen((current) => !current);
-      return;
-    }
-    onSelect(icon);
-  }
-
-  function isActive(icon: string) {
-    if (icon === PINNED_NOTES_ICON) return pinnedAnchor !== null;
-    if (icon === CONTACT_BOOK_ICON) return contactBookOpen;
-    return active === icon;
-  }
-
   return (
     <div className="sticky top-0 flex h-full min-h-0 shrink-0 flex-col items-center overflow-clip border-[0.5px] border-[#e6e6e6] bg-white py-4">
       <div className="flex min-h-0 w-16 flex-1 flex-col items-center">
         <div className="scrollbar-thin flex min-h-0 w-full flex-1 flex-col items-start overflow-y-auto px-2">
           <div className="flex w-full shrink-0 flex-col gap-1">
-            {TOP_ICONS.map((icon) => (
+            {NAV_ICONS.map((icon) => (
               <NavIcon
                 key={icon}
                 icon={icon}
-                active={isActive(icon)}
-                onClick={(event) => handleClick(icon, event)}
-              />
-            ))}
-          </div>
-          {/* Grows to push the second group down, and collapses first when the
-              rail is too short for every icon so nothing scrolls out of reach. */}
-          <div className="min-h-4 w-full flex-1" aria-hidden="true" />
-          <div className="flex w-full shrink-0 flex-col gap-1">
-            {BOTTOM_ICONS.map((icon) => (
-              <NavIcon
-                key={icon}
-                icon={icon}
-                active={isActive(icon)}
-                onClick={(event) => handleClick(icon, event)}
+                label={ICON_LABELS[icon]}
+                active={active === icon}
+                onClick={() => onSelect(icon)}
               />
             ))}
           </div>
         </div>
       </div>
-
-      {pinnedAnchor && <PinnedNotesPopover anchor={pinnedAnchor} onClose={() => setPinnedAnchor(null)} />}
-      {contactBookOpen && <ContactBookModal onClose={() => setContactBookOpen(false)} />}
     </div>
   );
 }

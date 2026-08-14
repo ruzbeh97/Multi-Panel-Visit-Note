@@ -1,5 +1,15 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import Icon from "./Icon";
+import PinnedNotesPopover from "./PinnedNotesPopover";
+import ContactBookModal from "./ContactBookModal";
+import {
+  ACTIVITY_ICON,
+  CONTACT_BOOK_ICON,
+  ICON_LABELS,
+  MESSAGES_ICON,
+  PINNED_NOTES_ICON,
+} from "./PanelNavBar";
 import { CASE, PATIENT } from "../data/chart";
 
 const TABS = [
@@ -15,6 +25,8 @@ const TABS = [
   "Orders",
   "Labs",
 ];
+
+const HEADER_ACTIONS = [CONTACT_BOOK_ICON, PINNED_NOTES_ICON, ACTIVITY_ICON, MESSAGES_ICON] as const;
 
 function IconButton({ icon, label }: { icon: string; label: string }) {
   return (
@@ -41,8 +53,115 @@ function SelectField({ label }: { label: string }) {
   );
 }
 
-export default function PatientHeader() {
+function HeaderTooltip({ label, top, left }: { label: string; top: number; left: number }) {
+  return createPortal(
+    <div
+      role="tooltip"
+      className="pointer-events-none fixed z-50 flex flex-col items-center"
+      style={{ top, left, transform: "translate(-50%, 0)" }}
+    >
+      <span
+        aria-hidden
+        className="h-0 w-0 border-x-[5px] border-x-transparent border-b-[6px] border-b-[#292929]"
+      />
+      <span className="whitespace-nowrap rounded-md bg-[#292929] px-2.5 py-1.5 font-body text-[12px] font-medium leading-[16px] text-white shadow-[0px_4px_12px_rgba(0,0,0,0.18)]">
+        {label}
+      </span>
+    </div>,
+    document.body,
+  );
+}
+
+function HeaderActionIcon({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  active: boolean;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!hovered || !buttonRef.current) {
+      setPosition(null);
+      return;
+    }
+
+    function update() {
+      const button = buttonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 6,
+        left: rect.left + rect.width / 2,
+      });
+    }
+
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [hovered]);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onFocus={() => setHovered(true)}
+        onBlur={() => setHovered(false)}
+        className={`flex items-center justify-center rounded-lg p-2 ${
+          active ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+        }`}
+      >
+        <Icon name={icon} size={20} className={active ? "text-[#1132ee]" : "text-[#333]"} />
+      </button>
+      {hovered && position && <HeaderTooltip label={label} top={position.top} left={position.left} />}
+    </>
+  );
+}
+
+type PatientHeaderProps = {
+  activePanel: string | null;
+  onSelectPanel: (icon: string) => void;
+};
+
+export default function PatientHeader({ activePanel, onSelectPanel }: PatientHeaderProps) {
   const [activeTab, setActiveTab] = useState("Appointments");
+  const [pinnedAnchor, setPinnedAnchor] = useState<HTMLElement | null>(null);
+  const [contactBookOpen, setContactBookOpen] = useState(false);
+
+  function handleAction(icon: string, event: MouseEvent<HTMLButtonElement>) {
+    if (icon === PINNED_NOTES_ICON) {
+      const button = event.currentTarget;
+      setPinnedAnchor((current) => (current ? null : button));
+      return;
+    }
+    if (icon === CONTACT_BOOK_ICON) {
+      setContactBookOpen((current) => !current);
+      return;
+    }
+    onSelectPanel(icon);
+  }
+
+  function isActive(icon: string) {
+    if (icon === PINNED_NOTES_ICON) return pinnedAnchor !== null;
+    if (icon === CONTACT_BOOK_ICON) return contactBookOpen;
+    return activePanel === icon;
+  }
 
   return (
     <div className="flex w-full flex-col items-start pt-2">
@@ -70,8 +189,8 @@ export default function PatientHeader() {
         </div>
       </div>
 
-      <div className="flex w-full items-center gap-4 border-b border-[#e6e6e6] pl-4">
-        <div className="scrollbar-none flex min-w-0 items-center gap-4 overflow-x-auto">
+      <div className="flex w-full items-center gap-4 border-b border-[#e6e6e6] pl-4 pr-3">
+        <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-4 overflow-x-auto">
           {TABS.map((tab) => {
             const active = tab === activeTab;
             return (
@@ -86,6 +205,18 @@ export default function PatientHeader() {
               </button>
             );
           })}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-0.5 self-stretch pb-0.5">
+          {HEADER_ACTIONS.map((icon) => (
+            <HeaderActionIcon
+              key={icon}
+              icon={icon}
+              label={ICON_LABELS[icon]}
+              active={isActive(icon)}
+              onClick={(event) => handleAction(icon, event)}
+            />
+          ))}
         </div>
       </div>
 
@@ -141,6 +272,9 @@ export default function PatientHeader() {
           </div>
         </div>
       </div>
+
+      {pinnedAnchor && <PinnedNotesPopover anchor={pinnedAnchor} onClose={() => setPinnedAnchor(null)} />}
+      {contactBookOpen && <ContactBookModal onClose={() => setContactBookOpen(false)} />}
     </div>
   );
 }

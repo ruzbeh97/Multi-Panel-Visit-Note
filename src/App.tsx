@@ -22,6 +22,7 @@ import ResizableSidePanel, { SIDE_PANEL_MIN_WIDTH } from "./components/Resizable
 import OverlayScrollbar from "./components/OverlayScrollbar";
 import AssistantColumn from "./components/AssistantColumn";
 import NoteOutlineRail from "./components/NoteOutlineRail";
+import AiSummaryCard from "./components/notes/AiSummaryCard";
 import SubjectiveSection from "./components/notes/SubjectiveSection";
 import ObjectiveSection from "./components/notes/ObjectiveSection";
 import AssessmentSection from "./components/notes/AssessmentSection";
@@ -68,7 +69,7 @@ function App() {
 
             <div className="flex h-full min-h-0 w-full flex-1 items-start gap-2 pt-2">
               <div className="flex h-full min-w-0 flex-1 flex-col items-start overflow-hidden rounded-lg border border-[#e6e6e6] bg-white">
-                <PatientHeader />
+                <PatientHeader activePanel={activePanel} onSelectPanel={selectPanel} />
 
                 <div className="flex min-h-0 w-full flex-1 flex-col items-start bg-[#f7f7f7]">
                   <NoteStoreProvider>
@@ -93,6 +94,7 @@ function App() {
                               sidePanelOpen ? "" : "max-w-[900px]"
                             }`}
                           >
+                            <AiSummaryCard />
                             <SubjectiveSection />
                             <ObjectiveSection />
                             <AssessmentSection />

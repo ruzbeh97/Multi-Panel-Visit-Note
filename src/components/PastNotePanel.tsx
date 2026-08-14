@@ -10,7 +10,11 @@ import PlanSection from "./notes/PlanSection";
 import { PAST_NOTES } from "../data/chart";
 
 function noteLabel(note: (typeof PAST_NOTES)[number]) {
-  return `${note.caseName} | ${note.provider} | ${note.date}`;
+  return `${note.caseName} | ${note.provider} | ${note.date} ${note.time}`;
+}
+
+function noteMeta(note: (typeof PAST_NOTES)[number]) {
+  return `${note.caseName} · ${note.provider} · ${note.date} · ${note.time}`;
 }
 
 export default function PastNotePanel() {
@@ -107,7 +111,7 @@ export default function PastNotePanel() {
                           {note.title}
                         </span>
                         <span className="font-body text-[13px] leading-[18px] text-[#666666]">
-                          {note.caseName} · {note.provider} · {note.date}
+                          {noteMeta(note)}
                         </span>
                       </button>
                     );

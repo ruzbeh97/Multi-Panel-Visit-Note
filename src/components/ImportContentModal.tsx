@@ -123,7 +123,7 @@ export default function ImportContentModal({
           <span
             className={`min-w-0 truncate font-body text-[16px] ${selected ? "text-[#1a1a1a]" : "text-[#666666]"}`}
           >
-            {selected ? `${selected.title} · ${selected.provider} · ${selected.date}` : "Select a previous chart note"}
+            {selected ? `${selected.title} · ${selected.provider} · ${selected.date} · ${selected.time}` : "Select a previous chart note"}
           </span>
           <Icon
             name="keyboard_arrow_down"
@@ -162,7 +162,7 @@ export default function ImportContentModal({
                     {note.title}
                   </span>
                   <span className="font-body text-[13px] leading-[18px] text-[#666666]">
-                    {note.caseName} · {note.provider} · {note.date}
+                    {note.caseName} · {note.provider} · {note.date} · {note.time}
                   </span>
                 </button>
               );
