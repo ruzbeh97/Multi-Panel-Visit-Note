@@ -1,7 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Icon from "./Icon";
 import PdfViewer from "./pdf/PdfViewer";
 import { ATTACHMENT_GROUPS } from "../data/chart";
+import AttachmentsFilterPopover, {
+  EMPTY_ATTACHMENT_FILTERS,
+  attachmentFilterCount,
+  attachmentFiltersActive,
+  filePassesFilters,
+  type AttachmentFilters,
+} from "./AttachmentsFilterPopover";
 
 type Tone = "magenta" | "yellow" | "green" | "grey" | "blue";
 
@@ -73,20 +80,26 @@ export default function AttachmentsPanel() {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>(["Patient", "Other"]);
   const [openFile, setOpenFile] = useState<string | null>(null);
+  const [filters, setFilters] = useState<AttachmentFilters>(EMPTY_ATTACHMENT_FILTERS);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   function toggleGroup(label: string) {
     setCollapsed((prev) => (prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]));
   }
 
   const search = query.trim().toLowerCase();
+  const filtersOn = attachmentFiltersActive(filters);
+  const filterCount = attachmentFilterCount(filters);
+
   const groups = GROUPS.map((group) => ({
     ...group,
-    files: search
-      ? group.files.filter((file) =>
-          [file.name, file.date, file.tag, file.case].some((field) => field.toLowerCase().includes(search)),
-        )
-      : group.files,
-  })).filter((group) => group.files.length > 0 || !search);
+    files: group.files.filter((file) => {
+      if (!filePassesFilters(file, group.label, filters)) return false;
+      if (!search) return true;
+      return [file.name, file.date, file.tag, file.case].some((field) => field.toLowerCase().includes(search));
+    }),
+  })).filter((group) => group.files.length > 0 || (!search && !filtersOn));
 
   return (
     <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
@@ -102,43 +115,73 @@ export default function AttachmentsPanel() {
               className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[24px] text-[#1a1a1a] outline-none placeholder:text-[#666]"
             />
           </label>
-          <button type="button" className="flex shrink-0 items-start rounded-full p-1 hover:bg-black/5" aria-label="Filter attachments">
-            <Icon name="filter_alt" size={20} className="text-[#1a1a1a]" />
+          <button
+            ref={filterButtonRef}
+            type="button"
+            onClick={() => setFilterOpen((open) => !open)}
+            aria-haspopup="dialog"
+            aria-expanded={filterOpen}
+            className={`relative flex shrink-0 items-start rounded-full p-1 ${
+              filterOpen || filtersOn ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+            }`}
+            aria-label="Filter attachments"
+          >
+            <Icon name="filter_alt" size={20} className={filtersOn || filterOpen ? "text-[#1132ee]" : "text-[#1a1a1a]"} />
+            {filtersOn && (
+              <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-[#1132ee] font-body text-[10px] font-medium leading-none text-white">
+                {filterCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
 
       <div className="flex w-full flex-col items-start pb-10">
-        {groups.map((group) => {
-          const isCollapsed = collapsed.includes(group.label);
-          return (
-            <div key={group.label} className="flex w-full flex-col items-start">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.label)}
-                aria-expanded={!isCollapsed}
-                className={`flex w-full items-center gap-2 py-2 pr-3 ${isCollapsed ? "border-b border-[#e6e6e6]" : ""}`}
-              >
-                <Badge tone={group.tone} label={group.label} />
-                <span className="font-body text-[14px] leading-[22px] text-[#666]">({group.files.length})</span>
-                <Icon name={isCollapsed ? "expand_more" : "expand_less"} size={16} className="text-[#1a1a1a]" />
-              </button>
-              {!isCollapsed &&
-                group.files.map((file, i) => {
-                  const key = `${group.label}-${i}`;
-                  return (
-                    <FileRow
-                      key={key}
-                      file={file}
-                      open={openFile === key}
-                      onToggle={() => setOpenFile((current) => (current === key ? null : key))}
-                    />
-                  );
-                })}
-            </div>
-          );
-        })}
+        {groups.length === 0 ? (
+          <p className="w-full py-8 text-center font-body text-[14px] leading-[22px] text-[#666666]">
+            No attachments match the current filters.
+          </p>
+        ) : (
+          groups.map((group) => {
+            const isCollapsed = collapsed.includes(group.label) && !(filtersOn || search);
+            return (
+              <div key={group.label} className="flex w-full flex-col items-start">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  aria-expanded={!isCollapsed}
+                  className={`flex w-full items-center gap-2 py-2 pr-3 ${isCollapsed ? "border-b border-[#e6e6e6]" : ""}`}
+                >
+                  <Badge tone={group.tone} label={group.label} />
+                  <span className="font-body text-[14px] leading-[22px] text-[#666]">({group.files.length})</span>
+                  <Icon name={isCollapsed ? "expand_more" : "expand_less"} size={16} className="text-[#1a1a1a]" />
+                </button>
+                {!isCollapsed &&
+                  group.files.map((file, i) => {
+                    const key = `${group.label}-${i}-${file.name}`;
+                    return (
+                      <FileRow
+                        key={key}
+                        file={file}
+                        open={openFile === key}
+                        onToggle={() => setOpenFile((current) => (current === key ? null : key))}
+                      />
+                    );
+                  })}
+              </div>
+            );
+          })
+        )}
       </div>
+
+      {filterOpen && filterButtonRef.current && (
+        <AttachmentsFilterPopover
+          anchor={filterButtonRef.current}
+          value={filters}
+          onChange={setFilters}
+          onClose={() => setFilterOpen(false)}
+        />
+      )}
     </aside>
   );
 }
