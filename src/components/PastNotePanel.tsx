@@ -11,11 +11,11 @@ import OrdersSection from "./notes/OrdersSection";
 import { PAST_NOTES } from "../data/chart";
 
 function noteLabel(note: (typeof PAST_NOTES)[number]) {
-  return `${note.caseName} | ${note.provider} | ${note.visitType} | ${note.date} ${note.time}`;
+  return `${note.caseName} | ${note.visitType} | ${note.provider} ${note.date} ${note.time}`;
 }
 
 function noteMeta(note: (typeof PAST_NOTES)[number]) {
-  return `${note.caseName} · ${note.provider} · ${note.visitType} · ${note.date} · ${note.time}`;
+  return `${note.caseName} · ${note.visitType} · ${note.provider} · ${note.date} · ${note.time}`;
 }
 
 type PastNotePanelProps = {
@@ -127,31 +127,33 @@ export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
               )}
             </div>
 
-            <button
-              type="button"
-              className="flex shrink-0 items-start rounded-full p-1 hover:bg-black/5"
-              aria-label={`Open visit note: ${noteLabel(selected)}`}
-              title="Open visit note"
-              onClick={() => onOpenVisit?.(selected.id)}
-            >
-              <Icon name="link" size={20} className="text-[#1132ee]" />
-            </button>
+            <div className="ml-auto flex shrink-0 items-start gap-1">
+              <button
+                type="button"
+                className="flex shrink-0 items-start rounded-full p-1 hover:bg-black/5"
+                aria-label={`Open visit note: ${noteLabel(selected)}`}
+                title="Open visit note"
+                onClick={() => onOpenVisit?.(selected.id)}
+              >
+                <Icon name="link" size={20} className="text-[#1132ee]" />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => (carriedForward ? store.undoImportWholeNote() : store.importWholeNote())}
-              className={`ml-auto flex shrink-0 items-start rounded-full p-1 ${
-                carriedForward ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
-              }`}
-              aria-label={
-                carriedForward
-                  ? "Undo carrying this note into the current note"
-                  : "Copy this note into the current note"
-              }
-              title={carriedForward ? "Undo carry forward" : "Carry this note forward"}
-            >
-              <Icon name={carriedForward ? "undo" : "move_up"} size={20} className="text-[#1132ee]" />
-            </button>
+              <button
+                type="button"
+                onClick={() => (carriedForward ? store.undoImportWholeNote() : store.importWholeNote())}
+                className={`flex shrink-0 items-start rounded-full p-1 ${
+                  carriedForward ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+                }`}
+                aria-label={
+                  carriedForward
+                    ? "Undo carrying this note into the current note"
+                    : "Copy this note into the current note"
+                }
+                title={carriedForward ? "Undo carry forward" : "Carry this note forward"}
+              >
+                <Icon name={carriedForward ? "undo" : "move_up"} size={20} className="text-[#1132ee]" />
+              </button>
+            </div>
           </div>
 
           <NoteReadOnlyProvider>

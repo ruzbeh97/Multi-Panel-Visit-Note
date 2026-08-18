@@ -17,7 +17,7 @@ type PastVisitNoteViewProps = {
 };
 
 function noteLabel(note: (typeof PAST_NOTES)[number]) {
-  return `${note.caseName} | ${note.provider} | ${note.visitType} | ${note.date} ${note.time}`;
+  return `${note.caseName} | ${note.visitType} | ${note.provider} ${note.date} ${note.time}`;
 }
 
 export default function PastVisitNoteView({ noteId, onBack }: PastVisitNoteViewProps) {

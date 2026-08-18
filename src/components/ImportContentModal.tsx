@@ -126,7 +126,7 @@ export default function ImportContentModal({
               className={`min-w-0 truncate font-body text-[16px] ${selected ? "text-[#1a1a1a]" : "text-[#666666]"}`}
             >
               {selected
-                ? `${selected.title} · ${selected.provider} · ${selected.visitType} · ${selected.date} · ${selected.time}`
+                ? `${selected.title} · ${selected.visitType} · ${selected.provider} · ${selected.date} · ${selected.time}`
                 : "Select a previous chart note"}
             </span>
             <Icon
@@ -166,7 +166,7 @@ export default function ImportContentModal({
                       {note.title}
                     </span>
                     <span className="font-body text-[13px] leading-[18px] text-[#666666]">
-                      {note.caseName} · {note.provider} · {note.visitType} · {note.date} · {note.time}
+                      {note.caseName} · {note.visitType} · {note.provider} · {note.date} · {note.time}
                     </span>
                   </button>
                 );
