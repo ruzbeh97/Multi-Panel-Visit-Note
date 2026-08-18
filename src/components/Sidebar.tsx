@@ -90,7 +90,12 @@ function SidebarGroup({ heading, items }: NavGroup) {
   );
 }
 
-export default function Sidebar() {
+type SidebarProps = {
+  railOutside: boolean;
+  onToggleRailOutside: () => void;
+};
+
+export default function Sidebar({ railOutside, onToggleRailOutside }: SidebarProps) {
   return (
     <div className="flex h-full w-[200px] shrink-0 flex-col gap-4 p-2">
       <div className="flex w-full flex-col items-start">
@@ -134,6 +139,34 @@ export default function Sidebar() {
             <Icon name="help" size={16} className="text-[#454545]" />
           </button>
         </div>
+
+        <button
+          type="button"
+          role="switch"
+          aria-checked={railOutside}
+          onClick={onToggleRailOutside}
+          aria-label="Dock the panel rail outside the chart frame"
+          title="Dock the panel rail outside the chart frame"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg px-1.5 py-1 hover:bg-black/5"
+        >
+          <Icon
+            name="dock_to_right"
+            size={16}
+            className={railOutside ? "text-[#0d28bf]" : "text-[#454545]"}
+          />
+          <span
+            aria-hidden
+            className={`flex h-3.5 w-6 shrink-0 items-center rounded-full px-0.5 transition-colors ${
+              railOutside ? "bg-[#1132ee]" : "bg-black/20"
+            }`}
+          >
+            <span
+              className={`size-2.5 rounded-full bg-white transition-transform ${
+                railOutside ? "translate-x-[10px]" : ""
+              }`}
+            />
+          </span>
+        </button>
       </div>
     </div>
   );

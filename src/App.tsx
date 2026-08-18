@@ -49,10 +49,13 @@ function App() {
   const [panelWidth, setPanelWidth] = useState(SIDE_PANEL_MIN_WIDTH);
   const [openedPastNoteId, setOpenedPastNoteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Appointments");
+  const [railOutside, setRailOutside] = useState(false);
   const noteScrollRef = useRef<HTMLDivElement>(null);
   const attachmentsTabOpen = activeTab === "Attachments";
+  // The detached rail lives beside the frame, so panels can stay open on any tab.
+  const railVisible = railOutside || !attachmentsTabOpen;
   const sidePanelOpen =
-    !attachmentsTabOpen &&
+    (railOutside || !attachmentsTabOpen) &&
     openedPastNoteId === null &&
     activePanel !== null &&
     SIDE_PANELS.includes(activePanel);
@@ -66,11 +69,37 @@ function App() {
     setActivePanel(null);
   }
 
+  function selectNavPanel(icon: string) {
+    if (openedPastNoteId) {
+      setOpenedPastNoteId(null);
+      setActivePanel(icon);
+      return;
+    }
+    selectPanel(icon);
+  }
+
+  const panelContent = (
+    <>
+      {activePanel === PAST_NOTE_ICON && <PastNotePanel onOpenVisit={openPastVisit} />}
+      {activePanel === ATTACHMENTS_ICON && <AttachmentsPanel />}
+      {activePanel === MEDICAL_HISTORY_ICON && <MedicalHistoryPanel />}
+      {activePanel === ORDERS_ICON && <OrdersPanel />}
+      {activePanel === MESSAGES_ICON && <MessagesPanel />}
+      {activePanel === ACTIVITY_ICON && <PatientActivityPanel />}
+      {activePanel === TIMELINE_ICON && <ChartTimelinePanel />}
+    </>
+  );
+
   return (
     <div className="flex h-screen w-full items-start justify-center border border-black/10 bg-[#f1f3fe] p-0">
       <div className="flex h-full w-full flex-1 flex-col items-start">
         <div className="flex h-full w-full flex-1 items-center justify-between bg-[#f1f3fe]">
-          {sidebarOpen && <Sidebar />}
+          {sidebarOpen && (
+            <Sidebar
+              railOutside={railOutside}
+              onToggleRailOutside={() => setRailOutside((current) => !current)}
+            />
+          )}
 
           <div className={`flex h-full min-w-0 flex-1 flex-col items-start py-2 pr-2 ${sidebarOpen ? "" : "pl-2"}`}>
             <div className="w-full px-2">
@@ -82,24 +111,24 @@ function App() {
               />
             </div>
 
+            <NoteStoreProvider>
             <div className="flex h-full min-h-0 w-full flex-1 items-start gap-2 pt-2">
-              <div className="flex h-full min-w-0 flex-1 flex-col items-start overflow-hidden rounded-lg border border-[#e6e6e6] bg-white">
-                <PatientHeader
-                  activePanel={openedPastNoteId ? null : activePanel}
-                  onSelectPanel={(icon) => {
-                    if (openedPastNoteId) {
-                      setOpenedPastNoteId(null);
-                      setActivePanel(icon);
-                      return;
-                    }
-                    selectPanel(icon);
-                  }}
-                  activeTab={activeTab}
-                  onSelectTab={setActiveTab}
-                />
+              {/* In the detached layout the frame, panel, and rail share one bordered surface. */}
+              <div
+                className={
+                  railOutside
+                    ? "flex h-full min-h-0 min-w-0 flex-1 items-stretch overflow-hidden rounded-lg border border-[#e6e6e6] bg-white"
+                    : "flex h-full min-h-0 min-w-0 flex-1 items-stretch"
+                }
+              >
+              <div
+                className={`flex h-full min-w-0 flex-1 flex-col items-start overflow-hidden bg-white ${
+                  railOutside ? "" : "rounded-lg border border-[#e6e6e6]"
+                }`}
+              >
+                <PatientHeader activeTab={activeTab} onSelectTab={setActiveTab} />
 
                 <div className="flex min-h-0 w-full flex-1 flex-col items-start bg-[#f7f7f7]">
-                  <NoteStoreProvider>
                   <div className="flex min-h-0 w-full flex-1 items-start gap-0 bg-white">
                     {attachmentsTabOpen ? (
                       <AttachmentsPage />
@@ -141,39 +170,43 @@ function App() {
                         <OverlayScrollbar targetRef={noteScrollRef} />
                       </div>
                     )}
-                    {sidePanelOpen && (
+                    {sidePanelOpen && !railOutside && (
                       <ResizableSidePanel width={panelWidth} onWidthChange={setPanelWidth}>
-                        {activePanel === PAST_NOTE_ICON && (
-                          <PastNotePanel onOpenVisit={openPastVisit} />
-                        )}
-                        {activePanel === ATTACHMENTS_ICON && <AttachmentsPanel />}
-                        {activePanel === MEDICAL_HISTORY_ICON && <MedicalHistoryPanel />}
-                        {activePanel === ORDERS_ICON && <OrdersPanel />}
-                        {activePanel === MESSAGES_ICON && <MessagesPanel />}
-                        {activePanel === ACTIVITY_ICON && <PatientActivityPanel />}
-                        {activePanel === TIMELINE_ICON && <ChartTimelinePanel />}
+                        {panelContent}
                       </ResizableSidePanel>
                     )}
-                    {!attachmentsTabOpen && (
+                    {!attachmentsTabOpen && !railOutside && (
                       <PanelNavBar
                         active={openedPastNoteId ? null : activePanel}
-                        onSelect={(icon) => {
-                          if (openedPastNoteId) {
-                            setOpenedPastNoteId(null);
-                            setActivePanel(icon);
-                            return;
-                          }
-                          selectPanel(icon);
-                        }}
+                        onSelect={selectNavPanel}
                       />
                     )}
                   </div>
-                  </NoteStoreProvider>
                 </div>
+              </div>
+
+              {railOutside && sidePanelOpen && (
+                <ResizableSidePanel
+                  variant="standalone"
+                  width={panelWidth}
+                  onWidthChange={setPanelWidth}
+                >
+                  {panelContent}
+                </ResizableSidePanel>
+              )}
+
+              {railOutside && railVisible && (
+                <PanelNavBar
+                  variant="standalone"
+                  active={openedPastNoteId ? null : activePanel}
+                  onSelect={selectNavPanel}
+                />
+              )}
               </div>
 
               {assistantOpen && <AssistantColumn />}
             </div>
+            </NoteStoreProvider>
           </div>
         </div>
       </div>

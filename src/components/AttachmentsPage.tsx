@@ -16,6 +16,14 @@ type AttachmentFile = (typeof ATTACHMENT_GROUPS)[number]["files"][number];
 // without a real <table> (rows expand to hold an inline PDF viewer).
 const COLUMNS = "grid-cols-[40px_minmax(0,1fr)_150px_200px_220px_84px]";
 
+// Group pill colors match the chart Attachments table (Fax / Case / Patient / Chart Note).
+const GROUP_BADGE_TONES: Record<string, string> = {
+  Imaging: "bg-[rgba(156,109,255,0.14)] text-[#5b2d9e]",
+  Fax: "bg-[rgba(255,173,51,0.16)] text-[#8a5a00]",
+  Patient: "bg-[rgba(79,176,115,0.16)] text-[#1f6b3a]",
+  Other: "bg-[rgba(255,200,50,0.18)] text-[#8a6a00]",
+};
+
 function Badge({ tone, label }: { tone: "grey" | "blue"; label: string }) {
   const tones = {
     grey: "bg-[rgba(128,128,128,0.12)] text-[#0f0f0f]",
@@ -242,7 +250,9 @@ export default function AttachmentsPage() {
         </div>
       </div>
 
-      <div className="mt-4 flex w-full flex-col items-start overflow-hidden rounded-lg border border-[#e6e6e6]">
+      <div className="mt-4 w-full overflow-hidden rounded-lg border border-[#e6e6e6]">
+        <div className="scrollbar-thin w-full overflow-x-auto">
+        <div className="flex min-w-[860px] flex-col items-start">
         <div
           className={`grid w-full ${COLUMNS} items-center gap-3 border-b border-[#e6e6e6] bg-white px-3 py-2.5`}
         >
@@ -300,11 +310,12 @@ export default function AttachmentsPage() {
                         className="text-[#1a1a1a]"
                       />
                     </button>
-                    <span className="flex items-center rounded-full bg-[rgba(255,173,51,0.16)] px-2 py-[3px] font-body text-[13px] font-medium leading-[20px] text-[#8a5a00]">
-                      {group.label}
-                    </span>
-                    <span className="font-body text-[13px] leading-[20px] text-[#666666]">
-                      ({group.files.length})
+                    <span
+                      className={`flex items-center rounded-full px-2 py-[3px] font-body text-[13px] font-medium leading-[20px] ${
+                        GROUP_BADGE_TONES[group.label] ?? "bg-[rgba(128,128,128,0.12)] text-[#0f0f0f]"
+                      }`}
+                    >
+                      {group.label} ({group.files.length})
                     </span>
                   </div>
                 </div>
@@ -324,6 +335,8 @@ export default function AttachmentsPage() {
             );
           })
         )}
+        </div>
+        </div>
       </div>
 
       {filterOpen && filterButtonRef.current && (

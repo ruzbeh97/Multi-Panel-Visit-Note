@@ -10,9 +10,16 @@ type Props = {
   width: number;
   onWidthChange: Dispatch<SetStateAction<number>>;
   children: ReactNode;
+  // "inset" docks against the note; "standalone" is its own card beside the frame.
+  variant?: "inset" | "standalone";
 };
 
-export default function ResizableSidePanel({ width, onWidthChange, children }: Props) {
+export default function ResizableSidePanel({
+  width,
+  onWidthChange,
+  children,
+  variant = "inset",
+}: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
 
@@ -80,7 +87,13 @@ export default function ResizableSidePanel({ width, onWidthChange, children }: P
   }
 
   return (
-    <div ref={wrapperRef} className="relative ml-4 flex h-full shrink-0" style={{ width }}>
+    <div
+      ref={wrapperRef}
+      className={`relative flex h-full shrink-0 ${
+        variant === "standalone" ? "bg-white" : "ml-4"
+      }`}
+      style={{ width }}
+    >
       <div
         role="separator"
         aria-orientation="vertical"

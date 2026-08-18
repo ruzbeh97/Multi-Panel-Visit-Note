@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import Icon from "./Icon";
+import PinnedNotesPopover from "./PinnedNotesPopover";
+import ContactBookModal from "./ContactBookModal";
 
 export const PAST_NOTE_ICON = "note_alt";
 export const PINNED_NOTES_ICON = "keep";
@@ -13,6 +15,10 @@ export const ACTIVITY_ICON = "route";
 export const TIMELINE_ICON = "conversion_path";
 
 const NAV_ICONS = [PAST_NOTE_ICON, ATTACHMENTS_ICON, MEDICAL_HISTORY_ICON, ORDERS_ICON, TIMELINE_ICON];
+
+// Formerly in the patient header tab row; Activity / Messages open side panels,
+// Contact Book / Pinned Notes open their own overlays.
+const FOOTER_ICONS = [CONTACT_BOOK_ICON, PINNED_NOTES_ICON, ACTIVITY_ICON, MESSAGES_ICON];
 
 export const ICON_LABELS: Record<string, string> = {
   [PAST_NOTE_ICON]: "Past Notes",
@@ -110,11 +116,39 @@ function NavIcon({
 type PanelNavBarProps = {
   active: string | null;
   onSelect: (icon: string) => void;
+  // "inset" sits inside the chart frame; "standalone" is its own card beside it.
+  variant?: "inset" | "standalone";
 };
 
-export default function PanelNavBar({ active, onSelect }: PanelNavBarProps) {
+export default function PanelNavBar({ active, onSelect, variant = "inset" }: PanelNavBarProps) {
+  const [pinnedAnchor, setPinnedAnchor] = useState<HTMLElement | null>(null);
+  const [contactBookOpen, setContactBookOpen] = useState(false);
+
+  function handleFooter(icon: string, event: MouseEvent<HTMLButtonElement>) {
+    if (icon === PINNED_NOTES_ICON) {
+      const button = event.currentTarget;
+      setPinnedAnchor((current) => (current ? null : button));
+      return;
+    }
+    if (icon === CONTACT_BOOK_ICON) {
+      setContactBookOpen((current) => !current);
+      return;
+    }
+    onSelect(icon);
+  }
+
+  function isFooterActive(icon: string) {
+    if (icon === PINNED_NOTES_ICON) return pinnedAnchor !== null;
+    if (icon === CONTACT_BOOK_ICON) return contactBookOpen;
+    return active === icon;
+  }
+
   return (
-    <div className="sticky top-0 flex h-full min-h-0 shrink-0 flex-col items-center overflow-clip border-[0.5px] border-[#e6e6e6] bg-white py-4">
+    <div
+      className={`flex h-full min-h-0 shrink-0 flex-col items-center overflow-clip border-[#e6e6e6] bg-white py-4 ${
+        variant === "standalone" ? "border-l" : "sticky top-0 border-[0.5px]"
+      }`}
+    >
       <div className="flex min-h-0 w-16 flex-1 flex-col items-center">
         <div className="scrollbar-thin flex min-h-0 w-full flex-1 flex-col items-start overflow-y-auto px-2">
           <div className="flex w-full shrink-0 flex-col gap-1">
@@ -129,7 +163,22 @@ export default function PanelNavBar({ active, onSelect }: PanelNavBarProps) {
             ))}
           </div>
         </div>
+
+        <div className="flex w-full shrink-0 flex-col items-start gap-1 border-t border-[#e6e6e6] px-2 pt-3">
+          {FOOTER_ICONS.map((icon) => (
+            <NavIcon
+              key={icon}
+              icon={icon}
+              label={ICON_LABELS[icon]}
+              active={isFooterActive(icon)}
+              onClick={(event) => handleFooter(icon, event)}
+            />
+          ))}
+        </div>
       </div>
+
+      {pinnedAnchor && <PinnedNotesPopover anchor={pinnedAnchor} onClose={() => setPinnedAnchor(null)} />}
+      {contactBookOpen && <ContactBookModal onClose={() => setContactBookOpen(false)} />}
     </div>
   );
 }
