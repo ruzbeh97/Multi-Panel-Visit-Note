@@ -120,7 +120,7 @@ export default function AttachmentsPanel() {
   const groups = ATTACHMENT_GROUPS.map((group) => ({
     ...group,
     files: group.files.filter((file) => {
-      if (!filePassesFilters(file, group.label, filters)) return false;
+      if (!filePassesFilters(file, filters)) return false;
       if (!search) return true;
       return [file.name, file.date, file.tag, file.case].some((field) => field.toLowerCase().includes(search));
     }),
