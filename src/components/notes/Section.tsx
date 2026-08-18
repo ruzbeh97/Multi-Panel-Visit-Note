@@ -65,18 +65,18 @@ export function SubHeading({ title }: { title: string }) {
         <div className="flex flex-1 items-center gap-1 py-1">
           <h2 className="flex-1 font-body text-[24px] font-bold leading-none text-black">{title}</h2>
         </div>
-        <div className="flex shrink-0 items-center rounded-lg border border-[#e6e6e6] bg-white px-1 py-0.5 shadow-[0px_4px_5px_rgba(0,0,0,0.06)]">
-          <button
-            type="button"
-            onClick={toggleImport}
-            aria-haspopup="dialog"
-            aria-expanded={importAnchor !== null}
-            className={`flex items-start rounded-full p-1 ${importAnchor ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
-            aria-label={`Carry ${title} forward into the current note`}
-          >
-            <Icon name="move_up" size={20} className="text-[#1132ee]" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={toggleImport}
+          aria-haspopup="dialog"
+          aria-expanded={importAnchor !== null}
+          className={`flex shrink-0 items-start rounded-full p-1 ${
+            importAnchor ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+          }`}
+          aria-label={`Carry ${title} forward into the current note`}
+        >
+          <Icon name="move_up" size={20} className="text-[#1132ee]" />
+        </button>
 
         {modal}
       </div>

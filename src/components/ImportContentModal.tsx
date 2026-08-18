@@ -54,6 +54,7 @@ export default function ImportContentModal({
   const [listOpen, setListOpen] = useState(false);
   const [action, setAction] = useState<ImportAction>("overwrite");
 
+  const noteLocked = Boolean(defaultNoteId);
   const selected = PAST_NOTES.find((note) => note.id === noteId) ?? null;
   const helper = ACTIONS.find((option) => option.id === action)?.helper ?? "";
 
@@ -112,64 +113,68 @@ export default function ImportContentModal({
         Import Content from Last Visit
       </h2>
 
-      <div className="relative w-full">
-        <button
-          type="button"
-          aria-haspopup="listbox"
-          aria-expanded={listOpen}
-          onClick={() => setListOpen((open) => !open)}
-          className="flex w-full items-center justify-between gap-4 rounded-lg border border-[#e6e6e6] bg-white px-4 py-3 hover:bg-[#f7f7f7]"
-        >
-          <span
-            className={`min-w-0 truncate font-body text-[16px] ${selected ? "text-[#1a1a1a]" : "text-[#666666]"}`}
+      {!noteLocked && (
+        <div className="relative w-full">
+          <button
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded={listOpen}
+            onClick={() => setListOpen((open) => !open)}
+            className="flex w-full items-center justify-between gap-4 rounded-lg border border-[#e6e6e6] bg-white px-4 py-3 hover:bg-[#f7f7f7]"
           >
-            {selected ? `${selected.title} · ${selected.provider} · ${selected.date} · ${selected.time}` : "Select a previous chart note"}
-          </span>
-          <Icon
-            name="keyboard_arrow_down"
-            size={16}
-            className={`shrink-0 text-[#1a1a1a] transition-transform ${listOpen ? "rotate-180" : ""}`}
-          />
-        </button>
+            <span
+              className={`min-w-0 truncate font-body text-[16px] ${selected ? "text-[#1a1a1a]" : "text-[#666666]"}`}
+            >
+              {selected
+                ? `${selected.title} · ${selected.provider} · ${selected.visitType} · ${selected.date} · ${selected.time}`
+                : "Select a previous chart note"}
+            </span>
+            <Icon
+              name="keyboard_arrow_down"
+              size={16}
+              className={`shrink-0 text-[#1a1a1a] transition-transform ${listOpen ? "rotate-180" : ""}`}
+            />
+          </button>
 
-        {listOpen && (
-          <div
-            role="listbox"
-            aria-label="Previous chart notes"
-            className="scrollbar-thin absolute left-0 top-[calc(100%+4px)] z-10 flex max-h-[240px] w-full flex-col overflow-y-auto rounded-xl border border-[#e6e6e6] bg-white py-2 shadow-[0px_12px_32px_rgba(0,0,0,0.14)]"
-          >
-            {PAST_NOTES.map((note) => {
-              const active = note.id === noteId;
-              return (
-                <button
-                  key={note.id}
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  onClick={() => {
-                    setNoteId(note.id);
-                    setListOpen(false);
-                  }}
-                  className={`mx-2 flex flex-col items-start rounded-lg px-3 py-2 text-left ${
-                    active ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-[#f7f7f7]"
-                  }`}
-                >
-                  <span
-                    className={`font-body text-[14px] font-medium leading-[20px] ${
-                      active ? "text-[#1132ee]" : "text-[#1a1a1a]"
+          {listOpen && (
+            <div
+              role="listbox"
+              aria-label="Previous chart notes"
+              className="scrollbar-thin absolute left-0 top-[calc(100%+4px)] z-10 flex max-h-[240px] w-full flex-col overflow-y-auto rounded-xl border border-[#e6e6e6] bg-white py-2 shadow-[0px_12px_32px_rgba(0,0,0,0.14)]"
+            >
+              {PAST_NOTES.map((note) => {
+                const active = note.id === noteId;
+                return (
+                  <button
+                    key={note.id}
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    onClick={() => {
+                      setNoteId(note.id);
+                      setListOpen(false);
+                    }}
+                    className={`mx-2 flex flex-col items-start rounded-lg px-3 py-2 text-left ${
+                      active ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-[#f7f7f7]"
                     }`}
                   >
-                    {note.title}
-                  </span>
-                  <span className="font-body text-[13px] leading-[18px] text-[#666666]">
-                    {note.caseName} · {note.provider} · {note.date} · {note.time}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    <span
+                      className={`font-body text-[14px] font-medium leading-[20px] ${
+                        active ? "text-[#1132ee]" : "text-[#1a1a1a]"
+                      }`}
+                    >
+                      {note.title}
+                    </span>
+                    <span className="font-body text-[13px] leading-[18px] text-[#666666]">
+                      {note.caseName} · {note.provider} · {note.visitType} · {note.date} · {note.time}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex w-full items-center justify-between gap-4 whitespace-nowrap font-body text-[15px]">
         <span className="font-medium text-[#1132ee]">Pulling From Section:</span>

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Icon from "./Icon";
 import PdfViewer from "./pdf/PdfViewer";
 import { ATTACHMENT_GROUPS } from "../data/chart";
@@ -10,34 +10,49 @@ import AttachmentsFilterPopover, {
   type AttachmentFilters,
 } from "./AttachmentsFilterPopover";
 
-type Tone = "magenta" | "yellow" | "green" | "grey" | "blue";
-
-const TONES: Record<Tone, string> = {
-  magenta: "bg-[rgba(232,22,92,0.12)]",
-  yellow: "bg-[rgba(255,204,0,0.16)]",
-  green: "bg-[rgba(79,176,115,0.12)]",
-  grey: "bg-[rgba(128,128,128,0.12)]",
-  blue: "bg-[rgba(27,131,228,0.12)]",
-};
-
-const GROUP_TONES: Record<string, Tone> = {
-  Imaging: "magenta",
-  Fax: "yellow",
-  Patient: "green",
-  Other: "grey",
-};
-
-const GROUPS = ATTACHMENT_GROUPS.map((group) => ({ ...group, tone: GROUP_TONES[group.label] ?? "grey" }));
-
 type File = (typeof ATTACHMENT_GROUPS)[number]["files"][number];
 
-function Badge({ tone, label, className = "" }: { tone: Tone; label: string; className?: string }) {
+function Badge({ tone, label, className = "" }: { tone: "grey" | "blue"; label: string; className?: string }) {
+  const tones = {
+    grey: "bg-[rgba(128,128,128,0.12)] text-[#0f0f0f]",
+    blue: "bg-[rgba(27,131,228,0.12)] text-[#0f0f0f]",
+  };
+
   return (
     <span
-      className={`flex items-center rounded-full px-3 py-[5px] font-body text-[12px] font-medium leading-[18px] text-[#0f0f0f] ${TONES[tone]} ${className}`}
+      className={`flex items-center rounded-full px-3 py-[5px] font-body text-[12px] font-medium leading-[18px] ${tones[tone]} ${className}`}
     >
       <span className="truncate">{label}</span>
     </span>
+  );
+}
+
+function RailGroup({
+  label,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  label: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex w-full flex-col items-start">
+      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-1 py-2">
+        <span className="flex items-center gap-[10px]">
+          <span aria-hidden className="h-[22px] w-[2px] shrink-0 bg-[#1132ee]" />
+          <span className="font-body text-[14px] font-medium leading-[22px] text-[#1132ee]">
+            {label} ({count})
+          </span>
+        </span>
+        <Icon name={open ? "expand_less" : "expand_more"} size={16} className="text-[#1132ee]" />
+      </button>
+      {open && children}
+    </div>
   );
 }
 
@@ -51,27 +66,37 @@ function FileRow({
   onToggle: () => void;
 }) {
   return (
-    <div className="flex w-full flex-col border-b border-[#e6e6e6] py-4">
-      <div className="flex w-full items-start gap-1">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <p className="truncate font-body text-[14px] font-medium leading-[22px] text-[#1a1a1a]">{file.name}</p>
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 font-body text-[14px] leading-[22px] text-[#1a1a1a]">{file.date}</span>
-            <Badge tone="grey" label={file.tag} className="shrink-0" />
-            <Badge tone="blue" label={file.case} className="min-w-0" />
-          </div>
+    <div className="flex w-full items-stretch gap-[10px]">
+      <span aria-hidden className="w-[2px] shrink-0 bg-[#1132ee]" />
+      <div className="flex min-w-0 flex-1 flex-col border-b border-[#e6e6e6] py-4">
+        <div className="flex w-full items-center gap-1">
+          <span className="flex size-7 shrink-0 items-center justify-center">
+            <Icon name="attach_file" size={20} className="text-[#1a1a1a]" />
+          </span>
+          <p className="min-w-0 flex-1 truncate font-body text-[14px] font-medium leading-[22px] text-[#1a1a1a]">
+            {file.name}
+          </p>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
+              open ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+            }`}
+            aria-label={`${open ? "Hide" : "Open"} ${file.name} as a PDF`}
+          >
+            <Icon name="picture_as_pdf" size={20} className={open ? "text-[#1132ee]" : "text-[#1a1a1a]"} />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          className={`flex shrink-0 items-start rounded-full p-1 ${open ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
-          aria-label={`${open ? "Hide" : "Open"} ${file.name} as a PDF`}
-        >
-          <Icon name="picture_as_pdf" size={20} className={open ? "text-[#1132ee]" : "text-[#1a1a1a]"} />
-        </button>
+
+        <div className="flex min-w-0 items-center gap-2 pt-2">
+          <span className="shrink-0 font-body text-[14px] leading-[22px] text-[#1a1a1a]">{file.date}</span>
+          <Badge tone="grey" label={file.tag} className="shrink-0" />
+          <Badge tone="blue" label={file.case} className="min-w-0" />
+        </div>
+
+        {open && <PdfViewer fileName={file.name} />}
       </div>
-      {open && <PdfViewer fileName={file.name} />}
     </div>
   );
 }
@@ -92,7 +117,7 @@ export default function AttachmentsPanel() {
   const filtersOn = attachmentFiltersActive(filters);
   const filterCount = attachmentFilterCount(filters);
 
-  const groups = GROUPS.map((group) => ({
+  const groups = ATTACHMENT_GROUPS.map((group) => ({
     ...group,
     files: group.files.filter((file) => {
       if (!filePassesFilters(file, group.label, filters)) return false;
@@ -103,17 +128,29 @@ export default function AttachmentsPanel() {
 
   return (
     <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
-      <div className="flex w-full flex-col items-start gap-2 pb-4">
-        <h2 className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">Attachments</h2>
+      <h2 className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">Attachments</h2>
+
+      <div className="flex w-full flex-col items-start gap-2 pb-10 pt-4">
         <div className="flex w-full items-center gap-1.5">
           <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
             <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search files"
+              placeholder="Search"
+              aria-label="Search attachments"
               className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[24px] text-[#1a1a1a] outline-none placeholder:text-[#666]"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="flex shrink-0 items-center rounded-full p-0.5 hover:bg-black/5"
+                aria-label="Clear attachment search"
+              >
+                <Icon name="close" size={16} className="text-[#666666]" />
+              </button>
+            )}
           </label>
           <button
             ref={filterButtonRef}
@@ -121,7 +158,7 @@ export default function AttachmentsPanel() {
             onClick={() => setFilterOpen((open) => !open)}
             aria-haspopup="dialog"
             aria-expanded={filterOpen}
-            className={`relative flex shrink-0 items-start rounded-full p-1 ${
+            className={`relative flex size-7 shrink-0 items-center justify-center rounded-full ${
               filterOpen || filtersOn ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
             }`}
             aria-label="Filter attachments"
@@ -134,30 +171,24 @@ export default function AttachmentsPanel() {
             )}
           </button>
         </div>
-      </div>
 
-      <div className="flex w-full flex-col items-start pb-10">
-        {groups.length === 0 ? (
-          <p className="w-full py-8 text-center font-body text-[14px] leading-[22px] text-[#666666]">
-            No attachments match the current filters.
-          </p>
-        ) : (
-          groups.map((group) => {
-            const isCollapsed = collapsed.includes(group.label) && !(filtersOn || search);
-            return (
-              <div key={group.label} className="flex w-full flex-col items-start">
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.label)}
-                  aria-expanded={!isCollapsed}
-                  className={`flex w-full items-center gap-2 py-2 pr-3 ${isCollapsed ? "border-b border-[#e6e6e6]" : ""}`}
+        <div className="flex w-full flex-col items-start">
+          {groups.length === 0 ? (
+            <p className="w-full py-8 text-center font-body text-[14px] leading-[22px] text-[#666666]">
+              No attachments match the current filters.
+            </p>
+          ) : (
+            groups.map((group) => {
+              const open = !(collapsed.includes(group.label) && !(filtersOn || search));
+              return (
+                <RailGroup
+                  key={group.label}
+                  label={group.label}
+                  count={group.files.length}
+                  open={open}
+                  onToggle={() => toggleGroup(group.label)}
                 >
-                  <Badge tone={group.tone} label={group.label} />
-                  <span className="font-body text-[14px] leading-[22px] text-[#666]">({group.files.length})</span>
-                  <Icon name={isCollapsed ? "expand_more" : "expand_less"} size={16} className="text-[#1a1a1a]" />
-                </button>
-                {!isCollapsed &&
-                  group.files.map((file, i) => {
+                  {group.files.map((file, i) => {
                     const key = `${group.label}-${i}-${file.name}`;
                     return (
                       <FileRow
@@ -168,10 +199,11 @@ export default function AttachmentsPanel() {
                       />
                     );
                   })}
-              </div>
-            );
-          })
-        )}
+                </RailGroup>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {filterOpen && filterButtonRef.current && (

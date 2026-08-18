@@ -265,6 +265,16 @@ function applyClear(note: EditableNote, title: string): EditableNote {
   }
 }
 
+// Every SubHeading that carry-forward knows how to move, in note order.
+const IMPORTABLE_SECTIONS = [
+  "Chief Complaint & History",
+  "Pain Assessment",
+  "Muscle Strength",
+  "Diagnosis & Findings",
+  "Goals & Progress",
+  "Visit Plan",
+];
+
 type NoteStore = {
   note: EditableNote;
   patchSubjective: (patch: Partial<EditableNote["subjective"]>) => void;
@@ -273,6 +283,9 @@ type NoteStore = {
   patchPlan: (patch: Partial<EditableNote["plan"]>) => void;
   importSection: (title: string, action: ImportAction) => void;
   clearSection: (title: string) => void;
+  importWholeNote: () => void;
+  undoImportWholeNote: () => void;
+  canUndoImportWholeNote: boolean;
 };
 
 const NoteStoreContext = createContext<NoteStore | null>(null);
@@ -285,6 +298,8 @@ export function useNoteStore() {
 
 export function NoteStoreProvider({ children }: { children: ReactNode }) {
   const [note, setNote] = useState<EditableNote>(initialNote);
+  // Snapshot taken before a whole-note carry-forward so it can be undone.
+  const [preImportNote, setPreImportNote] = useState<EditableNote | null>(null);
 
   const patchSubjective = useCallback(
     (patch: Partial<EditableNote["subjective"]>) =>
@@ -314,10 +329,41 @@ export function NoteStoreProvider({ children }: { children: ReactNode }) {
     (title: string) => setNote((current) => applyClear(current, title)),
     [],
   );
+  const importWholeNote = useCallback(() => {
+    setPreImportNote(note);
+    setNote(IMPORTABLE_SECTIONS.reduce((draft, title) => applyImport(draft, title, "overwrite"), note));
+  }, [note]);
+  const undoImportWholeNote = useCallback(() => {
+    if (!preImportNote) return;
+    setNote(preImportNote);
+    setPreImportNote(null);
+  }, [preImportNote]);
 
   const value = useMemo(
-    () => ({ note, patchSubjective, patchObjective, patchAssessment, patchPlan, importSection, clearSection }),
-    [note, patchSubjective, patchObjective, patchAssessment, patchPlan, importSection, clearSection],
+    () => ({
+      note,
+      patchSubjective,
+      patchObjective,
+      patchAssessment,
+      patchPlan,
+      importSection,
+      clearSection,
+      importWholeNote,
+      undoImportWholeNote,
+      canUndoImportWholeNote: preImportNote !== null,
+    }),
+    [
+      note,
+      patchSubjective,
+      patchObjective,
+      patchAssessment,
+      patchPlan,
+      importSection,
+      clearSection,
+      importWholeNote,
+      undoImportWholeNote,
+      preImportNote,
+    ],
   );
 
   return <NoteStoreContext.Provider value={value}>{children}</NoteStoreContext.Provider>;

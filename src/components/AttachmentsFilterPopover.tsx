@@ -180,14 +180,14 @@ export default function AttachmentsFilterPopover({
         />
         <div className="mx-1 h-px bg-[#e6e6e6]" />
         <FilterSection
-          title="Document type"
+          title="Tags"
           options={FILTER_OPTIONS.tags}
           selected={value.tags}
           onToggle={(option) => onChange({ ...value, tags: toggleValue(value.tags, option) })}
         />
         <div className="mx-1 h-px bg-[#e6e6e6]" />
         <FilterSection
-          title="Source"
+          title="Group"
           options={FILTER_OPTIONS.sources}
           selected={value.sources}
           onToggle={(option) => onChange({ ...value, sources: toggleValue(value.sources, option) })}

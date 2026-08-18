@@ -12,6 +12,7 @@ import PanelNavBar, {
   TIMELINE_ICON,
 } from "./components/PanelNavBar";
 import PastNotePanel from "./components/PastNotePanel";
+import PastVisitNoteView from "./components/PastVisitNoteView";
 import AttachmentsPanel from "./components/AttachmentsPanel";
 import MedicalHistoryPanel from "./components/MedicalHistoryPanel";
 import OrdersPanel from "./components/OrdersPanel";
@@ -27,6 +28,7 @@ import SubjectiveSection from "./components/notes/SubjectiveSection";
 import ObjectiveSection from "./components/notes/ObjectiveSection";
 import AssessmentSection from "./components/notes/AssessmentSection";
 import PlanSection from "./components/notes/PlanSection";
+import OrdersSection from "./components/notes/OrdersSection";
 import { NoteStoreProvider } from "./components/notes/noteStore";
 
 const SIDE_PANELS = [
@@ -44,11 +46,18 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(SIDE_PANEL_MIN_WIDTH);
+  const [openedPastNoteId, setOpenedPastNoteId] = useState<string | null>(null);
   const noteScrollRef = useRef<HTMLDivElement>(null);
-  const sidePanelOpen = activePanel !== null && SIDE_PANELS.includes(activePanel);
+  const sidePanelOpen =
+    openedPastNoteId === null && activePanel !== null && SIDE_PANELS.includes(activePanel);
 
   function selectPanel(icon: string) {
     setActivePanel((current) => (current === icon ? null : icon));
+  }
+
+  function openPastVisit(noteId: string) {
+    setOpenedPastNoteId(noteId);
+    setActivePanel(null);
   }
 
   return (
@@ -69,44 +78,64 @@ function App() {
 
             <div className="flex h-full min-h-0 w-full flex-1 items-start gap-2 pt-2">
               <div className="flex h-full min-w-0 flex-1 flex-col items-start overflow-hidden rounded-lg border border-[#e6e6e6] bg-white">
-                <PatientHeader activePanel={activePanel} onSelectPanel={selectPanel} />
+                <PatientHeader
+                  activePanel={openedPastNoteId ? null : activePanel}
+                  onSelectPanel={(icon) => {
+                    if (openedPastNoteId) {
+                      setOpenedPastNoteId(null);
+                      setActivePanel(icon);
+                      return;
+                    }
+                    selectPanel(icon);
+                  }}
+                />
 
                 <div className="flex min-h-0 w-full flex-1 flex-col items-start bg-[#f7f7f7]">
                   <NoteStoreProvider>
                   <div className="flex min-h-0 w-full flex-1 items-start gap-0 bg-white">
-                    <div className="relative flex min-h-0 min-w-0 flex-1 self-stretch">
-                      <div
-                        ref={noteScrollRef}
-                        data-note-scroll
-                        className={`scrollbar-none flex h-full min-h-0 w-full items-stretch overflow-x-clip overflow-y-auto ${
-                          sidePanelOpen ? "gap-0" : "gap-[60px] pr-[60px]"
-                        }`}
-                      >
-                        <NoteOutlineRail />
+                    {openedPastNoteId ? (
+                      <PastVisitNoteView
+                        noteId={openedPastNoteId}
+                        onBack={() => setOpenedPastNoteId(null)}
+                      />
+                    ) : (
+                      <div className="relative flex min-h-0 min-w-0 flex-1 self-stretch">
                         <div
-                          data-note-main
-                          className={`flex min-h-full min-w-0 flex-1 items-start ${
-                            sidePanelOpen ? "" : "justify-center"
+                          ref={noteScrollRef}
+                          data-note-scroll
+                          className={`scrollbar-none flex h-full min-h-0 w-full items-stretch overflow-x-clip overflow-y-auto ${
+                            sidePanelOpen ? "gap-0" : "gap-[60px] pr-[60px]"
                           }`}
                         >
-                          <main
-                            className={`flex w-full flex-col items-start gap-10 px-4 py-10 ${
-                              sidePanelOpen ? "" : "max-w-[900px]"
+                          <NoteOutlineRail />
+                          <div
+                            data-note-main
+                            className={`flex min-h-full min-w-0 flex-1 items-start ${
+                              sidePanelOpen ? "" : "justify-center"
                             }`}
                           >
-                            <AiSummaryCard />
-                            <SubjectiveSection />
-                            <ObjectiveSection />
-                            <AssessmentSection />
-                            <PlanSection />
-                          </main>
+                            <main
+                              className={`flex w-full flex-col items-start gap-10 px-4 py-10 ${
+                                sidePanelOpen ? "" : "max-w-[900px]"
+                              }`}
+                            >
+                              <AiSummaryCard />
+                              <SubjectiveSection />
+                              <ObjectiveSection />
+                              <AssessmentSection />
+                              <PlanSection />
+                              <OrdersSection />
+                            </main>
+                          </div>
                         </div>
+                        <OverlayScrollbar targetRef={noteScrollRef} />
                       </div>
-                      <OverlayScrollbar targetRef={noteScrollRef} />
-                    </div>
+                    )}
                     {sidePanelOpen && (
                       <ResizableSidePanel width={panelWidth} onWidthChange={setPanelWidth}>
-                        {activePanel === PAST_NOTE_ICON && <PastNotePanel />}
+                        {activePanel === PAST_NOTE_ICON && (
+                          <PastNotePanel onOpenVisit={openPastVisit} />
+                        )}
                         {activePanel === ATTACHMENTS_ICON && <AttachmentsPanel />}
                         {activePanel === MEDICAL_HISTORY_ICON && <MedicalHistoryPanel />}
                         {activePanel === ORDERS_ICON && <OrdersPanel />}
@@ -115,7 +144,17 @@ function App() {
                         {activePanel === TIMELINE_ICON && <ChartTimelinePanel />}
                       </ResizableSidePanel>
                     )}
-                    <PanelNavBar active={activePanel} onSelect={selectPanel} />
+                    <PanelNavBar
+                      active={openedPastNoteId ? null : activePanel}
+                      onSelect={(icon) => {
+                        if (openedPastNoteId) {
+                          setOpenedPastNoteId(null);
+                          setActivePanel(icon);
+                          return;
+                        }
+                        selectPanel(icon);
+                      }}
+                    />
                   </div>
                   </NoteStoreProvider>
                 </div>

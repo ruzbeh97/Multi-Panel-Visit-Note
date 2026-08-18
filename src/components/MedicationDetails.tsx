@@ -98,7 +98,7 @@ export default function MedicationDetails({ medication }: { medication: Medicati
           {medication.status === "Active" ? (
             <Badge tone="green" label="Active" icon="check_circle" />
           ) : (
-            <Badge tone="grey" label="Expired" icon="cancel" />
+            <Badge tone="grey" label={medication.status} icon="cancel" />
           )}
         </div>
       </SectionTitle>

@@ -925,9 +925,35 @@ export const PAST_NOTES = PAST_ENCOUNTERS.filter((visit) => visit.visitType !== 
   caseName: visit.caseName,
   title: visit.title,
   provider: visit.provider,
+  visitType: visit.visitType,
   date: visit.date,
   time: formatAppointmentTime(visit.time),
 }));
+
+// Categories shown in the Orders panel summary and group headers.
+export const ORDER_CATEGORIES = ["Imaging", "Procedures", "Referrals", "Labs", "DME"] as const;
+export type OrderCategory = (typeof ORDER_CATEGORIES)[number];
+
+function orderCategory(item: OrderItem): OrderCategory {
+  if (item.icon === "radiology" || /MRI|Radiologic|x-?ray/i.test(item.title)) return "Imaging";
+  if (item.icon === "science" || /laborator|lab panel|blood/i.test(item.title)) return "Labs";
+  if (
+    item.icon === "personal_injury" ||
+    /brace|orthosis|crutches|DME|CPM|passive motion|immobilizer/i.test(item.title)
+  ) {
+    return "DME";
+  }
+  if (/referral|refer to/i.test(item.title)) return "Referrals";
+  return "Procedures";
+}
+
+export const ORDER_CATEGORY_LABELS: Record<OrderCategory, string> = {
+  Imaging: "Imaging",
+  Procedures: "Procedures & Injections",
+  Referrals: "Referrals",
+  Labs: "Labs",
+  DME: "DME",
+};
 
 export const PAST_ORDERS = ENCOUNTERS.flatMap((visit) => visit.items.filter(isOrderItem))
   .map((item) => ({
@@ -938,12 +964,41 @@ export const PAST_ORDERS = ENCOUNTERS.flatMap((visit) => visit.items.filter(isOr
     orderSet: item.orderSet,
     created: `${item.date.replaceAll("/", "-")} ${item.time}`,
     recipient: item.detail,
+    category: orderCategory(item),
   }))
   .sort((a, b) => chartDateValue(orderCreatedDate(b)) - chartDateValue(orderCreatedDate(a)));
 
 function orderCreatedDate(order: { created: string }) {
   return order.created.split(" ")[0].replaceAll("-", "/");
 }
+
+// Draft orders shown in the visit note Orders section (below Plan).
+export const NOTE_ORDERS = [
+  {
+    id: "note-order-dme-neck",
+    title: "CUSTOM NECK BRACE (Dme Order)",
+    icon: "personal_injury",
+    tone: "orange" as const,
+    meta: "Created on 08/18/2026 09:44 AM | -",
+    status: "Draft",
+  },
+  {
+    id: "note-order-referral-pt",
+    title: "Outbound Referral Order",
+    icon: "group",
+    tone: "blue" as const,
+    meta: "Physical Therapy Referral · Created on 08/18/2026 09:44 AM | -",
+    status: "Draft",
+  },
+  {
+    id: "note-order-mri-brain",
+    title: "Mri brain stem w/o dye (Imaging Order)",
+    icon: "radiology",
+    tone: "blue" as const,
+    meta: "Meds and Non Meds · Created on 08/18/2026 09:44 AM | -",
+    status: "Draft",
+  },
+];
 
 const ATTACHMENT_SOURCES = ["Imaging", "Fax", "Patient", "Other"] as const;
 
@@ -957,11 +1012,12 @@ export const ATTACHMENT_GROUPS = ATTACHMENT_SOURCES.map((label) => ({
 
 // Past encounters as the diagnosis panel needs them: the clinical visit name
 // plus every code billed that day.
-export const DIAGNOSIS_ENCOUNTERS = PAST_ENCOUNTERS.map(({ title, provider, date, codes }) => ({
+export const DIAGNOSIS_ENCOUNTERS = PAST_ENCOUNTERS.map(({ title, provider, date, codes, caseName }) => ({
   type: title,
   provider,
   date,
   codes,
+  caseName,
 }));
 
 const diagnosisDateValue = chartDateValue;
@@ -1058,7 +1114,7 @@ export const MEDICATIONS = [
     prescriber: REFERRING_PROVIDER,
     pharmacy: PHARMACY,
     unitCode: "68180-521-06",
-    fillStatus: "Dispensed",
+    fillStatus: "Received",
     dose: "15mg",
     route: "Oral",
     frequency: "1 x Daily",
@@ -1111,7 +1167,7 @@ export const MEDICATIONS = [
     prescriber: REFERRING_PROVIDER,
     pharmacy: PHARMACY,
     unitCode: "50580-449-73",
-    fillStatus: "Dispensed",
+    fillStatus: "Received",
     dose: "500mg",
     route: "Oral",
     frequency: "Every 6 hours PRN",
@@ -1164,7 +1220,7 @@ export const MEDICATIONS = [
     prescriber: REFERRING_PROVIDER,
     pharmacy: PHARMACY,
     unitCode: "00406-0512-01",
-    fillStatus: "Completed",
+    fillStatus: "Received",
     dose: "5-325mg",
     route: "Oral",
     frequency: "Every 6 hours PRN",
@@ -1211,7 +1267,7 @@ export const MEDICATIONS = [
     prescriber: REFERRING_PROVIDER,
     pharmacy: PHARMACY,
     unitCode: "00904-6288-60",
-    fillStatus: "Completed",
+    fillStatus: "Denied",
     dose: "81mg",
     route: "Oral",
     frequency: "2 x Daily",
@@ -1249,7 +1305,7 @@ export const MEDICATIONS = [
   {
     name: "Naproxen Sodium 550mg tablet",
     date: "04/18/2026",
-    status: "Expired" as const,
+    status: "Discontinued" as const,
     sig: "Take 1 tablet by mouth twice daily with food for pain and swelling for up to 10 days.",
     duration: "10 days",
     dispense: "20 tablets",
@@ -1258,7 +1314,7 @@ export const MEDICATIONS = [
     prescriber: "Priya Raman MD",
     pharmacy: PHARMACY,
     unitCode: "00093-0148-01",
-    fillStatus: "Completed",
+    fillStatus: "Received",
     dose: "550mg",
     route: "Oral",
     frequency: "2 x Daily",
@@ -1290,7 +1346,7 @@ export const MEDICATIONS = [
   {
     name: "Naproxen 500mg tablet",
     date: "08/25/2025",
-    status: "Expired" as const,
+    status: "Discontinued" as const,
     sig: "Take 1 tablet by mouth twice daily with food for 14 days for elbow pain.",
     duration: "14 days",
     dispense: "28 tablets",
@@ -1299,7 +1355,7 @@ export const MEDICATIONS = [
     prescriber: REFERRING_PROVIDER,
     pharmacy: PHARMACY,
     unitCode: "00093-0147-01",
-    fillStatus: "Completed",
+    fillStatus: "Denied",
     dose: "500mg",
     route: "Oral",
     frequency: "2 x Daily",
@@ -1322,8 +1378,8 @@ export const MEDICATIONS = [
       },
       {
         date: "09/22/2025",
-        title: "Course completed",
-        detail: "Limited relief reported, so a lateral elbow injection was performed at the follow-up visit.",
+        title: "Discontinued",
+        detail: "Limited relief reported, so the NSAID was stopped and a lateral elbow injection was performed at the follow-up visit.",
         status: "completed" as const,
       },
     ],
@@ -1331,9 +1387,10 @@ export const MEDICATIONS = [
 ];
 
 export const ALLERGIES = [
-  { name: "Penicillin", status: "Active", severity: "Severe" as const, date: PRIOR_CASE.firstVisit },
-  { name: "Latex", status: "Active", severity: "Moderate" as const, date: PRIOR_CASE.firstVisit },
-  { name: "Shellfish", status: "Active", severity: "Mild" as const, date: PRIOR_CASE.firstVisit },
+  { name: "Latex", status: "Active" as const, severity: "Severe" as const, date: PRIOR_CASE.firstVisit },
+  { name: "Penicillin", status: "Active" as const, severity: "Severe" as const, date: PRIOR_CASE.firstVisit },
+  { name: "Shellfish", status: "Active" as const, severity: "Mild" as const, date: PRIOR_CASE.firstVisit },
+  { name: "Peanuts", status: "Inactive" as const, severity: "Severe" as const, date: "03/12/2019" },
 ];
 
 export const PATIENT_CONTACTS = [

@@ -2,25 +2,32 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import NoteOutlineRail from "./NoteOutlineRail";
 import { NoteReadOnlyProvider } from "./notes/readOnly";
-import { PastNoteSourceProvider } from "./notes/noteStore";
+import { PastNoteSourceProvider, useNoteStore } from "./notes/noteStore";
 import SubjectiveSection from "./notes/SubjectiveSection";
 import ObjectiveSection from "./notes/ObjectiveSection";
 import AssessmentSection from "./notes/AssessmentSection";
 import PlanSection from "./notes/PlanSection";
+import OrdersSection from "./notes/OrdersSection";
 import { PAST_NOTES } from "../data/chart";
 
 function noteLabel(note: (typeof PAST_NOTES)[number]) {
-  return `${note.caseName} | ${note.provider} | ${note.date} ${note.time}`;
+  return `${note.caseName} | ${note.provider} | ${note.visitType} | ${note.date} ${note.time}`;
 }
 
 function noteMeta(note: (typeof PAST_NOTES)[number]) {
-  return `${note.caseName} · ${note.provider} · ${note.date} · ${note.time}`;
+  return `${note.caseName} · ${note.provider} · ${note.visitType} · ${note.date} · ${note.time}`;
 }
 
-export default function PastNotePanel() {
+type PastNotePanelProps = {
+  onOpenVisit?: (noteId: string) => void;
+};
+
+export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
   const [selectedId, setSelectedId] = useState(PAST_NOTES[0].id);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const store = useNoteStore();
+  const carriedForward = store.canUndoImportWholeNote;
 
   const selected = PAST_NOTES.find((note) => note.id === selectedId) ?? PAST_NOTES[0];
 
@@ -59,23 +66,23 @@ export default function PastNotePanel() {
         <NoteOutlineRail />
 
         <div className="ml-4 flex min-w-0 flex-1 flex-col items-start gap-3 pb-10">
-          <div className="flex w-full items-center justify-between gap-2">
-            <div ref={menuRef} className="relative min-w-0">
+          <div className="flex w-full items-start gap-1">
+            <div ref={menuRef} className="relative min-w-0 max-w-[300px]">
               <button
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={menuOpen}
                 aria-label="Select a past visit note"
                 onClick={() => setMenuOpen((open) => !open)}
-                className="flex min-w-0 items-center rounded-lg hover:bg-[rgba(17,50,238,0.06)]"
+                className="flex min-w-0 max-w-full items-start rounded-lg hover:bg-[rgba(17,50,238,0.06)]"
               >
-                <span className="truncate font-body text-[14px] font-medium leading-[20px] text-[#1132ee]">
+                <span className="min-w-0 flex-1 whitespace-normal break-words text-left font-body text-[14px] font-medium leading-[20px] text-[#1132ee]">
                   {noteLabel(selected)}
                 </span>
                 <Icon
                   name="arrow_drop_down"
                   size={20}
-                  className={`shrink-0 text-[#1132ee] transition-transform ${menuOpen ? "rotate-180" : ""}`}
+                  className={`mt-0 shrink-0 text-[#1132ee] transition-transform ${menuOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
@@ -123,9 +130,27 @@ export default function PastNotePanel() {
             <button
               type="button"
               className="flex shrink-0 items-start rounded-full p-1 hover:bg-black/5"
-              aria-label="Copy this note into the current note"
+              aria-label={`Open visit note: ${noteLabel(selected)}`}
+              title="Open visit note"
+              onClick={() => onOpenVisit?.(selected.id)}
             >
-              <Icon name="move_up" size={20} className="text-[#1132ee]" />
+              <Icon name="link" size={20} className="text-[#1132ee]" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => (carriedForward ? store.undoImportWholeNote() : store.importWholeNote())}
+              className={`ml-auto flex shrink-0 items-start rounded-full p-1 ${
+                carriedForward ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+              }`}
+              aria-label={
+                carriedForward
+                  ? "Undo carrying this note into the current note"
+                  : "Copy this note into the current note"
+              }
+              title={carriedForward ? "Undo carry forward" : "Carry this note forward"}
+            >
+              <Icon name={carriedForward ? "undo" : "move_up"} size={20} className="text-[#1132ee]" />
             </button>
           </div>
 
@@ -136,6 +161,7 @@ export default function PastNotePanel() {
                 <ObjectiveSection />
                 <AssessmentSection />
                 <PlanSection />
+                <OrdersSection />
               </div>
             </PastNoteSourceProvider>
           </NoteReadOnlyProvider>
