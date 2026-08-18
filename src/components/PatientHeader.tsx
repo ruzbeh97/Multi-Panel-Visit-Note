@@ -137,10 +137,16 @@ function HeaderActionIcon({
 type PatientHeaderProps = {
   activePanel: string | null;
   onSelectPanel: (icon: string) => void;
+  activeTab: string;
+  onSelectTab: (tab: string) => void;
 };
 
-export default function PatientHeader({ activePanel, onSelectPanel }: PatientHeaderProps) {
-  const [activeTab, setActiveTab] = useState("Appointments");
+export default function PatientHeader({
+  activePanel,
+  onSelectPanel,
+  activeTab,
+  onSelectTab,
+}: PatientHeaderProps) {
   const [pinnedAnchor, setPinnedAnchor] = useState<HTMLElement | null>(null);
   const [contactBookOpen, setContactBookOpen] = useState(false);
 
@@ -196,7 +202,7 @@ export default function PatientHeader({ activePanel, onSelectPanel }: PatientHea
             return (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => onSelectTab(tab)}
                 className={`flex shrink-0 items-center justify-center gap-0.5 whitespace-nowrap px-1.5 pb-2.5 pt-2 font-body text-[14px] font-medium leading-[22px] ${
                   active ? "border-b-2 border-[#1132ee] text-[#1132ee]" : "text-[#666] hover:text-[#1a1a1a]"
                 }`}

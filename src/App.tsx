@@ -13,6 +13,7 @@ import PanelNavBar, {
 } from "./components/PanelNavBar";
 import PastNotePanel from "./components/PastNotePanel";
 import PastVisitNoteView from "./components/PastVisitNoteView";
+import AttachmentsPage from "./components/AttachmentsPage";
 import AttachmentsPanel from "./components/AttachmentsPanel";
 import MedicalHistoryPanel from "./components/MedicalHistoryPanel";
 import OrdersPanel from "./components/OrdersPanel";
@@ -47,9 +48,14 @@ function App() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(SIDE_PANEL_MIN_WIDTH);
   const [openedPastNoteId, setOpenedPastNoteId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("Appointments");
   const noteScrollRef = useRef<HTMLDivElement>(null);
+  const attachmentsTabOpen = activeTab === "Attachments";
   const sidePanelOpen =
-    openedPastNoteId === null && activePanel !== null && SIDE_PANELS.includes(activePanel);
+    !attachmentsTabOpen &&
+    openedPastNoteId === null &&
+    activePanel !== null &&
+    SIDE_PANELS.includes(activePanel);
 
   function selectPanel(icon: string) {
     setActivePanel((current) => (current === icon ? null : icon));
@@ -88,12 +94,16 @@ function App() {
                     }
                     selectPanel(icon);
                   }}
+                  activeTab={activeTab}
+                  onSelectTab={setActiveTab}
                 />
 
                 <div className="flex min-h-0 w-full flex-1 flex-col items-start bg-[#f7f7f7]">
                   <NoteStoreProvider>
                   <div className="flex min-h-0 w-full flex-1 items-start gap-0 bg-white">
-                    {openedPastNoteId ? (
+                    {attachmentsTabOpen ? (
+                      <AttachmentsPage />
+                    ) : openedPastNoteId ? (
                       <PastVisitNoteView
                         noteId={openedPastNoteId}
                         onBack={() => setOpenedPastNoteId(null)}
@@ -144,17 +154,19 @@ function App() {
                         {activePanel === TIMELINE_ICON && <ChartTimelinePanel />}
                       </ResizableSidePanel>
                     )}
-                    <PanelNavBar
-                      active={openedPastNoteId ? null : activePanel}
-                      onSelect={(icon) => {
-                        if (openedPastNoteId) {
-                          setOpenedPastNoteId(null);
-                          setActivePanel(icon);
-                          return;
-                        }
-                        selectPanel(icon);
-                      }}
-                    />
+                    {!attachmentsTabOpen && (
+                      <PanelNavBar
+                        active={openedPastNoteId ? null : activePanel}
+                        onSelect={(icon) => {
+                          if (openedPastNoteId) {
+                            setOpenedPastNoteId(null);
+                            setActivePanel(icon);
+                            return;
+                          }
+                          selectPanel(icon);
+                        }}
+                      />
+                    )}
                   </div>
                   </NoteStoreProvider>
                 </div>

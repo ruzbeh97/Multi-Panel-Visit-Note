@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Badge, { type Tone } from "./Badge";
 import Icon from "./Icon";
 import MedicationDetails from "./MedicationDetails";
+import FilterMenuPopover from "./FilterMenuPopover";
 import {
   ALLERGIES,
   CASE,
@@ -74,6 +75,8 @@ const FILL_STATUS_TONES: Record<string, { tone: Tone; icon: string }> = {
   Received: { tone: "green", icon: "check" },
   Denied: { tone: "red", icon: "cancel" },
 };
+
+const FILL_STATUS_FILTERS = ["Received", "Denied"];
 
 function SectionHeader({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
   return (
@@ -556,11 +559,18 @@ function MedicationsSection() {
   const [openMedication, setOpenMedication] = useState<string | null>(null);
   const [closedStatuses, setClosedStatuses] = useState<MedicationStatus[]>([]);
   const [query, setQuery] = useState("");
+  const [fillStatuses, setFillStatuses] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   const search = query.trim().toLowerCase();
-  const medications = medicationsForTab(tab).filter((med) =>
-    search ? [med.name, med.date, med.fillStatus].some((field) => field.toLowerCase().includes(search)) : true,
-  );
+  const medications = medicationsForTab(tab)
+    .filter((med) => (fillStatuses.length > 0 ? fillStatuses.includes(med.fillStatus) : true))
+    .filter((med) =>
+      search
+        ? [med.name, med.date, med.fillStatus].some((field) => field.toLowerCase().includes(search))
+        : true,
+    );
 
   const groups = MEDICATION_STATUS_GROUPS.map((status) => ({
     status,
@@ -597,13 +607,48 @@ function MedicationsSection() {
           )}
         </label>
         <button
+          ref={filterButtonRef}
           type="button"
-          className="flex size-7 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
+          onClick={() => setFilterOpen((open) => !open)}
+          aria-haspopup="dialog"
+          aria-expanded={filterOpen}
+          className={`relative flex size-7 shrink-0 items-center justify-center rounded-full ${
+            filterOpen || fillStatuses.length > 0 ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+          }`}
           aria-label="Filter medications"
         >
-          <Icon name="filter_alt" size={20} className="text-[#1a1a1a]" />
+          <Icon
+            name="filter_alt"
+            size={20}
+            className={filterOpen || fillStatuses.length > 0 ? "text-[#1132ee]" : "text-[#1a1a1a]"}
+          />
+          {fillStatuses.length > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-[#1132ee] font-body text-[10px] font-medium leading-none text-white">
+              {fillStatuses.length}
+            </span>
+          )}
         </button>
       </div>
+
+      {filterOpen && filterButtonRef.current && (
+        <FilterMenuPopover
+          anchor={filterButtonRef.current}
+          ariaLabel="Filter medications"
+          options={FILL_STATUS_FILTERS.map((status) => ({
+            value: status,
+            kind: "Fill Status",
+            checked: fillStatuses.includes(status),
+          }))}
+          onToggle={(option) =>
+            setFillStatuses((current) =>
+              current.includes(option.value)
+                ? current.filter((entry) => entry !== option.value)
+                : [...current, option.value],
+            )
+          }
+          onClose={() => setFilterOpen(false)}
+        />
+      )}
 
       <TabGroup tabs={MEDICATION_TABS} active={tab} onSelect={setTab} />
 
