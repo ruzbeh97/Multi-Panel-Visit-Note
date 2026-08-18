@@ -126,7 +126,19 @@ function App() {
                   railOutside ? "" : "rounded-lg border border-[#e6e6e6]"
                 }`}
               >
-                <PatientHeader activeTab={activeTab} onSelectTab={setActiveTab} />
+                <PatientHeader
+                  activePanel={openedPastNoteId ? null : activePanel}
+                  onSelectPanel={(icon) => {
+                    if (openedPastNoteId) {
+                      setOpenedPastNoteId(null);
+                      setActivePanel(icon);
+                      return;
+                    }
+                    selectPanel(icon);
+                  }}
+                  activeTab={activeTab}
+                  onSelectTab={setActiveTab}
+                />
 
                 <div className="flex min-h-0 w-full flex-1 flex-col items-start bg-[#f7f7f7]">
                   <div className="flex min-h-0 w-full flex-1 items-start gap-0 bg-white">

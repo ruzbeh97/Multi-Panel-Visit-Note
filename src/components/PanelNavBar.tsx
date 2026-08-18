@@ -1,8 +1,6 @@
 import { useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import Icon from "./Icon";
-import PinnedNotesPopover from "./PinnedNotesPopover";
-import ContactBookModal from "./ContactBookModal";
 
 export const PAST_NOTE_ICON = "note_alt";
 export const PINNED_NOTES_ICON = "keep";
@@ -15,10 +13,6 @@ export const ACTIVITY_ICON = "route";
 export const TIMELINE_ICON = "conversion_path";
 
 const NAV_ICONS = [PAST_NOTE_ICON, ATTACHMENTS_ICON, MEDICAL_HISTORY_ICON, ORDERS_ICON, TIMELINE_ICON];
-
-// Formerly in the patient header tab row; Activity / Messages open side panels,
-// Contact Book / Pinned Notes open their own overlays.
-const FOOTER_ICONS = [CONTACT_BOOK_ICON, PINNED_NOTES_ICON, ACTIVITY_ICON, MESSAGES_ICON];
 
 export const ICON_LABELS: Record<string, string> = {
   [PAST_NOTE_ICON]: "Past Notes",
@@ -121,28 +115,6 @@ type PanelNavBarProps = {
 };
 
 export default function PanelNavBar({ active, onSelect, variant = "inset" }: PanelNavBarProps) {
-  const [pinnedAnchor, setPinnedAnchor] = useState<HTMLElement | null>(null);
-  const [contactBookOpen, setContactBookOpen] = useState(false);
-
-  function handleFooter(icon: string, event: MouseEvent<HTMLButtonElement>) {
-    if (icon === PINNED_NOTES_ICON) {
-      const button = event.currentTarget;
-      setPinnedAnchor((current) => (current ? null : button));
-      return;
-    }
-    if (icon === CONTACT_BOOK_ICON) {
-      setContactBookOpen((current) => !current);
-      return;
-    }
-    onSelect(icon);
-  }
-
-  function isFooterActive(icon: string) {
-    if (icon === PINNED_NOTES_ICON) return pinnedAnchor !== null;
-    if (icon === CONTACT_BOOK_ICON) return contactBookOpen;
-    return active === icon;
-  }
-
   return (
     <div
       className={`flex h-full min-h-0 shrink-0 flex-col items-center overflow-clip border-[#e6e6e6] bg-white py-4 ${
@@ -163,22 +135,7 @@ export default function PanelNavBar({ active, onSelect, variant = "inset" }: Pan
             ))}
           </div>
         </div>
-
-        <div className="flex w-full shrink-0 flex-col items-start gap-1 border-t border-[#e6e6e6] px-2 pt-3">
-          {FOOTER_ICONS.map((icon) => (
-            <NavIcon
-              key={icon}
-              icon={icon}
-              label={ICON_LABELS[icon]}
-              active={isFooterActive(icon)}
-              onClick={(event) => handleFooter(icon, event)}
-            />
-          ))}
-        </div>
       </div>
-
-      {pinnedAnchor && <PinnedNotesPopover anchor={pinnedAnchor} onClose={() => setPinnedAnchor(null)} />}
-      {contactBookOpen && <ContactBookModal onClose={() => setContactBookOpen(false)} />}
     </div>
   );
 }
