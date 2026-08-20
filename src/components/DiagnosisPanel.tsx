@@ -65,7 +65,7 @@ function DiagnosisRow({
 
   return (
     <div id={diagnosisRowId(record.code)} className="flex w-full items-stretch gap-3 border-b border-[#e6e6e6]">
-      <span aria-hidden className={`w-[2px] shrink-0 rounded-full ${rail}`} />
+      <span aria-hidden className={`my-1 w-[2px] shrink-0 rounded-full ${rail}`} />
 
       <div className="flex min-w-0 flex-1 flex-col py-3">
         <div className="flex w-full items-start gap-2">

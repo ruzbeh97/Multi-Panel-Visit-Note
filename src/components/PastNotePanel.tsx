@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
-import { CloseRightPanelButton } from "./chartPanelUi";
 import NoteOutlineRail from "./NoteOutlineRail";
 import { NoteReadOnlyProvider } from "./notes/readOnly";
 import { PastNoteSourceProvider, useNoteStore } from "./notes/noteStore";
@@ -21,10 +20,9 @@ function noteMeta(note: (typeof PAST_NOTES)[number]) {
 
 type PastNotePanelProps = {
   onOpenVisit?: (noteId: string) => void;
-  onClose: () => void;
 };
 
-export default function PastNotePanel({ onOpenVisit, onClose }: PastNotePanelProps) {
+export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
   const [selectedId, setSelectedId] = useState(PAST_NOTES[0].id);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -155,7 +153,6 @@ export default function PastNotePanel({ onOpenVisit, onClose }: PastNotePanelPro
               >
                 <Icon name={carriedForward ? "undo" : "move_up"} size={20} className="text-[#1132ee]" />
               </button>
-              <CloseRightPanelButton onClose={onClose} />
             </div>
           </div>
 

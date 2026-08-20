@@ -140,7 +140,7 @@ export function RailGroup({
 export function RailRow({ accent = false, children }: { accent?: boolean; children: ReactNode }) {
   return (
     <div className="flex w-full items-stretch gap-[10px]">
-      <span aria-hidden className={`w-[2px] shrink-0 ${accent ? "bg-[#1132ee]" : "bg-[#cccccc]"}`} />
+      <span aria-hidden className={`my-1 w-[2px] shrink-0 ${accent ? "bg-[#1132ee]" : "bg-[#cccccc]"}`} />
       <div className="flex min-w-0 flex-1 flex-col border-b border-[#e6e6e6] py-4">{children}</div>
     </div>
   );

@@ -51,7 +51,7 @@ function OrderRow({ order }: { order: PastOrder }) {
 
   return (
     <div className="flex w-full items-stretch gap-[10px]">
-      <span aria-hidden className="w-[2px] shrink-0 bg-[#1132ee]" />
+      <span aria-hidden className="my-1 w-[2px] shrink-0 bg-[#1132ee]" />
       <div className="flex min-w-0 flex-1 flex-col border-b border-[#e6e6e6] py-4">
         <div className="flex w-full items-center gap-1">
           <span className="flex size-7 shrink-0 items-center justify-center">

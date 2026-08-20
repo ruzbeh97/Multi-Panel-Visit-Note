@@ -151,6 +151,13 @@ export default function MedicationsPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
           <TabGroup tabs={MEDICATION_TABS} active={tab} onSelect={setTab} />
+          <div className="flex w-full flex-wrap items-center gap-2">
+            {MEDICATION_STATUS_GROUPS.map((status) => (
+              <span key={status} className="font-body text-[14px] leading-[22px] text-[#666666]">
+                {MEDICATIONS.filter((med) => med.status === status).length} {status}
+              </span>
+            ))}
+          </div>
         </>
       }
     >
@@ -174,44 +181,34 @@ export default function MedicationsPanel({ onClose }: { onClose: () => void }) {
         />
       )}
 
-      <div className="flex w-full flex-col items-start gap-2">
-        <div className="flex w-full flex-wrap items-center gap-2">
-          {MEDICATION_STATUS_GROUPS.map((status) => (
-            <span key={status} className="font-body text-[14px] leading-[22px] text-[#666666]">
-              {MEDICATIONS.filter((med) => med.status === status).length} {status}
-            </span>
-          ))}
-        </div>
+      <div className="flex w-full flex-col items-start">
+        {groups.map((group) => (
+          <RailGroup
+            key={group.status}
+            label={group.status}
+            count={group.medications.length}
+            open={!closedStatuses.includes(group.status)}
+            accent={group.status === "Active"}
+            onToggle={() => toggleStatus(group.status)}
+          >
+            {group.medications.map((med) => (
+              <MedicationRow
+                key={med.name}
+                medication={med}
+                accent={group.status === "Active"}
+                open={openMedication === med.name}
+                onToggle={() => setOpenMedication((current) => (current === med.name ? null : med.name))}
+              />
+            ))}
+          </RailGroup>
+        ))}
 
-        <div className="flex w-full flex-col items-start">
-          {groups.map((group) => (
-            <RailGroup
-              key={group.status}
-              label={group.status}
-              count={group.medications.length}
-              open={!closedStatuses.includes(group.status)}
-              accent={group.status === "Active"}
-              onToggle={() => toggleStatus(group.status)}
-            >
-              {group.medications.map((med) => (
-                <MedicationRow
-                  key={med.name}
-                  medication={med}
-                  accent={group.status === "Active"}
-                  open={openMedication === med.name}
-                  onToggle={() => setOpenMedication((current) => (current === med.name ? null : med.name))}
-                />
-              ))}
-            </RailGroup>
-          ))}
-
-          {groups.length === 0 && (
-            <p className="w-full py-4 font-body text-[14px] leading-[22px] text-[#666666]">No medications to show.</p>
-          )}
-        </div>
-
-        <ShowMore />
+        {groups.length === 0 && (
+          <p className="w-full py-4 font-body text-[14px] leading-[22px] text-[#666666]">No medications to show.</p>
+        )}
       </div>
+
+      <ShowMore />
     </PanelShell>
   );
 }
