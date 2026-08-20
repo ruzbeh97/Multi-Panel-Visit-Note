@@ -12,7 +12,7 @@ import {
   type DiagnosisRelevance,
 } from "../data/chart";
 
-const DIAGNOSIS_TABS = ["By Diagnosis", "By Visit"];
+const DIAGNOSIS_TABS = ["By Visit", "By Diagnosis"];
 
 const latestVisitHint = (() => {
   const newest = LATEST_DIAGNOSIS_VISITS[0]?.date;
@@ -300,7 +300,7 @@ export default function DiagnosisPanel({ onClose }: { onClose: () => void }) {
   }
 
   function focusCode(code: string) {
-    setTab(DIAGNOSIS_TABS[0]);
+    setTab("By Diagnosis");
     setShowOlder(true);
     setQuery("");
     setOpenCodes([code]);

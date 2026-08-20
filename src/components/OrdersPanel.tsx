@@ -118,7 +118,7 @@ export default function OrdersPanel({ onClose }: { onClose: () => void }) {
     <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white">
       <StickyPanelHeader>
         <PanelTitle title="Orders" onClose={onClose} />
-        <div className="flex w-full items-center gap-1.5 pb-3 pt-4">
+        <div className="flex w-full items-center gap-1.5 pt-4">
           <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
             <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
             <input
@@ -147,36 +147,33 @@ export default function OrdersPanel({ onClose }: { onClose: () => void }) {
             <Icon name="filter_alt" size={20} className="text-[#1a1a1a]" />
           </button>
         </div>
-      </StickyPanelHeader>
-
-      <div className="flex w-full flex-col items-start gap-2 px-4 pb-10">
-        <div className="flex w-full flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 pb-3 pt-2">
           {ORDER_CATEGORIES.map((category) => (
             <span key={category} className="font-body text-[14px] leading-[22px] text-[#666666]">
               {PAST_ORDERS.filter((order) => order.category === category).length} {category}
             </span>
           ))}
         </div>
+      </StickyPanelHeader>
 
-        <div className="flex w-full flex-col items-start">
-          {groups.map((group) => (
-            <RailGroup
-              key={group.category}
-              label={ORDER_CATEGORY_LABELS[group.category]}
-              count={group.orders.length}
-              open={!closedCategories.includes(group.category)}
-              onToggle={() => toggleCategory(group.category)}
-            >
-              {group.orders.map((order) => (
-                <OrderRow key={`${order.title}-${order.created}`} order={order} />
-              ))}
-            </RailGroup>
-          ))}
+      <div className="flex w-full flex-col items-start px-4 pb-10">
+        {groups.map((group) => (
+          <RailGroup
+            key={group.category}
+            label={ORDER_CATEGORY_LABELS[group.category]}
+            count={group.orders.length}
+            open={!closedCategories.includes(group.category)}
+            onToggle={() => toggleCategory(group.category)}
+          >
+            {group.orders.map((order) => (
+              <OrderRow key={`${order.title}-${order.created}`} order={order} />
+            ))}
+          </RailGroup>
+        ))}
 
-          {groups.length === 0 && (
-            <p className="w-full py-4 font-body text-[14px] leading-[22px] text-[#666666]">No orders to show.</p>
-          )}
-        </div>
+        {groups.length === 0 && (
+          <p className="w-full py-4 font-body text-[14px] leading-[22px] text-[#666666]">No orders to show.</p>
+        )}
       </div>
     </aside>
   );

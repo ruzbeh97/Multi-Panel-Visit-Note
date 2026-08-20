@@ -20,16 +20,26 @@ type TimelineMatch = {
   itemKey?: string;
 };
 
-function rowLabel(item: EncounterItem) {
-  return item.type === "attachment" ? item.file : item.title;
-}
-
 function itemKey(item: EncounterItem) {
   return `${item.type}-${item.title}-${item.date}`;
 }
 
 function documentFor(item: EncounterItem) {
   return item.type === "attachment" ? item.file : timelineDocKey(item);
+}
+
+// Orders and prescriptions generate their document on the fly, so the row needs
+// a file name to show beside the paperclip.
+function fileNameFor(item: EncounterItem) {
+  if (item.type === "attachment") return item.file;
+  const slug = item.title.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "");
+  const stamp = item.date.replaceAll("/", "");
+  return `${slug}_${item.type === "order" ? "Requisition" : "Prescription"}_${stamp}.pdf`;
+}
+
+function timestampFor(item: EncounterItem, visit: Encounter) {
+  const time = "time" in item && item.time ? item.time : visit.time;
+  return time.toLowerCase().replace(/\s+/g, "");
 }
 
 function visitSearchText(visit: Encounter) {
@@ -40,7 +50,7 @@ function visitSearchText(visit: Encounter) {
 
 function itemSearchText(item: EncounterItem) {
   // Only fields shown on the timeline row, so highlights match what the user sees.
-  return rowLabel(item).toLowerCase();
+  return `${item.title} ${fileNameFor(item)}`.toLowerCase();
 }
 
 function collectMatches(query: string): TimelineMatch[] {
@@ -96,18 +106,20 @@ function MatchHighlight({
 
 function ItemRow({
   item,
+  visit,
   matched,
   active,
   onActivate,
 }: {
   item: EncounterItem;
+  visit: Encounter;
   matched: boolean;
   active: boolean;
   onActivate: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const meta = ROW_ICONS[item.type];
-  const label = rowLabel(item);
+  const file = fileNameFor(item);
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -116,32 +128,59 @@ function ItemRow({
   }, [active]);
 
   return (
-    <MatchHighlight active={active} matched={matched} className="w-full">
-      <div ref={rowRef} data-timeline-match={active ? "active" : matched ? "match" : undefined} className="flex w-full flex-col items-start justify-center overflow-clip rounded">
-        <button
-          type="button"
-          onClick={() => {
-            onActivate();
-            setOpen((current) => !current);
-          }}
-          aria-expanded={open}
-          aria-label={`${open ? "Hide" : "View"} ${label}`}
-          className={`flex w-full items-center rounded ${
-            open || active ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-[#f7f7f7]"
-          }`}
-        >
-          <span className="flex shrink-0 items-start p-1">
-            <Icon name={meta.icon} size={20} className={meta.color} />
-          </span>
-          <span className="min-w-0 truncate font-body text-[14px] leading-[22px] text-[#1a1a1a]">{label}</span>
-          <span className="flex min-w-px flex-1 items-center justify-end p-1">
-            <Icon name="picture_as_pdf" size={20} className={open ? "text-[#1132ee]" : "text-[#1a1a1a]"} />
-          </span>
-        </button>
-
-        {open && <PdfViewer fileName={documentFor(item)} />}
+    <div className="flex w-full items-stretch">
+      <div className="flex w-5 shrink-0 flex-col items-center">
+        <span className="flex size-5 shrink-0 items-center justify-center">
+          <Icon name={meta.icon} size={16} className={meta.color} />
+        </span>
+        <span aria-hidden className="mt-1.5 w-px flex-1 bg-[#e6e6e6]" />
       </div>
-    </MatchHighlight>
+
+      <MatchHighlight active={active} matched={matched} className="ml-2 min-w-0 flex-1">
+        <div
+          ref={rowRef}
+          data-timeline-match={active ? "active" : matched ? "match" : undefined}
+          className="flex w-full min-w-0 flex-col items-start pb-4"
+        >
+          <span className="w-full truncate font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">
+            {item.title}
+          </span>
+
+          <div
+            className={`mt-0.5 flex h-9 w-full items-center gap-2 rounded-lg border px-1 ${
+              open ? "border-[#1132ee] bg-[rgba(17,50,238,0.04)]" : "border-[#e6e6e6] bg-white"
+            }`}
+          >
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-[rgba(17,50,238,0.08)]">
+              <Icon name="attach_file" size={18} className="text-[#1132ee]" />
+            </span>
+            <span className="min-w-0 flex-1 truncate font-body text-[14px] leading-[21px] text-[#454545]">
+              {file}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                onActivate();
+                setOpen((current) => !current);
+              }}
+              aria-expanded={open}
+              aria-label={`${open ? "Hide" : "View"} ${file}`}
+              className={`flex size-7 shrink-0 items-center justify-center rounded-full ${
+                open ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+              }`}
+            >
+              <Icon name="visibility" size={20} className={open ? "text-[#1132ee]" : "text-[#666666]"} />
+            </button>
+          </div>
+
+          <span className="mt-1 w-full truncate font-body text-[12px] leading-[17px] text-[#666666]">
+            {visit.provider} • {timestampFor(item, visit)}, {item.date}
+          </span>
+
+          {open && <PdfViewer fileName={documentFor(item)} />}
+        </div>
+      </MatchHighlight>
+    </div>
   );
 }
 
@@ -170,51 +209,44 @@ function TimelineItemBlock({
   }, [visitActive]);
 
   return (
-    <div className="flex w-full items-start gap-4">
-      <div className="flex w-3 shrink-0 flex-col items-center gap-2 self-stretch pt-1.5">
-        <span className="size-3 shrink-0 rounded-full bg-[#1a1a1a]" />
-        <span className="flex w-full flex-1 flex-col items-center pt-1.5">
-          <span className="w-0.5 flex-1 rounded-sm bg-[#1a1a1a]" />
-        </span>
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
-        <MatchHighlight active={visitActive} matched={matchedVisit} className="w-full">
-          <div
-            ref={visitRef}
-            data-timeline-match={visitActive ? "active" : matchedVisit ? "match" : undefined}
-            className="flex w-full cursor-pointer flex-col items-start rounded-lg px-1 py-0.5"
-            onClick={() => matchedVisit && onActivateMatch(`visit:${visit.id}`)}
-          >
-            <div className="flex w-full items-start gap-2 font-body text-[16px] leading-[24px] text-[#1a1a1a]">
-              <span className="shrink-0 whitespace-nowrap font-medium">{visit.caseName}</span>
-              <span className="min-w-0 truncate">{visit.title}</span>
-            </div>
-            <span className="w-full truncate font-body text-[14px] leading-[22px] text-[#666666]">
-              {visit.date} | {visit.time} · {visit.visitType}
-            </span>
+    <div className="flex w-full min-w-0 flex-col items-start">
+      <MatchHighlight active={visitActive} matched={matchedVisit} className="w-full">
+        <div
+          ref={visitRef}
+          data-timeline-match={visitActive ? "active" : matchedVisit ? "match" : undefined}
+          className="flex w-full cursor-pointer flex-col items-start rounded-lg pb-2"
+          onClick={() => matchedVisit && onActivateMatch(`visit:${visit.id}`)}
+        >
+          <div className="flex w-full min-w-0 items-baseline gap-2 font-body text-[16px] leading-[24px]">
+            <span className="shrink-0 whitespace-nowrap font-medium text-[#1a1a1a]">{visit.caseName}</span>
+            <span className="min-w-0 truncate text-[#666666]">{visit.visitType}</span>
           </div>
-        </MatchHighlight>
+          <span className="w-full truncate font-body text-[12px] leading-[17px] text-[#666666]">
+            {visit.date} | {visit.time} · {visit.title}
+          </span>
+        </div>
+      </MatchHighlight>
 
-        {showItems && (
-          <div className="flex w-full flex-col items-start justify-center gap-2">
-            {visit.items.map((item) => {
-              const key = itemKey(item);
-              const matched = matchedItemKeys.has(key);
-              const active = activeMatch?.target === "item" && activeMatch.itemKey === key && activeMatch.visitId === visit.id;
-              return (
-                <ItemRow
-                  key={key}
-                  item={item}
-                  matched={matched}
-                  active={active}
-                  onActivate={() => matched && onActivateMatch(`item:${visit.id}:${key}`)}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {showItems && (
+        <div className="flex w-full flex-col items-start">
+          {visit.items.map((item) => {
+            const key = itemKey(item);
+            const matched = matchedItemKeys.has(key);
+            const active =
+              activeMatch?.target === "item" && activeMatch.itemKey === key && activeMatch.visitId === visit.id;
+            return (
+              <ItemRow
+                key={key}
+                item={item}
+                visit={visit}
+                matched={matched}
+                active={active}
+                onActivate={() => matched && onActivateMatch(`item:${visit.id}:${key}`)}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
