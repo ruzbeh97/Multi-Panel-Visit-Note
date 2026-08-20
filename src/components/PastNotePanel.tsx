@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import NoteOutlineRail from "./NoteOutlineRail";
 import { NoteReadOnlyProvider } from "./notes/readOnly";
-import { PastNoteSourceProvider, useNoteStore } from "./notes/noteStore";
+import { PastNoteSourceProvider, useNoteStore, CARRY_FORWARD_SECTIONS } from "./notes/noteStore";
 import SubjectiveSection from "./notes/SubjectiveSection";
 import ObjectiveSection from "./notes/ObjectiveSection";
 import AssessmentSection from "./notes/AssessmentSection";
@@ -25,20 +25,32 @@ type PastNotePanelProps = {
 export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
   const [selectedId, setSelectedId] = useState(PAST_NOTES[0].id);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [carryOpen, setCarryOpen] = useState(false);
+  const [selectedSections, setSelectedSections] = useState<string[]>(
+    CARRY_FORWARD_SECTIONS.filter((section) => section.label !== "Entire note").map((section) => section.label),
+  );
   const menuRef = useRef<HTMLDivElement>(null);
+  const carryRef = useRef<HTMLDivElement>(null);
   const store = useNoteStore();
   const carriedForward = store.canUndoImportWholeNote;
 
   const selected = PAST_NOTES.find((note) => note.id === selectedId) ?? PAST_NOTES[0];
+  const sectionChoices = CARRY_FORWARD_SECTIONS.filter((section) => section.label !== "Entire note");
+  const allSectionsSelected = sectionChoices.every((section) => selectedSections.includes(section.label));
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !carryOpen) return;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        setCarryOpen(false);
+      }
     }
     function onPointerDown(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+      const target = event.target as Node;
+      if (!menuRef.current?.contains(target)) setMenuOpen(false);
+      if (!carryRef.current?.contains(target)) setCarryOpen(false);
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -47,7 +59,21 @@ export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousedown", onPointerDown);
     };
-  }, [menuOpen]);
+  }, [menuOpen, carryOpen]);
+
+  function toggleSection(label: string) {
+    setSelectedSections((current) =>
+      current.includes(label) ? current.filter((entry) => entry !== label) : [...current, label],
+    );
+  }
+
+  function carrySelected() {
+    const titles = sectionChoices
+      .filter((section) => selectedSections.includes(section.label))
+      .flatMap((section) => [...section.titles]);
+    store.importSections(titles);
+    setCarryOpen(false);
+  }
 
   return (
     <aside
@@ -138,21 +164,117 @@ export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
                 <Icon name="link" size={20} className="text-[#1132ee]" />
               </button>
 
-              <button
-                type="button"
-                onClick={() => (carriedForward ? store.undoImportWholeNote() : store.importWholeNote())}
-                className={`flex shrink-0 items-start rounded-full p-1 ${
-                  carriedForward ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
-                }`}
-                aria-label={
-                  carriedForward
-                    ? "Undo carrying this note into the current note"
-                    : "Copy this note into the current note"
-                }
-                title={carriedForward ? "Undo carry forward" : "Carry this note forward"}
-              >
-                <Icon name={carriedForward ? "undo" : "move_up"} size={20} className="text-[#1132ee]" />
-              </button>
+            <div ref={carryRef} className="relative flex shrink-0 items-start">
+              {carriedForward ? (
+                <button
+                  type="button"
+                  onClick={() => store.undoImportWholeNote()}
+                  className="flex shrink-0 items-center rounded-full p-1 bg-[rgba(17,50,238,0.08)]"
+                  aria-label="Undo carrying this note into the current note"
+                  title="Undo carry forward"
+                >
+                  <Icon name="undo" size={20} className="text-[#1132ee]" />
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCarryOpen((open) => !open)}
+                    aria-haspopup="menu"
+                    aria-expanded={carryOpen}
+                    aria-label="Carry this note forward"
+                    title="Carry this note forward"
+                    className={`flex shrink-0 items-center rounded-full py-1 pl-1 pr-0.5 ${
+                      carryOpen ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"
+                    }`}
+                  >
+                    <Icon name="move_up" size={20} className="text-[#1132ee]" />
+                    <Icon
+                      name="arrow_drop_down"
+                      size={16}
+                      className={`-ml-0.5 text-[#1132ee] transition-transform ${carryOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {carryOpen && (
+                    <div
+                      role="menu"
+                      aria-label="Carry forward sections"
+                      className="absolute right-0 top-[calc(100%+4px)] z-30 flex w-[220px] flex-col rounded-xl border border-[#e6e6e6] bg-white py-2 shadow-[0px_12px_32px_rgba(0,0,0,0.14)]"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          store.importWholeNote();
+                          setCarryOpen(false);
+                        }}
+                        className="mx-2 flex items-center rounded-lg px-3 py-2 text-left font-body text-[14px] font-medium leading-[20px] text-[#1a1a1a] hover:bg-[#f7f7f7]"
+                      >
+                        Entire note
+                      </button>
+
+                      <div className="mx-2 my-1 h-px bg-[#e6e6e6]" />
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedSections(
+                            allSectionsSelected ? [] : sectionChoices.map((section) => section.label),
+                          )
+                        }
+                        className="mx-2 flex items-center gap-2 rounded-lg px-3 py-1.5 text-left hover:bg-[#f7f7f7]"
+                      >
+                        <span
+                          aria-hidden
+                          className={`flex size-[18px] items-center justify-center rounded-[2px] border-2 ${
+                            allSectionsSelected ? "border-[#1132ee] bg-[#1132ee]" : "border-[#666666] bg-white"
+                          }`}
+                        >
+                          {allSectionsSelected && <Icon name="check" size={14} className="text-white" />}
+                        </span>
+                        <span className="font-body text-[14px] leading-[20px] text-[#1a1a1a]">All sections</span>
+                      </button>
+
+                      {sectionChoices.map((section) => {
+                        const checked = selectedSections.includes(section.label);
+                        return (
+                          <button
+                            key={section.label}
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-checked={checked}
+                            onClick={() => toggleSection(section.label)}
+                            className="mx-2 flex items-center gap-2 rounded-lg px-3 py-1.5 text-left hover:bg-[#f7f7f7]"
+                          >
+                            <span
+                              aria-hidden
+                              className={`flex size-[18px] items-center justify-center rounded-[2px] border-2 ${
+                                checked ? "border-[#1132ee] bg-[#1132ee]" : "border-[#666666] bg-white"
+                              }`}
+                            >
+                              {checked && <Icon name="check" size={14} className="text-white" />}
+                            </span>
+                            <span className="font-body text-[14px] leading-[20px] text-[#1a1a1a]">{section.label}</span>
+                          </button>
+                        );
+                      })}
+
+                      <div className="mx-2 mt-2">
+                        <button
+                          type="button"
+                          disabled={selectedSections.length === 0}
+                          onClick={carrySelected}
+                          className="flex h-8 w-full items-center justify-center rounded-full bg-[#1132ee] font-body text-[13px] font-medium text-white hover:bg-[#0f2dd7] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Carry forward
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
             </div>
           </div>
 

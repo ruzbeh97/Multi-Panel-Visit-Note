@@ -275,6 +275,14 @@ const IMPORTABLE_SECTIONS = [
   "Visit Plan",
 ];
 
+export const CARRY_FORWARD_SECTIONS = [
+  { label: "Entire note", titles: IMPORTABLE_SECTIONS },
+  { label: "Subjective", titles: ["Chief Complaint & History"] },
+  { label: "Objective", titles: ["Pain Assessment", "Muscle Strength"] },
+  { label: "Assessment", titles: ["Diagnosis & Findings", "Goals & Progress"] },
+  { label: "Plan", titles: ["Visit Plan"] },
+] as const;
+
 type NoteStore = {
   note: EditableNote;
   patchSubjective: (patch: Partial<EditableNote["subjective"]>) => void;
@@ -283,6 +291,7 @@ type NoteStore = {
   patchPlan: (patch: Partial<EditableNote["plan"]>) => void;
   importSection: (title: string, action: ImportAction) => void;
   clearSection: (title: string) => void;
+  importSections: (titles: string[]) => void;
   importWholeNote: () => void;
   undoImportWholeNote: () => void;
   canUndoImportWholeNote: boolean;
@@ -329,10 +338,17 @@ export function NoteStoreProvider({ children }: { children: ReactNode }) {
     (title: string) => setNote((current) => applyClear(current, title)),
     [],
   );
+  const importSections = useCallback(
+    (titles: string[]) => {
+      if (titles.length === 0) return;
+      setPreImportNote(note);
+      setNote(titles.reduce((draft, title) => applyImport(draft, title, "overwrite"), note));
+    },
+    [note],
+  );
   const importWholeNote = useCallback(() => {
-    setPreImportNote(note);
-    setNote(IMPORTABLE_SECTIONS.reduce((draft, title) => applyImport(draft, title, "overwrite"), note));
-  }, [note]);
+    importSections(IMPORTABLE_SECTIONS);
+  }, [importSections]);
   const undoImportWholeNote = useCallback(() => {
     if (!preImportNote) return;
     setNote(preImportNote);
@@ -348,6 +364,7 @@ export function NoteStoreProvider({ children }: { children: ReactNode }) {
       patchPlan,
       importSection,
       clearSection,
+      importSections,
       importWholeNote,
       undoImportWholeNote,
       canUndoImportWholeNote: preImportNote !== null,
@@ -360,6 +377,7 @@ export function NoteStoreProvider({ children }: { children: ReactNode }) {
       patchPlan,
       importSection,
       clearSection,
+      importSections,
       importWholeNote,
       undoImportWholeNote,
       preImportNote,
