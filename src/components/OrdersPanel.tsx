@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import Icon from "./Icon";
+import { PanelTitle, StickyPanelHeader } from "./chartPanelUi";
 import PdfViewer from "./pdf/PdfViewer";
 import { pastOrderDocKey } from "./pdf/AttachmentDocument";
 import {
@@ -89,7 +90,7 @@ function OrderRow({ order }: { order: PastOrder }) {
   );
 }
 
-export default function OrdersPanel() {
+export default function OrdersPanel({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [closedCategories, setClosedCategories] = useState<OrderCategory[]>([]);
 
@@ -114,11 +115,10 @@ export default function OrdersPanel() {
   }
 
   return (
-    <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
-      <h2 className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">Orders</h2>
-
-      <div className="flex w-full flex-col items-start gap-2 pb-10 pt-4">
-        <div className="flex w-full items-center gap-1.5">
+    <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white">
+      <StickyPanelHeader>
+        <PanelTitle title="Orders" onClose={onClose} />
+        <div className="flex w-full items-center gap-1.5 pb-3 pt-4">
           <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
             <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
             <input
@@ -147,7 +147,9 @@ export default function OrdersPanel() {
             <Icon name="filter_alt" size={20} className="text-[#1a1a1a]" />
           </button>
         </div>
+      </StickyPanelHeader>
 
+      <div className="flex w-full flex-col items-start gap-2 px-4 pb-10">
         <div className="flex w-full flex-wrap items-center gap-2">
           {ORDER_CATEGORIES.map((category) => (
             <span key={category} className="font-body text-[14px] leading-[22px] text-[#666666]">

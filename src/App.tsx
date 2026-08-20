@@ -4,8 +4,10 @@ import TopBar from "./components/TopBar";
 import PatientHeader from "./components/PatientHeader";
 import PanelNavBar, {
   ACTIVITY_ICON,
+  ALLERGIES_ICON,
   ATTACHMENTS_ICON,
-  MEDICAL_HISTORY_ICON,
+  DIAGNOSIS_ICON,
+  MEDICATIONS_ICON,
   MESSAGES_ICON,
   ORDERS_ICON,
   PAST_NOTE_ICON,
@@ -14,8 +16,11 @@ import PanelNavBar, {
 import PastNotePanel from "./components/PastNotePanel";
 import PastVisitNoteView from "./components/PastVisitNoteView";
 import AttachmentsPage from "./components/AttachmentsPage";
+import MedicationsPage from "./components/MedicationsPage";
 import AttachmentsPanel from "./components/AttachmentsPanel";
-import MedicalHistoryPanel from "./components/MedicalHistoryPanel";
+import DiagnosisPanel from "./components/DiagnosisPanel";
+import MedicationsPanel from "./components/MedicationsPanel";
+import AllergiesPanel from "./components/AllergiesPanel";
 import OrdersPanel from "./components/OrdersPanel";
 import MessagesPanel from "./components/MessagesPanel";
 import PatientActivityPanel from "./components/PatientActivityPanel";
@@ -35,7 +40,9 @@ import { NoteStoreProvider } from "./components/notes/noteStore";
 const SIDE_PANELS = [
   PAST_NOTE_ICON,
   ATTACHMENTS_ICON,
-  MEDICAL_HISTORY_ICON,
+  DIAGNOSIS_ICON,
+  MEDICATIONS_ICON,
+  ALLERGIES_ICON,
   ORDERS_ICON,
   MESSAGES_ICON,
   ACTIVITY_ICON,
@@ -52,13 +59,9 @@ function App() {
   const [railOutside, setRailOutside] = useState(false);
   const noteScrollRef = useRef<HTMLDivElement>(null);
   const attachmentsTabOpen = activeTab === "Attachments";
-  // The detached rail lives beside the frame, so panels can stay open on any tab.
-  const railVisible = railOutside || !attachmentsTabOpen;
+  const medicationsTabOpen = activeTab === "Medications";
   const sidePanelOpen =
-    (railOutside || !attachmentsTabOpen) &&
-    openedPastNoteId === null &&
-    activePanel !== null &&
-    SIDE_PANELS.includes(activePanel);
+    openedPastNoteId === null && activePanel !== null && SIDE_PANELS.includes(activePanel);
 
   function selectPanel(icon: string) {
     setActivePanel((current) => (current === icon ? null : icon));
@@ -78,15 +81,21 @@ function App() {
     selectPanel(icon);
   }
 
+  function closePanel() {
+    setActivePanel(null);
+  }
+
   const panelContent = (
     <>
-      {activePanel === PAST_NOTE_ICON && <PastNotePanel onOpenVisit={openPastVisit} />}
-      {activePanel === ATTACHMENTS_ICON && <AttachmentsPanel />}
-      {activePanel === MEDICAL_HISTORY_ICON && <MedicalHistoryPanel />}
-      {activePanel === ORDERS_ICON && <OrdersPanel />}
-      {activePanel === MESSAGES_ICON && <MessagesPanel />}
-      {activePanel === ACTIVITY_ICON && <PatientActivityPanel />}
-      {activePanel === TIMELINE_ICON && <ChartTimelinePanel />}
+      {activePanel === PAST_NOTE_ICON && <PastNotePanel onOpenVisit={openPastVisit} onClose={closePanel} />}
+      {activePanel === ATTACHMENTS_ICON && <AttachmentsPanel onClose={closePanel} />}
+      {activePanel === DIAGNOSIS_ICON && <DiagnosisPanel onClose={closePanel} />}
+      {activePanel === MEDICATIONS_ICON && <MedicationsPanel onClose={closePanel} />}
+      {activePanel === ALLERGIES_ICON && <AllergiesPanel onClose={closePanel} />}
+      {activePanel === ORDERS_ICON && <OrdersPanel onClose={closePanel} />}
+      {activePanel === MESSAGES_ICON && <MessagesPanel onClose={closePanel} />}
+      {activePanel === ACTIVITY_ICON && <PatientActivityPanel onClose={closePanel} />}
+      {activePanel === TIMELINE_ICON && <ChartTimelinePanel onClose={closePanel} />}
     </>
   );
 
@@ -144,6 +153,8 @@ function App() {
                   <div className="flex min-h-0 w-full flex-1 items-start gap-0 bg-white">
                     {attachmentsTabOpen ? (
                       <AttachmentsPage />
+                    ) : medicationsTabOpen ? (
+                      <MedicationsPage />
                     ) : openedPastNoteId ? (
                       <PastVisitNoteView
                         noteId={openedPastNoteId}
@@ -187,7 +198,7 @@ function App() {
                         {panelContent}
                       </ResizableSidePanel>
                     )}
-                    {!attachmentsTabOpen && !railOutside && (
+                    {!railOutside && (
                       <PanelNavBar
                         active={openedPastNoteId ? null : activePanel}
                         onSelect={selectNavPanel}
@@ -207,7 +218,7 @@ function App() {
                 </ResizableSidePanel>
               )}
 
-              {railOutside && railVisible && (
+              {railOutside && (
                 <PanelNavBar
                   variant="standalone"
                   active={openedPastNoteId ? null : activePanel}

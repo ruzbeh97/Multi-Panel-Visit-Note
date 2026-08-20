@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from "react";
 import Icon from "./Icon";
 import PdfViewer from "./pdf/PdfViewer";
 import { ATTACHMENT_GROUPS } from "../data/chart";
+import { PanelTitle } from "./chartPanelUi";
 import AttachmentsFilterPopover, {
   EMPTY_ATTACHMENT_FILTERS,
   attachmentFilterCount,
@@ -101,7 +102,7 @@ function FileRow({
   );
 }
 
-export default function AttachmentsPanel() {
+export default function AttachmentsPanel({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>(["Patient", "Other"]);
   const [openFile, setOpenFile] = useState<string | null>(null);
@@ -127,11 +128,10 @@ export default function AttachmentsPanel() {
   })).filter((group) => group.files.length > 0 || (!search && !filtersOn));
 
   return (
-    <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
-      <h2 className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">Attachments</h2>
-
-      <div className="flex w-full flex-col items-start gap-2 pb-10 pt-4">
-        <div className="flex w-full items-center gap-1.5">
+    <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white">
+      <div className="sticky top-0 z-10 bg-white px-4 pt-5">
+        <PanelTitle title="Attachments" onClose={onClose} />
+        <div className="flex w-full items-center gap-1.5 pb-3 pt-4">
           <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
             <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
             <input
@@ -171,7 +171,9 @@ export default function AttachmentsPanel() {
             )}
           </button>
         </div>
+      </div>
 
+      <div className="px-4 pb-10">
         <div className="flex w-full flex-col items-start">
           {groups.length === 0 ? (
             <p className="w-full py-8 text-center font-body text-[14px] leading-[22px] text-[#666666]">

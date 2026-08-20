@@ -6,18 +6,31 @@ export const PAST_NOTE_ICON = "note_alt";
 export const PINNED_NOTES_ICON = "keep";
 export const CONTACT_BOOK_ICON = "import_contacts";
 export const ATTACHMENTS_ICON = "file_present";
-export const MEDICAL_HISTORY_ICON = "stethoscope";
+export const DIAGNOSIS_ICON = "stethoscope";
+export const MEDICAL_HISTORY_ICON = DIAGNOSIS_ICON;
+export const MEDICATIONS_ICON = "pill";
+export const ALLERGIES_ICON = "allergy";
 export const ORDERS_ICON = "outgoing_mail";
 export const MESSAGES_ICON = "forum";
 export const ACTIVITY_ICON = "route";
 export const TIMELINE_ICON = "conversion_path";
 
-const NAV_ICONS = [PAST_NOTE_ICON, ATTACHMENTS_ICON, MEDICAL_HISTORY_ICON, ORDERS_ICON, TIMELINE_ICON];
+const NAV_ICONS = [
+  PAST_NOTE_ICON,
+  ATTACHMENTS_ICON,
+  DIAGNOSIS_ICON,
+  MEDICATIONS_ICON,
+  ALLERGIES_ICON,
+  ORDERS_ICON,
+  TIMELINE_ICON,
+];
 
 export const ICON_LABELS: Record<string, string> = {
   [PAST_NOTE_ICON]: "Past Notes",
   [ATTACHMENTS_ICON]: "Attachments",
-  [MEDICAL_HISTORY_ICON]: "Medical History",
+  [DIAGNOSIS_ICON]: "Diagnosis",
+  [MEDICATIONS_ICON]: "Medications",
+  [ALLERGIES_ICON]: "Allergies",
   [ORDERS_ICON]: "Orders",
   [TIMELINE_ICON]: "Care Timeline",
   [CONTACT_BOOK_ICON]: "Contact Book",

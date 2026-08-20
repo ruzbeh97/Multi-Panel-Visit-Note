@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Icon from "./Icon";
+import { CloseRightPanelButton, StickyPanelHeader } from "./chartPanelUi";
 import PdfViewer from "./pdf/PdfViewer";
 import { timelineDocKey } from "./pdf/AttachmentDocument";
 import { ENCOUNTERS, type Encounter, type EncounterItem } from "../data/chart";
@@ -218,7 +219,7 @@ function TimelineItemBlock({
   );
 }
 
-export default function ChartTimelinePanel() {
+export default function ChartTimelinePanel({ onClose }: { onClose: () => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -286,26 +287,29 @@ export default function ChartTimelinePanel() {
   const hasQuery = query.trim().length > 0;
 
   return (
-    <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white px-4 pt-5">
-      <div className="flex w-full flex-col items-start gap-2 pb-10">
-        <div className="flex w-full items-center justify-between pb-2">
+    <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white">
+      <StickyPanelHeader>
+        <div className="flex w-full items-center justify-between">
           <h2 className="font-body text-[16px] font-medium leading-[24px] text-[#1a1a1a]">Care Timeline</h2>
-          <button
-            type="button"
-            onClick={() => setCollapsed((current) => !current)}
-            aria-pressed={collapsed}
-            className={`flex shrink-0 items-start rounded-full p-1 ${collapsed ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
-            aria-label={collapsed ? "Expand every timeline section" : "Collapse every timeline section"}
-          >
-            <Icon
-              name={collapsed ? "expand_content" : "collapse_content"}
-              size={20}
-              className={collapsed ? "text-[#1132ee]" : "text-[#1a1a1a]"}
-            />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCollapsed((current) => !current)}
+              aria-pressed={collapsed}
+              className={`flex size-7 shrink-0 items-center justify-center rounded-md ${collapsed ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
+              aria-label={collapsed ? "Expand every timeline section" : "Collapse every timeline section"}
+            >
+              <Icon
+                name={collapsed ? "expand_content" : "collapse_content"}
+                size={20}
+                className={collapsed ? "text-[#1132ee]" : "text-[#1a1a1a]"}
+              />
+            </button>
+            <CloseRightPanelButton onClose={onClose} />
+          </div>
         </div>
 
-        <div className="flex w-full items-center gap-1.5 pb-2">
+        <div className="flex w-full items-center gap-1.5 pb-3 pt-4">
           <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
             <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
             <input
@@ -358,20 +362,20 @@ export default function ChartTimelinePanel() {
             </div>
           )}
         </div>
+      </StickyPanelHeader>
 
-        <div className="flex w-full flex-col items-start gap-4">
-          {ENCOUNTERS.map((visit) => (
-            <TimelineItemBlock
-              key={visit.id}
-              visit={visit}
-              collapsed={collapsed}
-              activeMatch={activeMatch}
-              matchedVisit={matchLookup.visits.has(visit.id)}
-              matchedItemKeys={matchLookup.itemsByVisit.get(visit.id) ?? new Set()}
-              onActivateMatch={activateMatch}
-            />
-          ))}
-        </div>
+      <div className="flex w-full flex-col items-start gap-4 px-4 pb-10">
+        {ENCOUNTERS.map((visit) => (
+          <TimelineItemBlock
+            key={visit.id}
+            visit={visit}
+            collapsed={collapsed}
+            activeMatch={activeMatch}
+            matchedVisit={matchLookup.visits.has(visit.id)}
+            matchedItemKeys={matchLookup.itemsByVisit.get(visit.id) ?? new Set()}
+            onActivateMatch={activateMatch}
+          />
+        ))}
       </div>
     </aside>
   );

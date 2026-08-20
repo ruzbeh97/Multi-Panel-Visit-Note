@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Icon from "./Icon";
+import { CloseRightPanelButton } from "./chartPanelUi";
 import { ACTIVITY_EVENTS, AUDIT_LOG } from "../data/chart";
 
 const TABS = ["Activity Tracker", "Audit Log"] as const;
@@ -152,16 +153,17 @@ function AuditLog() {
   );
 }
 
-export default function PatientActivityPanel() {
+export default function PatientActivityPanel({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>(TABS[0]);
 
   return (
     <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white">
       <div className="flex w-full shrink-0 items-center justify-between gap-3 border-b border-[#e6e6e6] px-4 pb-4 pt-5">
-        <h2 className="font-body text-[22px] font-medium leading-[30px] text-[#1a1a1a]">Patient Activity</h2>
+        <h2 className="min-w-0 font-body text-[22px] font-medium leading-[30px] text-[#1a1a1a]">Patient Activity</h2>
 
+        <div className="flex shrink-0 items-center gap-2">
         {tab === "Activity Tracker" && (
-          <div className="flex shrink-0 items-center gap-2">
+          <>
             <button
               type="button"
               className="flex h-9 items-center gap-1.5 rounded-full bg-[#1132ee] pl-3 pr-4 font-body text-[14px] font-medium leading-[22px] text-white hover:bg-[#0f2dd7]"
@@ -176,8 +178,10 @@ export default function PatientActivityPanel() {
               <Icon name="tune" size={18} className="text-[#1132ee]" />
               Filters
             </button>
-          </div>
+          </>
         )}
+          <CloseRightPanelButton onClose={onClose} />
+        </div>
       </div>
 
       <div className="flex w-full shrink-0 items-center gap-6 border-b border-[#e6e6e6] px-4">

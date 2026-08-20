@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
+import { CloseRightPanelButton } from "./chartPanelUi";
 import { CARE_TEAM_THREAD, MESSAGE_AUTHOR } from "../data/chart";
 
 const AVATAR_TONES = {
@@ -62,7 +63,7 @@ function MessageGroup({ message }: { message: Message }) {
   );
 }
 
-export default function MessagesPanel() {
+export default function MessagesPanel({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>(CARE_TEAM_THREAD);
   const [draft, setDraft] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -85,6 +86,9 @@ export default function MessagesPanel() {
 
   return (
     <aside className="sticky top-0 flex h-full w-full min-w-0 flex-col overflow-hidden border-l border-[#e6e6e6] bg-white px-6">
+      <div className="flex w-full shrink-0 items-center justify-end px-4 pt-5">
+        <CloseRightPanelButton onClose={onClose} />
+      </div>
       <div
         ref={listRef}
         className="scrollbar-thin flex min-h-0 w-full flex-1 flex-col gap-6 overflow-y-auto px-4 pt-5"
