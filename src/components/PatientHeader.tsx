@@ -28,10 +28,22 @@ const TABS = [
 
 const HEADER_ACTIONS = [CONTACT_BOOK_ICON, PINNED_NOTES_ICON, ACTIVITY_ICON, MESSAGES_ICON] as const;
 
-function IconButton({ icon, label }: { icon: string; label: string }) {
+function IconButton({
+  icon,
+  label,
+  tone = "dark",
+}: {
+  icon: string;
+  label: string;
+  tone?: "blue" | "dark";
+}) {
   return (
-    <button className="group relative flex items-start rounded-full p-1 hover:bg-black/5" aria-label={label} title={label}>
-      <Icon name={icon} size={20} className="text-[#1a1a1a]" />
+    <button
+      className="flex size-7 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
+      aria-label={label}
+      title={label}
+    >
+      <Icon name={icon} size={16} className={tone === "blue" ? "text-[#1132ee]" : "text-[#1a1a1a]"} />
     </button>
   );
 }
@@ -172,25 +184,30 @@ export default function PatientHeader({
   return (
     <div className="flex w-full flex-col items-start pt-2">
       <div className="flex w-full items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#ffad33]">
-            <span className="font-body text-[26px] font-medium leading-none text-[#1a1a1a]">{PATIENT.initial}</span>
+        <div className="flex items-center gap-2">
+          <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#ffad33]">
+            <span className="font-body text-[16px] font-medium leading-none text-[#1a1a1a]">{PATIENT.initial}</span>
           </div>
           <span className="whitespace-nowrap font-body text-[14px] font-medium leading-[22px] text-[#1132ee]">{PATIENT.name}</span>
           <span className="whitespace-nowrap font-body text-[14px] font-medium leading-[22px] text-[#666]">
             (MRN: {PATIENT.mrn}, DOB: {PATIENT.dob})
           </span>
-          <IconButton icon="expand_more" label="Expand patient info" />
-          <IconButton icon="content_copy" label="Copy" />
-          <IconButton icon="account_balance_wallet" label="Wallet" />
-          <IconButton icon="print" label="Print" />
+          <IconButton icon="expand_more" label="Expand patient info" tone="blue" />
+          <IconButton icon="content_copy" label="Copy" tone="blue" />
+          <IconButton icon="account_balance_wallet" label="Wallet" tone="blue" />
+          <IconButton icon="print" label="Print" tone="blue" />
         </div>
-        <div className="flex w-[237px] items-center justify-between">
+        <div className="flex shrink-0 items-center gap-1">
           <IconButton icon="history" label="History" />
           <IconButton icon="flag" label="Flag" />
-          <button className="flex items-center justify-center gap-2 rounded-full border border-[#181b1b] py-1.5 pl-3 pr-4">
-            <Icon name="edit_calendar" size={20} className="text-[#181b1b]" />
-            <span className="whitespace-nowrap font-body text-[14px] font-medium leading-[24px] text-[#181b1b]">Book Appointment</span>
+          <button
+            type="button"
+            className="flex h-7 items-center justify-center gap-1 rounded-full border border-[#e6e6e6] pl-2 pr-2.5"
+          >
+            <Icon name="edit_calendar" size={16} className="text-[#1a1a1a]" />
+            <span className="whitespace-nowrap font-body text-[12px] font-medium leading-[16px] text-[#1a1a1a]">
+              Book Appointment
+            </span>
           </button>
         </div>
       </div>
