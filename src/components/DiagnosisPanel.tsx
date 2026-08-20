@@ -336,14 +336,13 @@ export default function DiagnosisPanel({ onClose }: { onClose: () => void }) {
             )}
           </label>
           <TabGroup tabs={DIAGNOSIS_TABS} active={tab} onSelect={setTab} />
+          <span className="w-full font-body text-[14px] leading-[22px] text-[#666666]">
+            {records.length} Diagnosis | {latestCount} in latest notes
+          </span>
         </>
       }
     >
-      <div className="flex w-full flex-col items-start gap-2">
-        <span className="w-full font-body text-[14px] leading-[22px] text-[#666666]">
-          {records.length} Diagnosis | {latestCount} in latest notes
-        </span>
-
+      <div className="flex w-full flex-col items-start">
         {tab === "By Diagnosis" ? (
           <div className="flex w-full flex-col items-start">
             {RELEVANCE_GROUPS.map((group) => {
