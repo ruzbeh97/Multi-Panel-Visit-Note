@@ -131,7 +131,9 @@ export default function Sidebar({ railOutside, onToggleRailOutside }: SidebarPro
       </div>
       <div className="flex h-9 w-full items-center justify-between pt-2">
         <div className="flex flex-1 items-center gap-2">
-          <div className="size-7 shrink-0 overflow-hidden rounded-full border border-black/20 bg-[#ffad33]" />
+          <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/20 bg-[#ffad33]">
+            <span className="font-body text-[16px] font-medium leading-none text-[#1a1a1a]">R</span>
+          </div>
           <button className="flex size-7 items-center justify-center rounded-lg hover:bg-black/5" aria-label="Settings">
             <Icon name="settings" size={16} className="text-[#454545]" />
           </button>
