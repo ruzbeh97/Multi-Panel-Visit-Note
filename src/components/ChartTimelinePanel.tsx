@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Icon from "./Icon";
-import { CloseRightPanelButton, StickyPanelHeader } from "./chartPanelUi";
+import { CloseRightPanelButton, PanelSearchField, StickyPanelHeader } from "./chartPanelUi";
 import PdfViewer from "./pdf/PdfViewer";
 import { timelineDocKey } from "./pdf/AttachmentDocument";
 import { ENCOUNTERS, type Encounter, type EncounterItem } from "../data/chart";
@@ -161,26 +161,7 @@ export default function ChartTimelinePanel({ onClose }: { onClose: () => void })
         </div>
 
         <div className="flex w-full items-center gap-1.5 pb-3 pt-4">
-          <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
-            <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search"
-              aria-label="Search timeline"
-              className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[24px] text-[#1a1a1a] outline-none placeholder:text-[#666]"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="flex shrink-0 items-center rounded-full p-0.5 hover:bg-black/5"
-                aria-label="Clear search"
-              >
-                <Icon name="close" size={16} className="text-[#666666]" />
-              </button>
-            )}
-          </label>
+          <PanelSearchField value={query} onChange={setQuery} ariaLabel="Search timeline" />
         </div>
       </StickyPanelHeader>
 

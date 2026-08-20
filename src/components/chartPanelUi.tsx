@@ -39,6 +39,47 @@ export function StickyPanelHeader({ children }: { children: ReactNode }) {
   return <div className="sticky top-0 z-10 bg-white px-4 pt-5">{children}</div>;
 }
 
+export function PanelSearchField({
+  value,
+  onChange,
+  placeholder = "Search",
+  ariaLabel,
+  clearLabel,
+  className = "min-w-0 flex-1",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  ariaLabel: string;
+  clearLabel?: string;
+  className?: string;
+}) {
+  return (
+    <label
+      className={`flex h-9 items-center gap-2 rounded-[6px] border border-[#e6e6e6] bg-white pl-3 pr-2 ${className}`}
+    >
+      <Icon name="search" size={20} className="shrink-0 text-[#666666]" />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[22px] text-[#1a1a1a] outline-none placeholder:text-[#999999]"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="flex shrink-0 items-center rounded-full p-0.5 hover:bg-black/5"
+          aria-label={clearLabel ?? "Clear search"}
+        >
+          <Icon name="close" size={16} className="text-[#666666]" />
+        </button>
+      ) : null}
+    </label>
+  );
+}
+
 export function PanelShell({
   title,
   onClose,

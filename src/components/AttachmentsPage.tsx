@@ -219,14 +219,14 @@ export default function AttachmentsPage() {
         <h1 className="font-body text-[20px] font-medium leading-[28px] text-[#1a1a1a]">Attachments</h1>
 
         <div className="flex shrink-0 items-center gap-2">
-          <label className="flex h-9 w-[260px] items-center gap-2 rounded-lg border border-[#e6e6e6] bg-white pl-3 pr-2">
-            <Icon name="search" size={18} className="shrink-0 text-[#666666]" />
+          <label className="flex h-9 w-[260px] items-center gap-2 rounded-[6px] border border-[#e6e6e6] bg-white pl-3 pr-2">
+            <Icon name="search" size={20} className="shrink-0 text-[#666666]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search attachments by file name"
               aria-label="Search attachments by file name"
-              className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[22px] text-[#1a1a1a] outline-none placeholder:text-[#666666]"
+              className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[22px] text-[#1a1a1a] outline-none placeholder:text-[#999999]"
             />
           </label>
 

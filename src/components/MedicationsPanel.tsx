@@ -3,7 +3,7 @@ import Badge, { type Tone } from "./Badge";
 import Icon from "./Icon";
 import MedicationDetails from "./MedicationDetails";
 import FilterMenuPopover from "./FilterMenuPopover";
-import { PanelShell, RailGroup, RailRow, ShowMore, TabGroup } from "./chartPanelUi";
+import { PanelSearchField, PanelShell, RailGroup, RailRow, ShowMore, TabGroup } from "./chartPanelUi";
 import { MEDICATIONS } from "../data/chart";
 
 const MEDICATION_TABS = ["Prescribed", "Medication History", "Pending Approvals"];
@@ -107,26 +107,12 @@ export default function MedicationsPanel({ onClose }: { onClose: () => void }) {
       toolbar={
         <>
           <div className="flex w-full items-center gap-1.5">
-            <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
-              <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search"
-                aria-label="Search medications"
-                className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[24px] text-[#1a1a1a] outline-none placeholder:text-[#666]"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="flex shrink-0 items-center rounded-full p-0.5 hover:bg-black/5"
-                  aria-label="Clear medication search"
-                >
-                  <Icon name="close" size={16} className="text-[#666666]" />
-                </button>
-              )}
-            </label>
+            <PanelSearchField
+              value={query}
+              onChange={setQuery}
+              ariaLabel="Search medications"
+              clearLabel="Clear medication search"
+            />
             <button
               ref={filterButtonRef}
               type="button"
@@ -148,6 +134,22 @@ export default function MedicationsPanel({ onClose }: { onClose: () => void }) {
                   {fillStatuses.length}
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              aria-label="Pharmacy history"
+              title="Pharmacy history"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
+            >
+              <Icon name="history" size={20} className="text-[#1a1a1a]" />
+            </button>
+            <button
+              type="button"
+              aria-label="PDMP check"
+              title="PDMP check"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
+            >
+              <Icon name="fact_check" size={20} className="text-[#1a1a1a]" />
             </button>
           </div>
           <TabGroup tabs={MEDICATION_TABS} active={tab} onSelect={setTab} />

@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from "react";
 import Icon from "./Icon";
 import PdfViewer from "./pdf/PdfViewer";
 import { ATTACHMENT_GROUPS } from "../data/chart";
-import { PanelTitle } from "./chartPanelUi";
+import { PanelSearchField, PanelTitle } from "./chartPanelUi";
 import AttachmentsFilterPopover, {
   EMPTY_ATTACHMENT_FILTERS,
   attachmentFilterCount,
@@ -132,26 +132,12 @@ export default function AttachmentsPanel({ onClose }: { onClose: () => void }) {
       <div className="sticky top-0 z-10 bg-white px-4 pt-5">
         <PanelTitle title="Attachments" onClose={onClose} />
         <div className="flex w-full items-center gap-1.5 pb-3 pt-4">
-          <label className="flex h-9 min-w-0 flex-1 items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
-            <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search"
-              aria-label="Search attachments"
-              className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[24px] text-[#1a1a1a] outline-none placeholder:text-[#666]"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="flex shrink-0 items-center rounded-full p-0.5 hover:bg-black/5"
-                aria-label="Clear attachment search"
-              >
-                <Icon name="close" size={16} className="text-[#666666]" />
-              </button>
-            )}
-          </label>
+          <PanelSearchField
+            value={query}
+            onChange={setQuery}
+            ariaLabel="Search attachments"
+            clearLabel="Clear attachment search"
+          />
           <button
             ref={filterButtonRef}
             type="button"

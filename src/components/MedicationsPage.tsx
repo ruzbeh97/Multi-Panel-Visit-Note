@@ -207,14 +207,14 @@ export default function MedicationsPage() {
       </div>
 
       <div className="flex w-full items-center justify-between gap-3 pt-4">
-        <label className="flex h-9 w-[280px] items-center gap-2 rounded-lg border border-[#e6e6e6] bg-white pl-3 pr-2">
-          <Icon name="search" size={18} className="shrink-0 text-[#666666]" />
+        <label className="flex h-9 w-[280px] items-center gap-2 rounded-[6px] border border-[#e6e6e6] bg-white pl-3 pr-2">
+          <Icon name="search" size={20} className="shrink-0 text-[#666666]" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search Drug Name"
             aria-label="Search drug name"
-            className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[22px] text-[#1a1a1a] outline-none placeholder:text-[#666666]"
+            className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[22px] text-[#1a1a1a] outline-none placeholder:text-[#999999]"
           />
         </label>
 

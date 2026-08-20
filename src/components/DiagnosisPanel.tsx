@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Icon from "./Icon";
-import { PanelShell, RailGroup, RailRow, TabGroup } from "./chartPanelUi";
+import { PanelSearchField, PanelShell, RailGroup, RailRow, TabGroup } from "./chartPanelUi";
 import {
   CASE,
   DIAGNOSIS_ENCOUNTERS,
@@ -315,26 +315,13 @@ export default function DiagnosisPanel({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       toolbar={
         <>
-          <label className="flex h-9 w-full items-center gap-1 rounded-lg bg-black/[0.04] pl-2 pr-1">
-            <Icon name="search" size={18} className="shrink-0 text-[#1a1a1a] opacity-40" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search"
-              aria-label="Search past diagnosis"
-              className="min-w-0 flex-1 bg-transparent font-body text-[14px] leading-[24px] text-[#1a1a1a] outline-none placeholder:text-[#666]"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="flex shrink-0 items-center rounded-full p-0.5 hover:bg-black/5"
-                aria-label="Clear diagnosis search"
-              >
-                <Icon name="close" size={16} className="text-[#666666]" />
-              </button>
-            )}
-          </label>
+          <PanelSearchField
+            value={query}
+            onChange={setQuery}
+            ariaLabel="Search past diagnosis"
+            clearLabel="Clear diagnosis search"
+            className="w-full"
+          />
           <TabGroup tabs={DIAGNOSIS_TABS} active={tab} onSelect={setTab} />
           <span className="w-full font-body text-[14px] leading-[22px] text-[#666666]">
             {records.length} Diagnosis | {latestCount} in latest notes
