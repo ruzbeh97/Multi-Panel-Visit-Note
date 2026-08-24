@@ -1,9 +1,15 @@
 import { useState } from "react";
 import Icon from "./Icon";
-import { CloseRightPanelButton, PanelSearchField, StickyPanelHeader } from "./chartPanelUi";
+import { CloseRightPanelButton, PanelSearchField, RailGroup, StickyPanelHeader } from "./chartPanelUi";
 import PdfViewer from "./pdf/PdfViewer";
 import { timelineDocKey } from "./pdf/AttachmentDocument";
-import { ENCOUNTERS, type Encounter, type EncounterItem } from "../data/chart";
+import {
+  ENCOUNTERS,
+  OUTSIDE_VISIT_ACTIVITY,
+  type Encounter,
+  type EncounterItem,
+  type OutsideVisitActivity,
+} from "../data/chart";
 
 const ROW_ICONS = {
   attachment: { icon: "attach_file", color: "text-[#1a1a1a]" },
@@ -26,8 +32,8 @@ function fileNameFor(item: EncounterItem) {
   return `${slug}_${item.type === "order" ? "Requisition" : "Prescription"}_${stamp}.pdf`;
 }
 
-function timestampFor(item: EncounterItem, visit: Encounter) {
-  const time = "time" in item && item.time ? item.time : visit.time;
+function timestampFor(item: EncounterItem, source: { time: string }) {
+  const time = "time" in item && item.time ? item.time : source.time;
   return time.toLowerCase().replace(/\s+/g, "");
 }
 
@@ -41,7 +47,19 @@ function itemSearchText(item: EncounterItem, visit: Encounter) {
   return `${item.title} ${fileNameFor(item)} ${timestampFor(item, visit)} ${item.date} ${visit.provider}`.toLowerCase();
 }
 
-function ItemRow({ item, visit }: { item: EncounterItem; visit: Encounter }) {
+function outsideSearchText(entry: OutsideVisitActivity) {
+  return `${entry.item.title} ${fileNameFor(entry.item)} ${entry.provider} ${entry.item.date} ${entry.item.type} other activity`.toLowerCase();
+}
+
+const OTHER_ACTIVITY_ID = "other-activity";
+
+const OTHER_ACTIVITY_GROUPS = [
+  { type: "attachment", label: "Attachments" },
+  { type: "order", label: "Orders" },
+  { type: "medication", label: "Medications" },
+] as const;
+
+function ItemRow({ item, source }: { item: EncounterItem; source: { provider: string; time: string } }) {
   const [open, setOpen] = useState(false);
   const meta = ROW_ICONS[item.type];
   const file = fileNameFor(item);
@@ -83,7 +101,7 @@ function ItemRow({ item, visit }: { item: EncounterItem; visit: Encounter }) {
         </div>
 
         <span className="mt-1 w-full truncate font-body text-[12px] leading-[17px] text-[#666666]">
-          {visit.provider} • {timestampFor(item, visit)}, {item.date}
+          {source.provider} • {timestampFor(item, source)}, {item.date}
         </span>
 
         {open && <PdfViewer fileName={documentFor(item)} />}
@@ -95,28 +113,42 @@ function ItemRow({ item, visit }: { item: EncounterItem; visit: Encounter }) {
 function TimelineItemBlock({
   visit,
   items,
-  collapsed,
+  open,
+  onToggle,
 }: {
   visit: Encounter;
   items: EncounterItem[];
-  collapsed: boolean;
+  open: boolean;
+  onToggle: () => void;
 }) {
   return (
     <div className="flex w-full min-w-0 flex-col items-start">
-      <div className="flex w-full flex-col items-start rounded-lg pb-2">
-        <div className="flex w-full min-w-0 items-baseline gap-2 font-body text-[16px] leading-[24px]">
-          <span className="shrink-0 whitespace-nowrap font-medium text-[#1a1a1a]">{visit.caseName}</span>
-          <span className="min-w-0 truncate text-[#666666]">{visit.visitType}</span>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full flex-col items-start rounded-lg pb-2 text-left hover:bg-[#f7f7f7]"
+      >
+        <div className="flex w-full min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-baseline gap-2 font-body text-[16px] leading-[24px]">
+            <span className="shrink-0 whitespace-nowrap font-medium text-[#1a1a1a]">{visit.caseName}</span>
+            <span className="min-w-0 truncate text-[#666666]">{visit.visitType}</span>
+          </div>
+          <Icon
+            name={open ? "expand_less" : "expand_more"}
+            size={20}
+            className="shrink-0 text-[#666666]"
+          />
         </div>
         <span className="w-full truncate font-body text-[12px] leading-[17px] text-[#666666]">
           {visit.date} | {visit.time} · {visit.title}
         </span>
-      </div>
+      </button>
 
-      {!collapsed && (
+      {open && (
         <div className="flex w-full flex-col items-start">
           {items.map((item) => (
-            <ItemRow key={itemKey(item)} item={item} visit={visit} />
+            <ItemRow key={itemKey(item)} item={item} source={visit} />
           ))}
         </div>
       )}
@@ -124,8 +156,77 @@ function TimelineItemBlock({
   );
 }
 
+function OtherActivityBlock({
+  entries,
+  open,
+  onToggle,
+}: {
+  entries: OutsideVisitActivity[];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    attachment: true,
+    order: true,
+    medication: true,
+  });
+
+  function toggleGroup(type: string) {
+    setOpenGroups((current) => ({ ...current, [type]: !current[type] }));
+  }
+
+  return (
+    <div className="flex w-full min-w-0 flex-col items-start">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full flex-col items-start rounded-lg pb-2 text-left hover:bg-[#f7f7f7]"
+      >
+        <div className="flex w-full min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-baseline gap-2 font-body text-[16px] leading-[24px]">
+            <span className="shrink-0 whitespace-nowrap font-medium text-[#1a1a1a]">Other Activity</span>
+            <span className="min-w-0 truncate text-[#666666]">Outside of appointments</span>
+          </div>
+          <Icon
+            name={open ? "expand_less" : "expand_more"}
+            size={20}
+            className="shrink-0 text-[#666666]"
+          />
+        </div>
+        <span className="w-full truncate font-body text-[12px] leading-[17px] text-[#666666]">
+          Attachments, orders, and medications
+        </span>
+      </button>
+
+      {open && (
+        <div className="flex w-full flex-col items-start">
+          {OTHER_ACTIVITY_GROUPS.map((group) => {
+            const grouped = entries.filter((entry) => entry.item.type === group.type);
+            if (grouped.length === 0) return null;
+            return (
+              <RailGroup
+                key={group.type}
+                label={group.label}
+                count={grouped.length}
+                open={openGroups[group.type]}
+                accent
+                onToggle={() => toggleGroup(group.type)}
+              >
+                {grouped.map((entry) => (
+                  <ItemRow key={itemKey(entry.item)} item={entry.item} source={entry} />
+                ))}
+              </RailGroup>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ChartTimelinePanel({ onClose }: { onClose: () => void }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
 
   const search = query.trim().toLowerCase();
@@ -137,6 +238,28 @@ export default function ChartTimelinePanel({ onClose }: { onClose: () => void })
     return { visit, items, visitMatches };
   }).filter((group) => (search ? group.visitMatches || group.items.length > 0 : true));
 
+  const otherEntries = OUTSIDE_VISIT_ACTIVITY.filter((entry) =>
+    search ? outsideSearchText(entry).includes(search) : true,
+  );
+  const sectionIds = [
+    ...(otherEntries.length > 0 ? [OTHER_ACTIVITY_ID] : []),
+    ...visits.map(({ visit }) => visit.id),
+  ];
+  const allCollapsed = sectionIds.length > 0 && sectionIds.every((id) => collapsedIds.has(id));
+
+  function toggleAll() {
+    setCollapsedIds(allCollapsed ? new Set() : new Set(sectionIds));
+  }
+
+  function toggleVisit(id: string) {
+    setCollapsedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
     <aside className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white">
       <StickyPanelHeader>
@@ -145,15 +268,15 @@ export default function ChartTimelinePanel({ onClose }: { onClose: () => void })
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
-              onClick={() => setCollapsed((current) => !current)}
-              aria-pressed={collapsed}
-              className={`flex size-7 shrink-0 items-center justify-center rounded-md ${collapsed ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
-              aria-label={collapsed ? "Expand every timeline section" : "Collapse every timeline section"}
+              onClick={toggleAll}
+              aria-pressed={allCollapsed}
+              className={`flex size-7 shrink-0 items-center justify-center rounded-md ${allCollapsed ? "bg-[rgba(17,50,238,0.08)]" : "hover:bg-black/5"}`}
+              aria-label={allCollapsed ? "Expand every timeline section" : "Collapse every timeline section"}
             >
               <Icon
-                name={collapsed ? "expand_content" : "collapse_content"}
+                name={allCollapsed ? "expand_content" : "collapse_content"}
                 size={20}
-                className={collapsed ? "text-[#1132ee]" : "text-[#1a1a1a]"}
+                className={allCollapsed ? "text-[#1132ee]" : "text-[#1a1a1a]"}
               />
             </button>
             <CloseRightPanelButton onClose={onClose} />
@@ -166,14 +289,29 @@ export default function ChartTimelinePanel({ onClose }: { onClose: () => void })
       </StickyPanelHeader>
 
       <div className="flex w-full flex-col items-start gap-4 px-4 pb-10">
-        {visits.length === 0 ? (
+        {visits.length === 0 && otherEntries.length === 0 ? (
           <p className="w-full py-8 text-center font-body text-[14px] leading-[22px] text-[#666666]">
             No timeline items match the current search.
           </p>
         ) : (
-          visits.map(({ visit, items }) => (
-            <TimelineItemBlock key={visit.id} visit={visit} items={items} collapsed={collapsed} />
-          ))
+          <>
+            {otherEntries.length > 0 && (
+              <OtherActivityBlock
+                entries={otherEntries}
+                open={!collapsedIds.has(OTHER_ACTIVITY_ID)}
+                onToggle={() => toggleVisit(OTHER_ACTIVITY_ID)}
+              />
+            )}
+            {visits.map(({ visit, items }) => (
+              <TimelineItemBlock
+                key={visit.id}
+                visit={visit}
+                items={items}
+                open={!collapsedIds.has(visit.id)}
+                onToggle={() => toggleVisit(visit.id)}
+              />
+            ))}
+          </>
         )}
       </div>
     </aside>

@@ -909,8 +909,74 @@ export const ENCOUNTERS: Encounter[] = [
   },
 ];
 
+// Chart events created between visits — portal uploads, called-in refills,
+// and orders placed from the inbox rather than from an appointment.
+export type OutsideVisitActivity = {
+  provider: string;
+  time: string;
+  item: EncounterItem;
+};
+
+export const OUTSIDE_VISIT_ACTIVITY: OutsideVisitActivity[] = [
+  {
+    provider: "Patient",
+    time: "7:22pm",
+    item: {
+      type: "attachment",
+      title: "Knee swelling photos",
+      file: "Patient_Knee_Photos_08142026.pdf",
+      date: "08/14/2026",
+      source: "Patient",
+      tag: "Photo",
+      caseTag: ACL_TAG,
+    },
+  },
+  {
+    provider: ASSOCIATE_PROVIDER,
+    time: "4:05pm",
+    item: {
+      type: "medication",
+      title: "Ibuprofen 800mg tablet",
+      detail: "30 tablets · 1 refill",
+      date: "08/08/2026",
+    },
+  },
+  {
+    provider: CLINIC_ASSISTANT,
+    time: "10:41am",
+    item: {
+      type: "attachment",
+      title: "Outside PT progress note",
+      file: "PT_Progress_Note_Northside_08062026.pdf",
+      date: "08/06/2026",
+      source: "Fax",
+      tag: "PT Note",
+      caseTag: ACL_TAG,
+    },
+  },
+  {
+    provider: PROVIDER.short,
+    time: "2:18pm",
+    item: {
+      type: "order",
+      title: "CBC with automated differential",
+      detail: "Hale Orthopedics Lab",
+      date: "08/04/2026",
+      time: "2:18 PM",
+      icon: "science",
+      tone: "blue",
+      orderSet: "Pre-Activity Labs",
+    },
+  },
+];
+
 const isOrderItem = (item: EncounterItem): item is OrderItem => item.type === "order";
 const isAttachmentItem = (item: EncounterItem): item is AttachmentItem => item.type === "attachment";
+
+const ALL_CHART_ITEMS: EncounterItem[] = [
+  ...ENCOUNTERS.flatMap((visit) => visit.items),
+  ...OUTSIDE_VISIT_ACTIVITY.map((entry) => entry.item),
+];
 
 const PAST_ENCOUNTERS = ENCOUNTERS.filter((visit) => visit.date !== CASE.visitDateLong);
 
@@ -955,7 +1021,7 @@ export const ORDER_CATEGORY_LABELS: Record<OrderCategory, string> = {
   DME: "DME",
 };
 
-export const PAST_ORDERS = ENCOUNTERS.flatMap((visit) => visit.items.filter(isOrderItem))
+export const PAST_ORDERS = ALL_CHART_ITEMS.filter(isOrderItem)
   .map((item) => ({
     title: item.title,
     icon: item.icon,
@@ -1004,7 +1070,7 @@ const ATTACHMENT_SOURCES = ["Imaging", "Fax", "Patient", "Other"] as const;
 
 export const ATTACHMENT_GROUPS = ATTACHMENT_SOURCES.map((label) => ({
   label,
-  files: ENCOUNTERS.flatMap((visit) => visit.items.filter(isAttachmentItem))
+  files: ALL_CHART_ITEMS.filter(isAttachmentItem)
     .filter((item) => item.source === label)
     .map((item) => ({ name: item.file, date: item.date, tag: item.tag, case: item.caseTag }))
     .sort((a, b) => chartDateValue(b.date) - chartDateValue(a.date)),
