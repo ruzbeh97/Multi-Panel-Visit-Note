@@ -87,7 +87,7 @@ function App() {
 
   const panelContent = (
     <>
-      {activePanel === PAST_NOTE_ICON && <PastNotePanel onOpenVisit={openPastVisit} />}
+      {activePanel === PAST_NOTE_ICON && <PastNotePanel onClose={closePanel} onOpenVisit={openPastVisit} />}
       {activePanel === ATTACHMENTS_ICON && <AttachmentsPanel onClose={closePanel} />}
       {activePanel === DIAGNOSIS_ICON && <DiagnosisPanel onClose={closePanel} />}
       {activePanel === MEDICATIONS_ICON && <MedicationsPanel onClose={closePanel} />}

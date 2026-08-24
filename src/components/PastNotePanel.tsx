@@ -8,6 +8,7 @@ import ObjectiveSection from "./notes/ObjectiveSection";
 import AssessmentSection from "./notes/AssessmentSection";
 import PlanSection from "./notes/PlanSection";
 import OrdersSection from "./notes/OrdersSection";
+import { PanelTitle } from "./chartPanelUi";
 import { PAST_NOTES } from "../data/chart";
 
 function noteLabel(note: (typeof PAST_NOTES)[number]) {
@@ -18,11 +19,48 @@ function noteMeta(note: (typeof PAST_NOTES)[number]) {
   return `${note.caseName} · ${note.visitType} · ${note.provider} · ${note.date} · ${note.time}`;
 }
 
+function CarrySectionRow({
+  label,
+  checked,
+  onToggle,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      onClick={onToggle}
+      className="flex w-full items-center justify-center py-1 pl-3 pr-2 hover:bg-[#f7f7f7]"
+    >
+      <span className="flex w-full items-center gap-1">
+        <span className="flex shrink-0 items-center justify-center p-[5px]">
+          <span
+            aria-hidden
+            className={`flex size-[18px] items-center justify-center rounded-[2px] border-2 ${
+              checked ? "border-[#1132ee] bg-[#1132ee]" : "border-[#666666] bg-white"
+            }`}
+          >
+            {checked ? <Icon name="check" size={14} className="text-white" /> : null}
+          </span>
+        </span>
+        <span className="min-w-0 flex-1 truncate text-left font-body text-[16px] leading-[24px] text-[#1a1a1a]">
+          {label}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 type PastNotePanelProps = {
+  onClose: () => void;
   onOpenVisit?: (noteId: string) => void;
 };
 
-export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
+export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelProps) {
   const [selectedId, setSelectedId] = useState(PAST_NOTES[0].id);
   const [menuOpen, setMenuOpen] = useState(false);
   const [carryOpen, setCarryOpen] = useState(false);
@@ -78,17 +116,22 @@ export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
   return (
     <aside
       data-note-scroll
-      className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white pr-4 pt-5"
+      className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white"
     >
-      <div className="w-full pl-[49px]">
+      <div className="w-full px-4 pt-5">
+        <PanelTitle title="Past Notes" onClose={onClose} />
+      </div>
+      <div className="w-full px-4 pt-3">
         <div className="flex w-full items-center gap-2 overflow-clip rounded-lg bg-[#f1f3fe] pr-3">
           <div className="h-9 w-1 shrink-0 bg-[#1132ee]" />
           <Icon name="comments_disabled" size={20} className="text-[#1132ee]" />
-          <span className="font-body text-[14px] leading-[22px] text-[#1a1a1a]">This visit note is read only.</span>
+          <span className="min-w-0 flex-1 font-body text-[14px] leading-[22px] text-[#1a1a1a]">
+            This visit note is read only.
+          </span>
         </div>
       </div>
 
-      <div className="flex w-full items-start pt-2">
+      <div className="flex w-full items-start px-4 pt-2">
         <NoteOutlineRail />
 
         <div className="ml-4 flex min-w-0 flex-1 flex-col items-start gap-3 pb-10">
@@ -200,74 +243,35 @@ export default function PastNotePanel({ onOpenVisit }: PastNotePanelProps) {
                     <div
                       role="menu"
                       aria-label="Carry forward sections"
-                      className="absolute right-0 top-[calc(100%+4px)] z-30 flex w-[220px] flex-col rounded-xl border border-[#e6e6e6] bg-white py-2 shadow-[0px_12px_32px_rgba(0,0,0,0.14)]"
+                      className="absolute right-0 top-[calc(100%+4px)] z-30 flex w-[265px] flex-col overflow-hidden rounded-[6px] border border-[#e6e6e6] bg-white shadow-[0px_4px_10px_rgba(0,0,0,0.06)]"
                     >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          store.importWholeNote();
-                          setCarryOpen(false);
-                        }}
-                        className="mx-2 flex items-center rounded-lg px-3 py-2 text-left font-body text-[14px] font-medium leading-[20px] text-[#1a1a1a] hover:bg-[#f7f7f7]"
-                      >
-                        Entire note
-                      </button>
-
-                      <div className="mx-2 my-1 h-px bg-[#e6e6e6]" />
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedSections(
-                            allSectionsSelected ? [] : sectionChoices.map((section) => section.label),
-                          )
-                        }
-                        className="mx-2 flex items-center gap-2 rounded-lg px-3 py-1.5 text-left hover:bg-[#f7f7f7]"
-                      >
-                        <span
-                          aria-hidden
-                          className={`flex size-[18px] items-center justify-center rounded-[2px] border-2 ${
-                            allSectionsSelected ? "border-[#1132ee] bg-[#1132ee]" : "border-[#666666] bg-white"
-                          }`}
-                        >
-                          {allSectionsSelected && <Icon name="check" size={14} className="text-white" />}
-                        </span>
-                        <span className="font-body text-[14px] leading-[20px] text-[#1a1a1a]">All sections</span>
-                      </button>
-
-                      {sectionChoices.map((section) => {
-                        const checked = selectedSections.includes(section.label);
-                        return (
-                          <button
+                      <div className="flex w-full flex-col items-start gap-0.5 py-2">
+                        <CarrySectionRow
+                          label="All Sections"
+                          checked={allSectionsSelected}
+                          onToggle={() =>
+                            setSelectedSections(
+                              allSectionsSelected ? [] : sectionChoices.map((section) => section.label),
+                            )
+                          }
+                        />
+                        {sectionChoices.map((section) => (
+                          <CarrySectionRow
                             key={section.label}
-                            type="button"
-                            role="menuitemcheckbox"
-                            aria-checked={checked}
-                            onClick={() => toggleSection(section.label)}
-                            className="mx-2 flex items-center gap-2 rounded-lg px-3 py-1.5 text-left hover:bg-[#f7f7f7]"
-                          >
-                            <span
-                              aria-hidden
-                              className={`flex size-[18px] items-center justify-center rounded-[2px] border-2 ${
-                                checked ? "border-[#1132ee] bg-[#1132ee]" : "border-[#666666] bg-white"
-                              }`}
-                            >
-                              {checked && <Icon name="check" size={14} className="text-white" />}
-                            </span>
-                            <span className="font-body text-[14px] leading-[20px] text-[#1a1a1a]">{section.label}</span>
-                          </button>
-                        );
-                      })}
-
-                      <div className="mx-2 mt-2">
+                            label={section.label}
+                            checked={selectedSections.includes(section.label)}
+                            onToggle={() => toggleSection(section.label)}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex h-12 w-full items-center justify-center border-t border-[#e6e6e6]">
                         <button
                           type="button"
                           disabled={selectedSections.length === 0}
                           onClick={carrySelected}
-                          className="flex h-8 w-full items-center justify-center rounded-full bg-[#1132ee] font-body text-[13px] font-medium text-white hover:bg-[#0f2dd7] disabled:cursor-not-allowed disabled:opacity-40"
+                          className="flex h-9 w-full items-center justify-center rounded-full px-3 font-body text-[14px] font-medium leading-[22px] text-[#1132ee] hover:bg-[rgba(17,50,238,0.08)] disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          Carry forward
+                          Carry Over Sections
                         </button>
                       </div>
                     </div>
