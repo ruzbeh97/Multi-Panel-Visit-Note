@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import NoteOutlineRail from "./NoteOutlineRail";
 import { NoteReadOnlyProvider } from "./notes/readOnly";
-import { PastNoteSourceProvider, useNoteStore, CARRY_FORWARD_SECTIONS } from "./notes/noteStore";
+import { PastNoteSourceProvider, useNoteStore, CARRY_FORWARD_ACTIONS, CARRY_FORWARD_SECTIONS } from "./notes/noteStore";
 import SubjectiveSection from "./notes/SubjectiveSection";
 import ObjectiveSection from "./notes/ObjectiveSection";
 import AssessmentSection from "./notes/AssessmentSection";
@@ -115,27 +115,59 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
 
   return (
     <aside
-      data-note-scroll
-      className="scrollbar-thin sticky top-0 flex h-full w-full min-w-0 flex-col overflow-y-auto border-l border-[#e6e6e6] bg-white"
+      className="sticky top-0 flex h-full w-full min-w-0 flex-col overflow-hidden border-l border-[#e6e6e6] bg-white"
     >
-      <div className="w-full px-4 pt-5">
-        <PanelTitle title="Past Notes" onClose={onClose} />
-      </div>
-      <div className="w-full px-4 pt-3">
-        <div className="flex w-full items-center gap-2 overflow-clip rounded-lg bg-[#f1f3fe] pr-3">
-          <div className="h-9 w-1 shrink-0 bg-[#1132ee]" />
-          <Icon name="comments_disabled" size={20} className="text-[#1132ee]" />
-          <span className="min-w-0 flex-1 font-body text-[14px] leading-[22px] text-[#1a1a1a]">
-            This visit note is read only.
-          </span>
+      <div className="z-10 shrink-0 bg-white">
+        <div className="flex w-full items-center px-4 pt-5">
+          <div className="w-[33px] shrink-0" aria-hidden />
+          <div className="ml-4 min-w-0 flex-1">
+            <PanelTitle title="Past Notes" onClose={onClose} />
+          </div>
         </div>
-      </div>
+        <div className="flex w-full items-center px-4 pt-3">
+          <div className="w-[33px] shrink-0" aria-hidden />
+          <div className="ml-4 min-w-0 flex-1">
+            <div className="flex w-full items-center gap-2 overflow-clip rounded-lg bg-[#f1f3fe] pr-3">
+              <div className="h-9 w-1 shrink-0 bg-[#1132ee]" />
+              <Icon name="comments_disabled" size={20} className="text-[#1132ee]" />
+              <span className="min-w-0 flex-1 font-body text-[14px] leading-[22px] text-[#1a1a1a]">
+                This visit note is read only.
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <div className="flex w-full items-start px-4 pt-2">
-        <NoteOutlineRail />
+        <div className="flex w-full items-center px-4 pt-3">
+          <div className="w-[33px] shrink-0" aria-hidden />
+          <div className="ml-4 min-w-0 flex-1">
+            <div className="flex w-full flex-wrap items-center gap-2" role="radiogroup" aria-label="Carry forward action">
+              {CARRY_FORWARD_ACTIONS.map((option) => {
+                const active = option.id === store.carryAction;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => store.setCarryAction(option.id)}
+                    className={`flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 font-body text-[13px] font-medium leading-[18px] ${
+                      active
+                        ? "border-[rgba(17,50,238,0.24)] bg-[rgba(17,50,238,0.08)] text-[#1132ee]"
+                        : "border-[#e6e6e6] bg-white text-[#666666] hover:bg-[#f7f7f7]"
+                    }`}
+                  >
+                    <Icon name={option.icon} size={16} className={active ? "text-[#1132ee]" : "text-[#666666]"} />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
-        <div className="ml-4 flex min-w-0 flex-1 flex-col items-start gap-3 pb-10">
-          <div className="flex w-full items-start gap-1">
+        <div className="flex w-full items-start px-4 pt-2 pb-3">
+          <div className="w-[33px] shrink-0" aria-hidden />
+          <div className="ml-4 flex min-w-0 flex-1 items-start gap-1">
             <div ref={menuRef} className="relative min-w-0 max-w-[300px]">
               <button
                 type="button"
@@ -281,7 +313,16 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
             </div>
             </div>
           </div>
+        </div>
+      </div>
 
+      <div
+        data-note-scroll
+        className="scrollbar-thin flex min-h-0 w-full flex-1 items-start overflow-y-auto px-4"
+      >
+        <NoteOutlineRail offsetClass="pt-2" />
+
+        <div className="ml-4 flex min-w-0 flex-1 flex-col items-start pb-10">
           <NoteReadOnlyProvider>
             <PastNoteSourceProvider noteId={selected.id}>
               <div className="flex w-full flex-col items-start gap-10">

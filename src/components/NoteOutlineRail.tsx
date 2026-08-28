@@ -24,7 +24,7 @@ function toGroups(headings: Heading[]): Group[] {
   return groups;
 }
 
-export default function NoteOutlineRail() {
+export default function NoteOutlineRail({ offsetClass = "pt-14" }: { offsetClass?: string }) {
   const railRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | null>(null);
   const [headings, setHeadings] = useState<Heading[]>([]);
@@ -94,7 +94,7 @@ export default function NoteOutlineRail() {
   return (
     <div
       ref={railRef}
-      className="sticky top-0 z-20 flex w-[33px] shrink-0 items-start self-start pt-14"
+      className={`sticky top-0 z-20 flex w-[33px] shrink-0 items-start self-start ${offsetClass}`}
       onMouseEnter={show}
       onMouseLeave={hide}
     >

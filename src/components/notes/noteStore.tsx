@@ -1,9 +1,15 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { CURRENT_VISIT, PREVIOUS_VISIT } from "../../data/chart";
 
-// The carry-forward action chosen in the import modal. "blend" is treated like
-// an overwrite here since there is no real AI merge in the prototype.
+// "blend" is treated like an overwrite here since there is no real AI merge in the prototype.
 export type ImportAction = "overwrite" | "append" | "prepend" | "blend";
+
+export const CARRY_FORWARD_ACTIONS = [
+  { id: "overwrite" as const, label: "Overwrite", icon: "edit" },
+  { id: "append" as const, label: "Append", icon: "keyboard_tab" },
+  { id: "prepend" as const, label: "Prepend", icon: "keyboard_tab_rtl" },
+  { id: "blend" as const, label: "Blend", icon: "auto_awesome" },
+];
 
 export type EditableNote = {
   subjective: {
@@ -295,6 +301,8 @@ type NoteStore = {
   importWholeNote: () => void;
   undoImportWholeNote: () => void;
   canUndoImportWholeNote: boolean;
+  carryAction: ImportAction;
+  setCarryAction: (action: ImportAction) => void;
 };
 
 const NoteStoreContext = createContext<NoteStore | null>(null);
@@ -307,6 +315,7 @@ export function useNoteStore() {
 
 export function NoteStoreProvider({ children }: { children: ReactNode }) {
   const [note, setNote] = useState<EditableNote>(initialNote);
+  const [carryAction, setCarryAction] = useState<ImportAction>("overwrite");
   // Snapshot taken before a whole-note carry-forward so it can be undone.
   const [preImportNote, setPreImportNote] = useState<EditableNote | null>(null);
 
@@ -342,9 +351,9 @@ export function NoteStoreProvider({ children }: { children: ReactNode }) {
     (titles: string[]) => {
       if (titles.length === 0) return;
       setPreImportNote(note);
-      setNote(titles.reduce((draft, title) => applyImport(draft, title, "overwrite"), note));
+      setNote(titles.reduce((draft, title) => applyImport(draft, title, carryAction), note));
     },
-    [note],
+    [note, carryAction],
   );
   const importWholeNote = useCallback(() => {
     importSections(IMPORTABLE_SECTIONS);
@@ -368,6 +377,8 @@ export function NoteStoreProvider({ children }: { children: ReactNode }) {
       importWholeNote,
       undoImportWholeNote,
       canUndoImportWholeNote: preImportNote !== null,
+      carryAction,
+      setCarryAction,
     }),
     [
       note,
@@ -381,14 +392,14 @@ export function NoteStoreProvider({ children }: { children: ReactNode }) {
       importWholeNote,
       undoImportWholeNote,
       preImportNote,
+      carryAction,
     ],
   );
 
   return <NoteStoreContext.Provider value={value}>{children}</NoteStoreContext.Provider>;
 }
 
-// Lets the read-only past-note headings know which visit is currently selected
-// so the import modal can preselect it.
+// Lets the read-only past-note headings know which visit is currently selected.
 const PastNoteSourceContext = createContext<string | null>(null);
 
 export function usePastNoteSource() {
