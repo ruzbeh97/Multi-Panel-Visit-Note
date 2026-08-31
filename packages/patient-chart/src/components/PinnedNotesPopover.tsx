@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Icon from "./Icon";
 import { PINNED_NOTE, PROVIDER } from "../data/chart";
@@ -29,10 +29,10 @@ export default function PinnedNotesPopover({ anchor, onClose }: PinnedNotesPopov
 
   const canSave = draft.trim().length > 0 && draft.trim() !== note;
 
-  function cancelEdit() {
+  const cancelEdit = useCallback(() => {
     setDraft(note);
     setEditing(false);
-  }
+  }, [note]);
 
   function save() {
     if (!canSave) return;
@@ -75,7 +75,7 @@ export default function PinnedNotesPopover({ anchor, onClose }: PinnedNotesPopov
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousedown", onPointerDown);
     };
-  }, [anchor, onClose, editing, note]);
+  }, [anchor, onClose, editing, cancelEdit]);
 
   return createPortal(
     <div

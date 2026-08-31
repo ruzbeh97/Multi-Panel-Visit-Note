@@ -1,4 +1,4 @@
-import Icon from "./Icon";
+import { Icon } from "@visit-note/patient-chart";
 
 type NavItem = {
   icon: string;

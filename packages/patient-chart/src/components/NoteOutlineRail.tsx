@@ -36,10 +36,20 @@ export default function NoteOutlineRail({ offsetClass = "pt-14" }: { offsetClass
     [],
   );
 
-  useEffect(() => {
+  const syncHeadings = useCallback(() => {
     const scroller = getScroller();
     if (scroller) setHeadings(readHeadings(scroller));
   }, [getScroller]);
+
+  // The outline is derived from the rendered note markup, so it can only be
+  // read once the rail is attached to the DOM.
+  const attachRail = useCallback(
+    (node: HTMLDivElement | null) => {
+      railRef.current = node;
+      syncHeadings();
+    },
+    [syncHeadings],
+  );
 
   useEffect(() => {
     const scroller = getScroller();
@@ -74,8 +84,7 @@ export default function NoteOutlineRail({ offsetClass = "pt-14" }: { offsetClass
       window.clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
-    const scroller = getScroller();
-    if (scroller) setHeadings(readHeadings(scroller));
+    syncHeadings();
     setOpen(true);
   };
 
@@ -93,7 +102,7 @@ export default function NoteOutlineRail({ offsetClass = "pt-14" }: { offsetClass
 
   return (
     <div
-      ref={railRef}
+      ref={attachRail}
       className={`sticky top-0 z-20 flex w-[33px] shrink-0 items-start self-start ${offsetClass}`}
       onMouseEnter={show}
       onMouseLeave={hide}

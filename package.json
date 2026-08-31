@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -10,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@visit-note/patient-chart": "*",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
