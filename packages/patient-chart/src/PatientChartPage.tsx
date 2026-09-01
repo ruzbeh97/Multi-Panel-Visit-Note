@@ -5,7 +5,13 @@ import AttachmentsPage from "./components/AttachmentsPage";
 import AttachmentsPanel from "./components/AttachmentsPanel";
 import ChartTimelinePanel from "./components/ChartTimelinePanel";
 import DiagnosisPanel from "./components/DiagnosisPanel";
-import Icon from "./components/Icon";
+import DemographicsPage from "./components/DemographicsPage";
+import TasksPage from "./components/TasksPage";
+import AllergiesPage from "./components/AllergiesPage";
+import VitalsPage from "./components/VitalsPage";
+import ImmunizationsPage from "./components/ImmunizationsPage";
+import ProblemListPage from "./components/ProblemListPage";
+import OrdersPage from "./components/OrdersPage";
 import MedicationsPage from "./components/MedicationsPage";
 import MedicationsPanel from "./components/MedicationsPanel";
 import MessagesPanel from "./components/MessagesPanel";
@@ -62,23 +68,25 @@ export default function PatientChartPage({
   variant = "embedded",
   railOutside = false,
   assistantOpen: assistantOpenProp,
-  onAssistantOpenChange,
 }: PatientChartPageProps) {
   const demo = variant === "demo";
   const [activePanel, setActivePanel] = useState<string | null>(null);
-  const [internalAssistantOpen, setInternalAssistantOpen] = useState(false);
+  const internalAssistantOpen = false;
   const [panelWidth, setPanelWidth] = useState(SIDE_PANEL_MIN_WIDTH);
   const [openedPastNoteId, setOpenedPastNoteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Appointments");
   const noteScrollRef = useRef<HTMLDivElement>(null);
 
   const assistantOpen = assistantOpenProp ?? internalAssistantOpen;
-  function setAssistantOpen(open: boolean) {
-    onAssistantOpenChange?.(open);
-    if (assistantOpenProp === undefined) setInternalAssistantOpen(open);
-  }
 
   const attachmentsTabOpen = activeTab === "Attachments";
+  const demographicsTabOpen = activeTab === "Demographics";
+  const tasksTabOpen = activeTab === "Tasks";
+  const allergiesTabOpen = activeTab === "Allergies";
+  const vitalsTabOpen = activeTab === "Vitals";
+  const immunizationsTabOpen = activeTab === "Immunizations";
+  const problemListTabOpen = activeTab === "Problem List";
+  const ordersTabOpen = activeTab === "Orders";
   const medicationsTabOpen = activeTab === "Medications";
   const sidePanelOpen =
     openedPastNoteId === null &&
@@ -170,9 +178,23 @@ export default function PatientChartPage({
           }`}
         >
           <div
-            className={`flex min-h-0 w-full flex-1 items-start ${demo ? "gap-0 bg-white" : ""}`}
+            className={`flex min-h-0 w-full flex-1 self-stretch items-start ${demo ? "gap-0 bg-white" : ""}`}
           >
-            {attachmentsTabOpen ? (
+            {demographicsTabOpen ? (
+              <DemographicsPage />
+            ) : tasksTabOpen ? (
+              <TasksPage />
+            ) : allergiesTabOpen ? (
+              <AllergiesPage />
+            ) : vitalsTabOpen ? (
+              <VitalsPage />
+            ) : immunizationsTabOpen ? (
+              <ImmunizationsPage />
+            ) : problemListTabOpen ? (
+              <ProblemListPage />
+            ) : ordersTabOpen ? (
+              <OrdersPage />
+            ) : attachmentsTabOpen ? (
               <AttachmentsPage />
             ) : medicationsTabOpen ? (
               <MedicationsPage />
@@ -262,32 +284,6 @@ export default function PatientChartPage({
         {noteFrame}
         {demo && assistantOpen && <AssistantColumn />}
       </div>
-
-      {!demo &&
-        (assistantOpen ? (
-          <div className="relative flex h-full min-h-0 shrink-0 pt-8">
-            <button
-              type="button"
-              aria-label="Close assistant"
-              onClick={() => setAssistantOpen(false)}
-              className="absolute right-0 top-0 flex h-7 items-center gap-1 rounded-lg px-2 font-ui text-[13px] font-medium text-[#1132ee] hover:bg-[rgba(17,50,238,0.08)]"
-            >
-              <Icon name="close" size={16} />
-              Assistant
-            </button>
-            <AssistantColumn />
-          </div>
-        ) : (
-          <button
-            type="button"
-            aria-label="Open assistant"
-            onClick={() => setAssistantOpen(true)}
-            className="absolute right-4 top-4 z-20 flex h-7 items-center gap-1.5 rounded-lg bg-white px-2 font-ui text-[13px] font-medium text-[#1132ee] shadow-sm hover:bg-[#f7f7f7]"
-          >
-            <Icon name="auto_awesome" size={18} />
-            Assistant
-          </button>
-        ))}
     </NoteStoreProvider>
   );
 
