@@ -113,23 +113,14 @@ function authorizationGroups(orders: PickedOrder[]): OrderAuthorizationGroup[] {
   return groups;
 }
 
-function linkedGroupMembers(orders: PickedOrder[]): Set<string> {
-  const members = new Set<string>();
-  for (const group of authorizationGroups(orders)) {
-    if (group.orders.length < 2) continue;
-    for (const entry of group.orders) members.add(entry.id);
-  }
-  return members;
-}
-
-// A group keeps the number it was first given, so later links become 2, 3, and so on
-// even when earlier groups grow, shrink, or get removed.
+// A group keeps the number it was first given, so later authorizations become 2, 3, and so on
+// even when earlier groups grow, shrink, or get removed. A standalone order that requires
+// authorization counts as its own group.
 function withAuthGroupNumbers(orders: PickedOrder[]): PickedOrder[] {
   const assigned = new Map<string, number>();
   let highest = orders.reduce((max, entry) => Math.max(max, entry.authGroupNumber ?? 0), 0);
 
   for (const group of authorizationGroups(orders)) {
-    if (group.orders.length < 2) continue;
     const existing = group.orders
       .map((entry) => orders.find((candidate) => candidate.id === entry.id)?.authGroupNumber)
       .filter((value): value is number => typeof value === "number");
@@ -436,7 +427,6 @@ export default function OrdersSection() {
     });
   };
 
-  const groupMembers = linkedGroupMembers(orders);
 
   return (
     <Section title="Orders">
@@ -482,7 +472,7 @@ export default function OrdersSection() {
               order={order}
               relatedOrders={orders.filter((entry) => entry.id !== order.id)}
               readOnly={readOnly}
-              authGroupNumber={groupMembers.has(order.id) ? order.authGroupNumber : undefined}
+              authGroupNumber={order.authGroupNumber}
               onRemove={() => setOrders((current) => current.filter((entry) => entry.id !== order.id))}
               onComplete={() =>
                 setOrders((current) => {
