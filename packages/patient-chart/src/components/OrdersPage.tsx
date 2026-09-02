@@ -1,5 +1,10 @@
-import { useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
+import CustomTemplateBuilder from "./CustomTemplateBuilder";
+import ManageTemplatesDrawer, {
+  INITIAL_TEMPLATES,
+  type SavedTemplate,
+} from "./ManageTemplatesDrawer";
 import NewOrderDrawer from "./NewOrderDrawer";
 import { ASSOCIATE_PROVIDER, CLINIC_ASSISTANT, PATIENT, PROVIDER } from "../data/chart";
 
@@ -102,6 +107,16 @@ const MEDICATION_COLUMNS: Column[] = [
 ];
 
 const patient = PATIENT.name;
+const SITE_PATIENTS = ["Avery Patel", "Morgan Lee", "Casey Brooks", "Taylor Nguyen"];
+
+function siteRows(rows: OrderRow[], repeat = false): OrderRow[] {
+  const source = repeat ? [...rows, ...rows] : rows;
+  return source.map((entry, index) => ({
+    ...entry,
+    id: `site-${index}-${entry.id}`,
+    patient: SITE_PATIENTS[index % SITE_PATIENTS.length],
+  }));
+}
 
 function row(
   id: string,
@@ -310,6 +325,7 @@ function OrderTable({
   actions = "default",
   groupLabel,
   pagerCount,
+  groupByPatient = false,
 }: {
   title: string;
   columns: Column[];
@@ -318,6 +334,7 @@ function OrderTable({
   actions?: "default" | "view" | "none";
   groupLabel?: string;
   pagerCount?: number;
+  groupByPatient?: boolean;
 }) {
   const showActions = actions !== "none";
   const colSpan = columns.length + (showActions ? 1 : 0);
@@ -369,8 +386,21 @@ function OrderTable({
                     </td>
                   </tr>
                 ) : null}
-                {rows.map((order) => (
-                  <tr key={order.id} className="border-t border-[#e6e6e6] hover:bg-[#fafafa]">
+                {rows.map((order, index) => (
+                  <Fragment key={order.id}>
+                  {groupByPatient && (index === 0 || rows[index - 1]?.patient !== order.patient) ? (
+                    <tr key={`${order.id}-group`} className="border-t border-[#e6e6e6] bg-white">
+                      <td colSpan={colSpan} className="px-3 py-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <Icon name="expand_less" size={18} className="text-[#555]" />
+                          <span className="font-body text-[13px] font-semibold text-[#1a1a1a]">
+                            {String(order.patient)} ({rows.filter((entry) => entry.patient === order.patient).length} medications)
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : null}
+                  <tr className="border-t border-[#e6e6e6] hover:bg-[#fafafa]">
                     {showActions ? (
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2 text-[#1a1a1a]">
@@ -420,6 +450,7 @@ function OrderTable({
                       </td>
                     ))}
                   </tr>
+                  </Fragment>
                 ))}
               </>
             )}
@@ -431,9 +462,13 @@ function OrderTable({
   );
 }
 
-function MedicationSection() {
+function MedicationSection({ siteWide = false }: { siteWide?: boolean }) {
   const [tab, setTab] = useState<"Controlled" | "Non-Controlled">("Non-Controlled");
-  const rows = tab === "Non-Controlled" ? MEDICATIONS : [];
+  const rows = tab === "Non-Controlled"
+    ? siteWide
+      ? siteRows(MEDICATIONS, true).sort((a, b) => String(a.patient).localeCompare(String(b.patient)))
+      : MEDICATIONS
+    : [];
 
   return (
     <div>
@@ -457,31 +492,161 @@ function MedicationSection() {
         rows={rows}
         emptyMessage="No medication orders found"
         actions="none"
-        groupLabel={rows.length ? `${patient} (${rows.length} medications)` : undefined}
-        pagerCount={rows.length ? 1 : 0}
+        groupLabel={!siteWide && rows.length ? `${patient} (${rows.length} medications)` : undefined}
+        groupByPatient={siteWide}
+        pagerCount={rows.length}
       />
     </div>
   );
 }
 
-export default function OrdersPage() {
+export type OrdersPageProps = {
+  siteWide?: boolean;
+};
+
+export default function OrdersPage({ siteWide = false }: OrdersPageProps) {
   const [statusTab, setStatusTab] = useState("All");
   const [orderOpen, setOrderOpen] = useState(false);
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+  const [templateBuilderOpen, setTemplateBuilderOpen] = useState(false);
+  const [manageTemplatesOpen, setManageTemplatesOpen] = useState(false);
+  const [templates, setTemplates] = useState<SavedTemplate[]>(INITIAL_TEMPLATES);
+  const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
+  const templateMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!templateMenuOpen) return;
+    function onPointerDown(event: MouseEvent) {
+      if (!templateMenuRef.current?.contains(event.target as Node)) {
+        setTemplateMenuOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setTemplateMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [templateMenuOpen]);
+
+  if (templateBuilderOpen) {
+    return (
+      <CustomTemplateBuilder
+        initialName={editingTemplate?.name}
+        initialContent={editingTemplate?.content}
+        onCancel={() => {
+          setTemplateBuilderOpen(false);
+          setEditingTemplate(null);
+        }}
+        onSave={(template) => {
+          setTemplates((current) => {
+            if (editingTemplate) {
+              return current.map((entry) =>
+                entry.id === editingTemplate.id
+                  ? { ...entry, name: template.name, content: template.content }
+                  : entry,
+              );
+            }
+            return [
+              {
+                id: `tpl-${Date.now()}`,
+                name: template.name,
+                content: template.content,
+                archived: false,
+              },
+              ...current,
+            ];
+          });
+          setTemplateBuilderOpen(false);
+          setEditingTemplate(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="scrollbar-thin min-h-0 min-w-0 flex-1 self-stretch overflow-y-auto bg-white">
       {orderOpen ? <NewOrderDrawer onClose={() => setOrderOpen(false)} /> : null}
+      {manageTemplatesOpen ? (
+        <ManageTemplatesDrawer
+          templates={templates}
+          onClose={() => setManageTemplatesOpen(false)}
+          onPreview={(template) => {
+            setManageTemplatesOpen(false);
+            setEditingTemplate(template);
+            setTemplateBuilderOpen(true);
+          }}
+          onArchive={(id) =>
+            setTemplates((current) =>
+              current.map((template) => (template.id === id ? { ...template, archived: true } : template)),
+            )
+          }
+          onRestore={(id) =>
+            setTemplates((current) =>
+              current.map((template) => (template.id === id ? { ...template, archived: false } : template)),
+            )
+          }
+        />
+      ) : null}
       <div className="flex w-full flex-col gap-4 px-4 py-4">
         <div className="flex items-center justify-between px-2">
           <h1 className="font-body text-[22px] font-medium leading-[28px] text-[#1a1a1a]">Orders</h1>
-          <button
-            type="button"
-            onClick={() => setOrderOpen(true)}
-            className="flex h-8 items-center gap-1 rounded-full bg-[#1132ee] px-4 text-white"
-          >
-            <Icon name="add" size={16} />
-            <span className="font-body text-[13px] font-medium">Order</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <div ref={templateMenuRef} className="relative">
+              <button
+                type="button"
+                aria-expanded={templateMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setTemplateMenuOpen((open) => !open)}
+                className="flex h-8 items-center gap-1 rounded-full border border-[#1132ee] bg-white px-3.5 text-[#1132ee]"
+              >
+                <Icon name="add" size={16} />
+                <span className="font-body text-[13px] font-medium">Custom Order/Letter</span>
+                <Icon name={templateMenuOpen ? "arrow_drop_up" : "arrow_drop_down"} size={18} />
+              </button>
+              {templateMenuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-[calc(100%+6px)] z-30 min-w-[210px] overflow-hidden rounded-lg bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setTemplateMenuOpen(false);
+                      setEditingTemplate(null);
+                      setTemplateBuilderOpen(true);
+                    }}
+                    className="flex h-10 w-full items-center px-4 text-left font-body text-[14px] text-[#1a1a1a] hover:bg-[#f5f5f5]"
+                  >
+                    Add Custom Template
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setTemplateMenuOpen(false);
+                      setManageTemplatesOpen(true);
+                    }}
+                    className="flex h-10 w-full items-center px-4 text-left font-body text-[14px] text-[#1a1a1a] hover:bg-[#f5f5f5]"
+                  >
+                    Manage Templates
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => setOrderOpen(true)}
+              className="flex h-8 items-center gap-1 rounded-full bg-[#1132ee] px-4 text-white"
+            >
+              <Icon name="add" size={16} />
+              <span className="font-body text-[13px] font-medium">Order</span>
+            </button>
+          </div>
         </div>
 
         <button
@@ -521,13 +686,13 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <MedicationSection />
-        <OrderTable title="Referral" columns={REFERRAL_COLUMNS} rows={REFERRALS} />
-        <OrderTable title="Imaging" columns={IMAGING_COLUMNS} rows={IMAGING} />
-        <OrderTable title="Lab" columns={LAB_COLUMNS} rows={LABS} />
-        <OrderTable title="HealthGorilla Labs" columns={HEALTH_GORILLA_COLUMNS} rows={HEALTH_GORILLA} actions="view" />
-        <OrderTable title="DME" columns={DME_COLUMNS} rows={DME} />
-        <OrderTable title="Procedures & Injections" columns={PROCEDURE_COLUMNS} rows={PROCEDURES} />
+        <MedicationSection siteWide={siteWide} />
+        <OrderTable title="Referral" columns={REFERRAL_COLUMNS} rows={siteWide ? siteRows(REFERRALS) : REFERRALS} />
+        <OrderTable title="Imaging" columns={IMAGING_COLUMNS} rows={siteWide ? siteRows(IMAGING) : IMAGING} />
+        <OrderTable title="Lab" columns={LAB_COLUMNS} rows={siteWide ? siteRows(LABS) : LABS} />
+        <OrderTable title="HealthGorilla Labs" columns={HEALTH_GORILLA_COLUMNS} rows={siteWide ? siteRows(HEALTH_GORILLA) : HEALTH_GORILLA} actions="view" />
+        <OrderTable title="DME" columns={DME_COLUMNS} rows={siteWide ? siteRows(DME) : DME} />
+        <OrderTable title="Procedures & Injections" columns={PROCEDURE_COLUMNS} rows={siteWide ? siteRows(PROCEDURES) : PROCEDURES} />
         <OrderTable
           title="Custom"
           columns={SHARED_COLUMNS}

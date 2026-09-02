@@ -12,6 +12,7 @@ import VitalsPage from "./components/VitalsPage";
 import ImmunizationsPage from "./components/ImmunizationsPage";
 import ProblemListPage from "./components/ProblemListPage";
 import OrdersPage from "./components/OrdersPage";
+import VisitsNotesPage from "./components/VisitsNotesPage";
 import MedicationsPage from "./components/MedicationsPage";
 import MedicationsPanel from "./components/MedicationsPanel";
 import MessagesPanel from "./components/MessagesPanel";
@@ -74,7 +75,8 @@ export default function PatientChartPage({
   const internalAssistantOpen = false;
   const [panelWidth, setPanelWidth] = useState(SIDE_PANEL_MIN_WIDTH);
   const [openedPastNoteId, setOpenedPastNoteId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("Appointments");
+  const [activeTab, setActiveTab] = useState("Visits & Notes");
+  const [currentVisitOpen, setCurrentVisitOpen] = useState(false);
   const noteScrollRef = useRef<HTMLDivElement>(null);
 
   const assistantOpen = assistantOpenProp ?? internalAssistantOpen;
@@ -88,6 +90,7 @@ export default function PatientChartPage({
   const problemListTabOpen = activeTab === "Problem List";
   const ordersTabOpen = activeTab === "Orders";
   const medicationsTabOpen = activeTab === "Medications";
+  const visitsTabOpen = activeTab === "Visits & Notes";
   const sidePanelOpen =
     openedPastNoteId === null &&
     activePanel !== null &&
@@ -98,7 +101,15 @@ export default function PatientChartPage({
   }
 
   function openPastVisit(noteId: string) {
+    setCurrentVisitOpen(false);
     setOpenedPastNoteId(noteId);
+    setActivePanel(null);
+  }
+
+  function selectTab(tab: string) {
+    setActiveTab(tab);
+    setCurrentVisitOpen(false);
+    setOpenedPastNoteId(null);
     setActivePanel(null);
   }
 
@@ -169,7 +180,8 @@ export default function PatientChartPage({
             selectPanel(icon);
           }}
           activeTab={activeTab}
-          onSelectTab={setActiveTab}
+          onSelectTab={selectTab}
+          showVisitNoteHeader={currentVisitOpen}
         />
 
         <div
@@ -198,6 +210,14 @@ export default function PatientChartPage({
               <AttachmentsPage />
             ) : medicationsTabOpen ? (
               <MedicationsPage />
+            ) : visitsTabOpen && !currentVisitOpen && !openedPastNoteId ? (
+              <VisitsNotesPage
+                onOpenCurrentVisit={() => {
+                  setCurrentVisitOpen(true);
+                  setOpenedPastNoteId(null);
+                }}
+                onOpenPastVisit={openPastVisit}
+              />
             ) : openedPastNoteId ? (
               <PastVisitNoteView
                 noteId={openedPastNoteId}
@@ -220,7 +240,9 @@ export default function PatientChartPage({
                     }`}
                   >
                     <main
-                      className={`flex w-full flex-col items-start gap-10 px-4 py-10 ${
+                      // The trailing space lets the last section (Orders) scroll up
+                      // to the top of the viewport instead of being stuck at the bottom.
+                      className={`flex w-full flex-col items-start gap-10 px-4 pt-10 pb-[70vh] ${
                         sidePanelOpen ? "" : "max-w-[900px]"
                       }`}
                     >

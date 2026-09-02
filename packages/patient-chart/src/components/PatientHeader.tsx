@@ -14,7 +14,7 @@ import { CASE, PATIENT } from "../data/chart";
 
 const TABS = [
   "Demographics",
-  "Appointments",
+  "Visits & Notes",
   "Attachments",
   "Tasks",
   "Medications",
@@ -151,6 +151,7 @@ type PatientHeaderProps = {
   onSelectPanel: (icon: string) => void;
   activeTab: string;
   onSelectTab: (tab: string) => void;
+  showVisitNoteHeader: boolean;
 };
 
 export default function PatientHeader({
@@ -158,6 +159,7 @@ export default function PatientHeader({
   onSelectPanel,
   activeTab,
   onSelectTab,
+  showVisitNoteHeader,
 }: PatientHeaderProps) {
   const [pinnedAnchor, setPinnedAnchor] = useState<HTMLElement | null>(null);
   const [contactBookOpen, setContactBookOpen] = useState(false);
@@ -243,7 +245,7 @@ export default function PatientHeader({
         </div>
       </div>
 
-      {activeTab === "Appointments" && (
+      {activeTab === "Visits & Notes" && showVisitNoteHeader && (
         <div className="flex h-[94px] w-full flex-col items-start border-b border-[#e6e6e6] bg-white px-4 py-3">
           <div className="flex w-full flex-col items-start gap-1.5">
             <div className="flex w-full items-center justify-between">

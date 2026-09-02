@@ -3,17 +3,214 @@ import { createPortal } from "react-dom";
 import Icon from "../Icon";
 import Section from "./Section";
 import { useNoteReadOnly } from "./readOnly";
-import { NOTE_ORDERS } from "../../data/chart";
+import OrderPickerModal, { type PickedOrder } from "./OrderPickerModal";
+import OrderDetailsForm from "./OrderDetailsForm";
+import { PATIENT, PROVIDER } from "../../data/chart";
 
 const ICON_TONES = {
   blue: "text-[#1132ee]",
-  orange: "text-[#ffad33]",
+  orange: "text-[#c47a3a]",
+  green: "text-[#2e7d32]",
 };
 
 const CARRY_DISABLED_MESSAGE =
   "Can't carry forward — the current note has no Orders section to import into.";
 
-type NoteOrder = (typeof NOTE_ORDERS)[number];
+function uniqueIds(ids: string[]) {
+  return [...new Set(ids)];
+}
+
+export const ORDER_AUTHORIZATIONS_EVENT = "patient-chart:order-authorizations";
+
+const ORDERS_STORAGE_KEY = "patient-chart:note-orders";
+
+// The prototype has no backend, so the working note survives a refresh via localStorage.
+function loadStoredOrders(): PickedOrder[] {
+  try {
+    const raw = window.localStorage.getItem(ORDERS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? (parsed as PickedOrder[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function storeOrders(orders: PickedOrder[]) {
+  try {
+    window.localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+  } catch {
+    // Storage can be unavailable in private browsing; the note still works in memory.
+  }
+}
+
+type OrderAuthorizationGroup = {
+  id: string;
+  patient: {
+    name: string;
+    dob: string;
+    mrn: string;
+    insurance: string;
+  };
+  provider: string;
+  orders: Array<{
+    id: string;
+    title: string;
+    code: string;
+    trackingType: "Units";
+    units: string;
+  }>;
+};
+
+function authorizationGroups(orders: PickedOrder[]): OrderAuthorizationGroup[] {
+  const eligible = orders.filter((order) => order.requiresAuthorization);
+  const byId = new Map(eligible.map((order) => [order.id, order]));
+  const visited = new Set<string>();
+  const groups: OrderAuthorizationGroup[] = [];
+
+  for (const order of eligible) {
+    if (visited.has(order.id)) continue;
+
+    const component: PickedOrder[] = [];
+    const queue = [order.id];
+    while (queue.length > 0) {
+      const id = queue.shift();
+      if (!id || visited.has(id)) continue;
+      const current = byId.get(id);
+      if (!current) continue;
+      visited.add(id);
+      component.push(current);
+
+      for (const linkedId of current.associatedOrderIds ?? []) {
+        if (byId.has(linkedId) && !visited.has(linkedId)) queue.push(linkedId);
+      }
+      for (const candidate of eligible) {
+        if ((candidate.associatedOrderIds ?? []).includes(id) && !visited.has(candidate.id)) {
+          queue.push(candidate.id);
+        }
+      }
+    }
+
+    const ids = component.map((entry) => entry.id).sort();
+    groups.push({
+      id: ids.join("--"),
+      patient: {
+        name: PATIENT.name,
+        dob: PATIENT.dob,
+        mrn: PATIENT.mrn,
+        insurance: PATIENT.insurance,
+      },
+      provider: PROVIDER.display,
+      orders: component.map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        code: entry.cptCode || entry.code || "",
+        trackingType: "Units",
+        units: entry.cptUnits ?? (entry.code === "J1010" ? "40" : ""),
+      })),
+    });
+  }
+
+  return groups;
+}
+
+function linkedGroupMembers(orders: PickedOrder[]): Set<string> {
+  const members = new Set<string>();
+  for (const group of authorizationGroups(orders)) {
+    if (group.orders.length < 2) continue;
+    for (const entry of group.orders) members.add(entry.id);
+  }
+  return members;
+}
+
+// A group keeps the number it was first given, so later links become 2, 3, and so on
+// even when earlier groups grow, shrink, or get removed.
+function withAuthGroupNumbers(orders: PickedOrder[]): PickedOrder[] {
+  const assigned = new Map<string, number>();
+  let highest = orders.reduce((max, entry) => Math.max(max, entry.authGroupNumber ?? 0), 0);
+
+  for (const group of authorizationGroups(orders)) {
+    if (group.orders.length < 2) continue;
+    const existing = group.orders
+      .map((entry) => orders.find((candidate) => candidate.id === entry.id)?.authGroupNumber)
+      .filter((value): value is number => typeof value === "number");
+    const number = existing.length > 0 ? Math.min(...existing) : (highest += 1);
+    for (const entry of group.orders) assigned.set(entry.id, number);
+  }
+
+  if (assigned.size === 0) return orders;
+  return orders.map((entry) => {
+    const number = assigned.get(entry.id);
+    return number && number !== entry.authGroupNumber ? { ...entry, authGroupNumber: number } : entry;
+  });
+}
+
+function linkedOrderIds(orders: PickedOrder[], sourceId: string) {
+  const source = orders.find((entry) => entry.id === sourceId);
+  const ids = new Set<string>([sourceId, ...(source?.associatedOrderIds ?? [])]);
+  for (const entry of orders) {
+    if ((entry.associatedOrderIds ?? []).includes(sourceId)) ids.add(entry.id);
+  }
+  return [...ids];
+}
+
+function withSubmittedStatus(orders: PickedOrder[], ids: string[]) {
+  const submit = new Set(ids);
+  return orders.map((entry) => {
+    if (!submit.has(entry.id)) return entry;
+    return { ...entry, status: entry.requiresAuthorization ? "Needs Auth" : "Sent" };
+  });
+}
+
+function publishAuthorizations(orders: PickedOrder[]) {
+  const submitted = orders.filter((order) => order.status === "Needs Auth" || order.status === "Sent");
+  window.dispatchEvent(
+    new CustomEvent(ORDER_AUTHORIZATIONS_EVENT, {
+      detail: { source: "visit-note", groups: authorizationGroups(submitted) },
+    }),
+  );
+}
+
+function withLinkedAuthorization(
+  orders: PickedOrder[],
+  sourceId: string,
+  patch: Partial<Pick<PickedOrder, "requiresAuthorization" | "associatedOrderIds">>,
+): PickedOrder[] {
+  const selectedPartnerIds = patch.associatedOrderIds;
+  const next = orders.map((entry) => {
+    if (entry.id === sourceId) return { ...entry, ...patch };
+    if (!selectedPartnerIds) return entry;
+
+    const withoutSource = (entry.associatedOrderIds ?? []).filter((id) => id !== sourceId);
+    return {
+      ...entry,
+      associatedOrderIds: selectedPartnerIds.includes(entry.id)
+        ? uniqueIds([...withoutSource, sourceId])
+        : withoutSource,
+    };
+  });
+  const source = next.find((entry) => entry.id === sourceId);
+  if (!source) return next;
+
+  const partnerIds = source.associatedOrderIds ?? [];
+  const linkedIds = new Set<string>([sourceId, ...partnerIds]);
+  for (const entry of next) {
+    if ((entry.associatedOrderIds ?? []).includes(sourceId)) linkedIds.add(entry.id);
+  }
+
+  const anyRequiresAuth = [...linkedIds].some(
+    (id) => next.find((entry) => entry.id === id)?.requiresAuthorization,
+  );
+
+  if (!anyRequiresAuth) return next;
+
+  return next.map((entry) => {
+    if (!linkedIds.has(entry.id)) return entry;
+    const updated = entry.requiresAuthorization ? entry : { ...entry, requiresAuthorization: true };
+    return updated;
+  });
+}
+
+type NoteOrder = PickedOrder;
 
 const TOOLTIP_WIDTH = 240;
 const TOOLTIP_MARGIN = 8;
@@ -118,13 +315,27 @@ function DisabledCarryForwardButton() {
 
 function OrderRow({
   order,
+  relatedOrders,
   readOnly,
+  authGroupNumber,
   onRemove,
+  onComplete,
+  onRequiresAuthorizationChange,
+  onAssociateOrder,
+  onFieldsChange,
 }: {
   order: NoteOrder;
+  relatedOrders: NoteOrder[];
   readOnly: boolean;
+  authGroupNumber?: number;
   onRemove: () => void;
+  onComplete: () => void;
+  onRequiresAuthorizationChange: (value: boolean) => void;
+  onAssociateOrder: (orderIds: string[]) => void;
+  onFieldsChange: (fields: { cptCode: string; cptUnits: string }) => void;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
     <div className="flex w-full items-start gap-2 py-3">
       <span className="flex size-7 shrink-0 items-center justify-center">
@@ -135,17 +346,46 @@ function OrderRow({
         <div className="flex w-full items-start gap-2">
           <button
             type="button"
+            onClick={() => setOpen((current) => !current)}
+            aria-expanded={open}
             className="flex min-w-0 flex-1 items-center gap-0.5 text-left"
-            aria-label={`Open ${order.title}`}
+            aria-label={`${open ? "Collapse" : "Expand"} ${order.title}`}
           >
-            <span className="min-w-0 truncate font-body text-[14px] font-bold leading-[20px] text-[#1a1a1a]">
+            <span
+              className={`min-w-0 font-body text-[14px] font-bold leading-[20px] text-[#1a1a1a] ${
+                open ? "" : "truncate"
+              }`}
+            >
               {order.title}
             </span>
-            <Icon name="chevron_right" size={18} className="shrink-0 text-[#1a1a1a]" />
+            {open ? (
+              <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#ececec]">
+                <Icon name="keyboard_arrow_down" size={16} className="text-[#1a1a1a]" />
+              </span>
+            ) : (
+              <Icon name="chevron_right" size={18} className="shrink-0 text-[#1a1a1a]" />
+            )}
           </button>
 
           <div className="flex shrink-0 items-center gap-2">
-            <span className="rounded-md bg-[rgba(17,50,238,0.08)] px-2 py-0.5 font-body text-[12px] font-medium leading-[18px] text-[#1132ee]">
+            {order.requiresAuthorization && (
+              <span
+                className="flex size-6 items-center justify-center rounded-full bg-[rgba(17,50,238,0.08)] font-body text-[12px] font-medium text-[#1132ee]"
+                title={authGroupNumber ? `Authorization group ${authGroupNumber}` : "Requires authorization"}
+                aria-label={authGroupNumber ? `Authorization group ${authGroupNumber}` : "Requires authorization"}
+              >
+                {authGroupNumber ? authGroupNumber : <Icon name="assignment" size={16} className="text-[#1132ee]" />}
+              </span>
+            )}
+            <span
+              className={`whitespace-nowrap rounded-md px-2 py-0.5 font-body text-[12px] font-medium leading-[18px] ${
+                order.status === "Sent"
+                  ? "bg-[#e6f4ea] text-[#137333]"
+                  : order.status === "Needs Auth"
+                    ? "bg-[#ececec] text-[#5f5f5f]"
+                    : "bg-[rgba(17,50,238,0.08)] text-[#1132ee]"
+              }`}
+            >
               {order.status}
             </span>
             {!readOnly && (
@@ -162,6 +402,16 @@ function OrderRow({
         </div>
 
         <p className="w-full font-body text-[13px] leading-[18px] text-[#666666]">{order.meta}</p>
+        <div className={open ? "w-full" : "hidden"}>
+          <OrderDetailsForm
+            order={order}
+            relatedOrders={relatedOrders}
+            onComplete={onComplete}
+            onRequiresAuthorizationChange={onRequiresAuthorizationChange}
+            onAssociateOrder={onAssociateOrder}
+            onFieldsChange={onFieldsChange}
+          />
+        </div>
       </div>
     </div>
   );
@@ -169,7 +419,24 @@ function OrderRow({
 
 export default function OrdersSection() {
   const readOnly = useNoteReadOnly();
-  const [orders, setOrders] = useState(NOTE_ORDERS);
+  // Past notes render their own read-only copy, so only the editable note restores drafts.
+  const [orders, setOrdersState] = useState<PickedOrder[]>(() =>
+    readOnly ? [] : withAuthGroupNumbers(loadStoredOrders()),
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const addOrderRef = useRef<HTMLButtonElement>(null);
+
+  const setOrders: typeof setOrdersState = (update) => {
+    setOrdersState((current) => {
+      const updated =
+        typeof update === "function" ? (update as (value: PickedOrder[]) => PickedOrder[])(current) : update;
+      const next = withAuthGroupNumbers(updated);
+      if (!readOnly && next !== current) storeOrders(next);
+      return next;
+    });
+  };
+
+  const groupMembers = linkedGroupMembers(orders);
 
   return (
     <Section title="Orders">
@@ -181,13 +448,25 @@ export default function OrdersSection() {
           ) : (
             <div className="flex shrink-0 items-center gap-4">
               <button
+                ref={addOrderRef}
                 type="button"
+                onClick={() => setPickerOpen(true)}
                 className="font-body text-[14px] font-medium leading-[20px] text-[#1132ee] hover:underline"
               >
                 Add Order
               </button>
               <button
                 type="button"
+                onClick={() =>
+                  setOrders((current) => {
+                    const next = withSubmittedStatus(
+                      current,
+                      current.map((entry) => entry.id),
+                    );
+                    publishAuthorizations(next);
+                    return next;
+                  })
+                }
                 className="font-body text-[14px] font-medium leading-[20px] text-[#1132ee] hover:underline"
               >
                 Submit All
@@ -201,12 +480,53 @@ export default function OrdersSection() {
             <OrderRow
               key={order.id}
               order={order}
+              relatedOrders={orders.filter((entry) => entry.id !== order.id)}
               readOnly={readOnly}
+              authGroupNumber={groupMembers.has(order.id) ? order.authGroupNumber : undefined}
               onRemove={() => setOrders((current) => current.filter((entry) => entry.id !== order.id))}
+              onComplete={() =>
+                setOrders((current) => {
+                  const next = withSubmittedStatus(current, linkedOrderIds(current, order.id));
+                  publishAuthorizations(next);
+                  return next;
+                })
+              }
+              onRequiresAuthorizationChange={(value) =>
+                setOrders((current) => withLinkedAuthorization(current, order.id, { requiresAuthorization: value }))
+              }
+              onAssociateOrder={(orderIds) =>
+                setOrders((current) =>
+                  withLinkedAuthorization(current, order.id, {
+                    associatedOrderIds: orderIds,
+                  }),
+                )
+              }
+              onFieldsChange={(fields) =>
+                setOrders((current) => {
+                  const entry = current.find((candidate) => candidate.id === order.id);
+                  if (
+                    !entry ||
+                    (entry.cptCode === fields.cptCode && entry.cptUnits === fields.cptUnits)
+                  ) {
+                    // Same array identity keeps the form's sync effect from looping.
+                    return current;
+                  }
+                  return current.map((candidate) =>
+                    candidate.id === order.id ? { ...candidate, ...fields } : candidate,
+                  );
+                })
+              }
             />
           ))}
         </div>
       </div>
+      {pickerOpen && (
+        <OrderPickerModal
+          anchorRef={addOrderRef}
+          onClose={() => setPickerOpen(false)}
+          onSelect={(selected) => setOrders((current) => [...current, ...selected])}
+        />
+      )}
     </Section>
   );
 }

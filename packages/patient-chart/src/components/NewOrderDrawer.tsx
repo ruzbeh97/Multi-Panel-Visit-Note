@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ASSOCIATE_PROVIDER, PATIENT, PROVIDER } from "../data/chart";
 import Icon from "./Icon";
+import { TEMPLATE_FORM_CLASS } from "./CustomTemplateBuilder";
+import { SURGERY_ORDER_CONTENT } from "./ManageTemplatesDrawer";
 
 const ORDER_TYPES = [
   "DME",
@@ -22,6 +24,11 @@ const sectionTitleClass = "font-body text-[14px] font-bold text-[#1a1a1a]";
 const blockTitleClass = "font-body text-[13px] font-bold text-[#1a1a1a]";
 const textareaClass =
   "w-full resize-none rounded-[3px] border border-[#ededed] bg-white px-3 py-2.5 font-body text-[14px] leading-[22px] text-[#303030] outline-none placeholder:text-[#b8b8b8]";
+const ORDER_AUTHORIZATIONS_EVENT = "patient-chart:order-authorizations";
+
+function codeFromSelection(value: string) {
+  return value.split(/\s+[—-]\s+/)[0]?.trim() ?? "";
+}
 
 function SelectField({
   label,
@@ -262,6 +269,7 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
   const [ndc, setNdc] = useState("");
   const [modifiers, setModifiers] = useState("");
   const [template, setTemplate] = useState("");
+  const [customCptCode, setCustomCptCode] = useState("");
   const [contactSource, setContactSource] = useState<"NPI" | "Contact List">("NPI");
   const [contacts, setContacts] = useState("");
   const [attachments, setAttachments] = useState("");
@@ -275,6 +283,58 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  const completeOrder = () => {
+    if (requiresAuthorization) {
+      const selectedCode =
+        orderType === "DME"
+          ? hcpcs
+          : orderType === "Imaging" || orderType === "Lab"
+            ? cptCodes
+            : orderType === "Procedures & Injections"
+              ? procedureInjection
+              : orderType === "Custom"
+                ? customCptCode
+                : procedure;
+      const id = `drawer-${Date.now()}`;
+      const title =
+        orderName ||
+        template ||
+        procedureInjection.replace(/^[^\s]+\s+[—-]\s+/, "") ||
+        specialty ||
+        `${orderType} Order`;
+
+      window.dispatchEvent(
+        new CustomEvent(ORDER_AUTHORIZATIONS_EVENT, {
+          detail: {
+            source: id,
+            groups: [
+              {
+                id,
+                patient: {
+                  name: patient || PATIENT.name,
+                  dob: PATIENT.dob,
+                  mrn: PATIENT.mrn,
+                  insurance: payer || PATIENT.insurance,
+                },
+                provider: provider || PROVIDER.display,
+                orders: [
+                  {
+                    id,
+                    title,
+                    code: codeFromSelection(selectedCode),
+                    trackingType: "Units",
+                    units: quantity || visits || "",
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      );
+    }
+    onClose();
+  };
 
   const drawer = (
     <div className="fixed inset-0 z-[80] flex justify-end">
@@ -358,16 +418,18 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
               />
               <span className="font-body text-[14px] text-[#303030]">Expects Response</span>
             </label>
-            <label className="flex items-center gap-2.5">
-              <input
-                type="checkbox"
-                checked={requiresAuthorization}
-                onChange={(event) => setRequiresAuthorization(event.target.checked)}
-                className="size-[17px] rounded-[2px] border-[#9a9a9a] accent-[#1132ee]"
-              />
-              <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
-            </label>
           </div>
+
+          <h3 className={`${sectionTitleClass} mb-2 mt-5`}>Authorization</h3>
+          <label className="flex items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={requiresAuthorization}
+              onChange={(event) => setRequiresAuthorization(event.target.checked)}
+              className="size-[17px] rounded-[2px] border-[#9a9a9a] accent-[#1132ee]"
+            />
+            <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
+          </label>
 
           <h3 className={`${sectionTitleClass} mb-2 mt-5`}>
             {orderType === "Outbound Referral" ? "Referral" : orderType === "Custom" ? "Custom Order" : orderType}
@@ -642,8 +704,23 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
                 ]}
                 onChange={setTemplate}
               />
-              <div className="flex min-h-[88px] items-center justify-center rounded-[3px] border border-[#ededed]">
-                <p className="font-body text-[13px] text-[#8a8a8a]">Select a template to fill in the order details</p>
+              <div
+                onChange={(event) => {
+                  const target = event.target;
+                  if (!(target instanceof HTMLSelectElement)) return;
+                  if (target.dataset.field === "cpt") setCustomCptCode(target.value);
+                }}
+                className={
+                  template === "Surgery Order V3" || template === "Surgery Order" || template === "Surgical Order v2"
+                    ? `rounded-[3px] border border-[#ededed] bg-white p-4 ${TEMPLATE_FORM_CLASS}`
+                    : "flex min-h-[88px] items-center justify-center rounded-[3px] border border-[#ededed]"
+                }
+              >
+                {template === "Surgery Order V3" || template === "Surgery Order" || template === "Surgical Order v2" ? (
+                  <div dangerouslySetInnerHTML={{ __html: SURGERY_ORDER_CONTENT }} />
+                ) : (
+                  <p className="font-body text-[13px] text-[#8a8a8a]">Select a template to fill in the order details</p>
+                )}
               </div>
             </div>
           ) : (
@@ -798,7 +875,7 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
         <footer className="flex shrink-0 items-center gap-3 bg-[#f7f7f7] px-5 pb-5 pt-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={completeOrder}
             className="h-8 rounded-full bg-[#1132ee] px-4 font-body text-[13px] font-medium text-white hover:bg-[#0e28be]"
           >
             Complete Order
