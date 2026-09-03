@@ -21,6 +21,8 @@ export type PickedOrder = {
   status: string;
   requiresAuthorization: boolean;
   associatedOrderIds: string[];
+  /** Assignee for the linked authorization group in the prior auth tracker. */
+  assignedTo?: string;
   /** Billing code and quantity as they currently stand in the expanded order form. */
   cptCode?: string;
   cptUnits?: string;

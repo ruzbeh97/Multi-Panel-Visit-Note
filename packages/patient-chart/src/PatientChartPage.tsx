@@ -42,6 +42,7 @@ import AssessmentSection from "./components/notes/AssessmentSection";
 import { NoteStoreProvider } from "./components/notes/noteStore";
 import ObjectiveSection from "./components/notes/ObjectiveSection";
 import OrdersSection from "./components/notes/OrdersSection";
+import BillingDetailsSection from "./components/notes/BillingDetailsSection";
 import PlanSection from "./components/notes/PlanSection";
 import SubjectiveSection from "./components/notes/SubjectiveSection";
 
@@ -240,7 +241,7 @@ export default function PatientChartPage({
                     }`}
                   >
                     <main
-                      // The trailing space lets the last section (Orders) scroll up
+                      // The trailing space lets the last section (Billing Details) scroll up
                       // to the top of the viewport instead of being stuck at the bottom.
                       className={`flex w-full flex-col items-start gap-10 px-4 pt-10 pb-[70vh] ${
                         sidePanelOpen ? "" : "max-w-[900px]"
@@ -252,6 +253,7 @@ export default function PatientChartPage({
                       <AssessmentSection />
                       <PlanSection />
                       <OrdersSection />
+                      <BillingDetailsSection />
                     </main>
                   </div>
                 </div>

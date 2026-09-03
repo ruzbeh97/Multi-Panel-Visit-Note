@@ -8,6 +8,7 @@ import ObjectiveSection from "./notes/ObjectiveSection";
 import AssessmentSection from "./notes/AssessmentSection";
 import PlanSection from "./notes/PlanSection";
 import OrdersSection from "./notes/OrdersSection";
+import BillingDetailsSection from "./notes/BillingDetailsSection";
 import { PanelTitle } from "./chartPanelUi";
 import { PAST_NOTES } from "../data/chart";
 
@@ -331,6 +332,7 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
                 <AssessmentSection />
                 <PlanSection />
                 <OrdersSection />
+                <BillingDetailsSection />
               </div>
             </PastNoteSourceProvider>
           </NoteReadOnlyProvider>

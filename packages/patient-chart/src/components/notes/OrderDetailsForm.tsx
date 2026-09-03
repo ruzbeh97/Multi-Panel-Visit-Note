@@ -22,6 +22,25 @@ const ROUTE_OPTIONS = ["IM", "IV", "PO", "Intra-articular"];
 const MODIFIER_OPTIONS = ["50", "LT", "RT", "59"];
 const HCPCS_OPTIONS = ["L0180 - Cervical, multiple post collar", "L0120 - Cervical, flexible, non-adjustable", "E0114 - Crutches, underarm, pair"];
 const ICD10_OPTIONS = ["M25.561", "M25.551", "M25.552", "S83.511A"];
+const ASSIGNEE_OPTIONS = [
+  "Ashton Roy",
+  "Bailey Moon",
+  "Brad Hope",
+  "Leo Wood",
+  "Olivia Grace",
+  "Ethan Sky",
+  "Sophia Sun",
+  "Noah Rain",
+  "Isabella Star",
+  "Caleb Stone",
+  "Ava Brooks",
+  "Ryan Field",
+  "Hazel Cloud",
+  "Dylan River",
+  "Piper West",
+  "Gavin Lake",
+  "Violet Ash",
+];
 type Recipient = {
   id: string;
   name: string;
@@ -551,6 +570,7 @@ export default function OrderDetailsForm({
   onComplete,
   onRequiresAuthorizationChange,
   onAssociateOrder,
+  onAssignedToChange,
   onFieldsChange,
 }: {
   order: PickedOrder;
@@ -558,6 +578,7 @@ export default function OrderDetailsForm({
   onComplete: () => void;
   onRequiresAuthorizationChange: (value: boolean) => void;
   onAssociateOrder: (orderIds: string[]) => void;
+  onAssignedToChange: (assignee: string) => void;
   onFieldsChange: (fields: {
     cptCode: string;
     cptUnits: string;
@@ -713,7 +734,7 @@ export default function OrderDetailsForm({
 
   const radioName = `${order.id}-contacts`;
   // An in-house procedure has no outside recipient, so those fields are inert.
-  const contactsDisabled = readOnly || (order.type === "Procedure" && inHouse);
+  const contactsDisabled = readOnly || (order.type === "Procedure" && inHouse && !order.requiresAuthorization);
   const associatedIds = order.associatedOrderIds ?? [];
 
   return (
@@ -766,7 +787,7 @@ export default function OrderDetailsForm({
 
       <div className={ROW}>
         <span className={LABEL}>Requires Authorization</span>
-        <div className="flex min-w-0 flex-1 items-center gap-4 pt-1.5">
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-3 pt-1.5">
           <label className="flex shrink-0 items-center gap-2">
             <input
               type="checkbox"
@@ -777,19 +798,31 @@ export default function OrderDetailsForm({
             />
             <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
           </label>
-          <MultiSelectDropdown
-            selectedIds={associatedIds}
-            placeholder={
-              relatedOrders.length === 0 ? "No other orders on this visit" : "Associate with another order"
-            }
-            options={relatedOrders.map((entry) => ({
-              id: entry.id,
-              label: `${entry.title} · Created on ${entry.createdAt}`,
-            }))}
-            disabled={readOnly || !order.requiresAuthorization || relatedOrders.length === 0}
-            muted={!order.requiresAuthorization || relatedOrders.length === 0}
-            onChange={onAssociateOrder}
-          />
+          {order.requiresAuthorization ? (
+            <>
+              <MultiSelectDropdown
+                selectedIds={associatedIds}
+                placeholder={
+                  relatedOrders.length === 0 ? "No other orders on this visit" : "Associate with another order"
+                }
+                options={relatedOrders.map((entry) => ({
+                  id: entry.id,
+                  label: `${entry.title} · Created on ${entry.createdAt}`,
+                }))}
+                disabled={readOnly || relatedOrders.length === 0}
+                muted={relatedOrders.length === 0}
+                onChange={onAssociateOrder}
+              />
+              <Dropdown
+                value={order.assignedTo && order.assignedTo !== "Unassigned" ? order.assignedTo : ""}
+                placeholder="Assign to..."
+                options={ASSIGNEE_OPTIONS}
+                disabled={readOnly}
+                compact
+                onChange={onAssignedToChange}
+              />
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -821,11 +854,17 @@ export default function OrderDetailsForm({
             <input
               type="checkbox"
               checked={inHouse}
-              disabled={readOnly}
+              disabled={readOnly || order.requiresAuthorization}
               onChange={(event) => setInHouse(event.target.checked)}
-              className="size-4 accent-[#1132ee]"
+              className="size-4 accent-[#1132ee] disabled:opacity-40"
             />
-            <span className="font-body text-[14px] text-[#303030]">Procedure administered in-house</span>
+            <span
+              className={`font-body text-[14px] ${
+                order.requiresAuthorization ? "text-[#c4c4c4]" : "text-[#303030]"
+              }`}
+            >
+              Procedure administered in-house
+            </span>
           </label>
         </div>
       )}

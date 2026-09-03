@@ -53,6 +53,7 @@ type OrderAuthorizationGroup = {
   };
   provider: string;
   caseName: string;
+  assignedTo: string;
   orders: Array<{
     id: string;
     title: string;
@@ -62,6 +63,13 @@ type OrderAuthorizationGroup = {
     details: OrderDetailField[];
   }>;
 };
+
+function groupAssignedTo(orders: PickedOrder[]): string {
+  const assigned = orders
+    .map((entry) => entry.assignedTo?.trim())
+    .filter((value): value is string => Boolean(value && value !== "Unassigned"));
+  return assigned.length > 0 ? [...new Set(assigned)].join(", ") : "Unassigned";
+}
 
 function authorizationGroups(orders: PickedOrder[]): OrderAuthorizationGroup[] {
   const eligible = orders.filter((order) => order.requiresAuthorization);
@@ -103,6 +111,7 @@ function authorizationGroups(orders: PickedOrder[]): OrderAuthorizationGroup[] {
       },
       provider: PROVIDER.display,
       caseName: CASE.name,
+      assignedTo: groupAssignedTo(component),
       orders: component.map((entry) => ({
         id: entry.id,
         title: entry.title,
@@ -163,6 +172,11 @@ function publishAuthorizations(orders: PickedOrder[]) {
       detail: { source: "visit-note", groups: authorizationGroups(submitted) },
     }),
   );
+}
+
+function withLinkedAssignee(orders: PickedOrder[], sourceId: string, assignedTo: string): PickedOrder[] {
+  const linkedIds = new Set(linkedOrderIds(orders, sourceId));
+  return orders.map((entry) => (linkedIds.has(entry.id) ? { ...entry, assignedTo } : entry));
 }
 
 function withLinkedAuthorization(
@@ -317,6 +331,7 @@ function OrderRow({
   onComplete,
   onRequiresAuthorizationChange,
   onAssociateOrder,
+  onAssignedToChange,
   onFieldsChange,
 }: {
   order: NoteOrder;
@@ -327,6 +342,7 @@ function OrderRow({
   onComplete: () => void;
   onRequiresAuthorizationChange: (value: boolean) => void;
   onAssociateOrder: (orderIds: string[]) => void;
+  onAssignedToChange: (assignee: string) => void;
   onFieldsChange: (fields: {
     cptCode: string;
     cptUnits: string;
@@ -408,6 +424,7 @@ function OrderRow({
             onComplete={onComplete}
             onRequiresAuthorizationChange={onRequiresAuthorizationChange}
             onAssociateOrder={onAssociateOrder}
+            onAssignedToChange={onAssignedToChange}
             onFieldsChange={onFieldsChange}
           />
         </div>
@@ -498,6 +515,15 @@ export default function OrdersSection() {
                     associatedOrderIds: orderIds,
                   }),
                 )
+              }
+              onAssignedToChange={(assignee) =>
+                setOrders((current) => {
+                  const next = withLinkedAssignee(current, order.id, assignee || "Unassigned");
+                  if (next.some((entry) => entry.status === "Needs Auth")) {
+                    publishAuthorizations(next);
+                  }
+                  return next;
+                })
               }
               onFieldsChange={(fields) =>
                 setOrders((current) => {

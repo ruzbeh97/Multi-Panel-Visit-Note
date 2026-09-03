@@ -9,6 +9,7 @@ import ObjectiveSection from "./notes/ObjectiveSection";
 import AssessmentSection from "./notes/AssessmentSection";
 import PlanSection from "./notes/PlanSection";
 import OrdersSection from "./notes/OrdersSection";
+import BillingDetailsSection from "./notes/BillingDetailsSection";
 import { PAST_NOTES } from "../data/chart";
 
 type PastVisitNoteViewProps = {
@@ -67,6 +68,7 @@ export default function PastVisitNoteView({ noteId, onBack }: PastVisitNoteViewP
                   <AssessmentSection />
                   <PlanSection />
                   <OrdersSection />
+                  <BillingDetailsSection />
                 </div>
               </PastNoteSourceProvider>
             </NoteReadOnlyProvider>
