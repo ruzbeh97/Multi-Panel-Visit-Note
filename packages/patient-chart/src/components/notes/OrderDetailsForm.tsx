@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon";
 import { useNoteReadOnly } from "./readOnly";
-import type { PickedOrder } from "./OrderPickerModal";
+import type { OrderDetailField, PickedOrder } from "./OrderPickerModal";
 
 const LABEL = "w-[168px] shrink-0 pt-1.5 font-body text-[13px] leading-[18px] text-[#8a8a8a]";
 const VALUE = "min-w-0 flex-1 font-body text-[14px] leading-[22px] text-[#1a1a1a] outline-none placeholder:text-[#b3b3b3] bg-transparent disabled:text-[#808080]";
@@ -558,42 +558,158 @@ export default function OrderDetailsForm({
   onComplete: () => void;
   onRequiresAuthorizationChange: (value: boolean) => void;
   onAssociateOrder: (orderIds: string[]) => void;
-  onFieldsChange: (fields: { cptCode: string; cptUnits: string }) => void;
+  onFieldsChange: (fields: {
+    cptCode: string;
+    cptUnits: string;
+    authDetailFields: OrderDetailField[];
+  }) => void;
 }) {
   const readOnly = useNoteReadOnly();
   const coded = codedValue(order);
-  const [procedure, setProcedure] = useState(coded);
+  const savedValue = (label: string) =>
+    order.authDetailFields?.find((field) => field.label === label)?.value ?? "";
+  const restoredCode =
+    [...PROCEDURE_OPTIONS, ...CPT_OPTIONS, ...HCPCS_OPTIONS].find(
+      (option) => option.split(" - ")[0].trim() === order.cptCode,
+    ) ?? coded;
+  const [procedure, setProcedure] = useState(restoredCode);
   const [orderName, setOrderName] = useState(
-    order.type === "Procedure" ? "" : order.title.replace(/ \([^)]+ Order\)$/, ""),
+    savedValue("Order Name") ||
+      (order.type === "Procedure" ? "" : order.title.replace(/ \([^)]+ Order\)$/, "")),
   );
-  const [inHouse, setInHouse] = useState(true);
-  const [contactSource, setContactSource] = useState<"NPI" | "Contact List">("NPI");
-  const [recipients, setRecipients] = useState<SelectedRecipient[]>([]);
-  const [sig, setSig] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [lot, setLot] = useState("");
-  const [ndc, setNdc] = useState("");
-  const [units, setUnits] = useState(order.code === "J1010" ? "Unit" : "");
-  const [quantity, setQuantity] = useState(order.code === "J1010" ? "40" : order.type === "DME" ? "1" : "");
-  const [refills, setRefills] = useState("0");
-  const [route, setRoute] = useState("");
-  const [modifiers, setModifiers] = useState("");
-  const [notes, setNotes] = useState("");
-  const [priority, setPriority] = useState(order.type === "Lab" ? "No Priority" : "");
-  const [icd10, setIcd10] = useState("");
-  const [icd10Codes, setIcd10Codes] = useState<string[]>(order.type === "DME" ? ["M25.561"] : []);
-  const [hcpcs, setHcpcs] = useState("");
-  const [resultMedium, setResultMedium] = useState("");
-  const [includePdf, setIncludePdf] = useState(false);
-  const [specimenCollected, setSpecimenCollected] = useState(false);
-  const [dispenseAsWritten, setDispenseAsWritten] = useState(false);
+  const [inHouse, setInHouse] = useState(savedValue("Procedure Location") !== "External");
+  const [contactSource, setContactSource] = useState<"NPI" | "Contact List">(
+    savedValue("Include contacts from") === "Contact List" ? "Contact List" : "NPI",
+  );
+  const [recipients, setRecipients] = useState<SelectedRecipient[]>(() => {
+    const summary = savedValue("Recipients");
+    return RECIPIENTS.filter((recipient) => summary.includes(recipient.name)).map((recipient) => ({
+      ...recipient,
+      fax: summary.includes("Fax"),
+      email: summary.includes("Email"),
+      text: summary.includes("Text"),
+    }));
+  });
+  const [sig, setSig] = useState(savedValue(order.type === "DME" ? "Prescription SIG" : "SIG"));
+  const [expiry, setExpiry] = useState(savedValue("Drug Expiry Date"));
+  const [lot, setLot] = useState(savedValue("Lot Number"));
+  const [ndc, setNdc] = useState(savedValue("NDC"));
+  const [units, setUnits] = useState(savedValue("Units") || (order.code === "J1010" ? "Unit" : ""));
+  const [quantity, setQuantity] = useState(
+    savedValue(order.type === "Procedure" ? "Quantity of Units" : "Quantity") ||
+      order.cptUnits ||
+      (order.code === "J1010" ? "40" : order.type === "DME" ? "1" : ""),
+  );
+  const [refills, setRefills] = useState(savedValue("Refills") || "0");
+  const [route, setRoute] = useState(savedValue("Route"));
+  const [modifiers, setModifiers] = useState(savedValue("Modifiers"));
+  const [notes, setNotes] = useState(savedValue("Notes"));
+  const [priority, setPriority] = useState(savedValue("Priority") || (order.type === "Lab" ? "No Priority" : ""));
+  const [icd10, setIcd10] = useState(savedValue("ICD-10 Codes"));
+  const [icd10Codes, setIcd10Codes] = useState<string[]>(
+    savedValue("ICD-10 Codes")
+      ? savedValue("ICD-10 Codes").split(", ").filter(Boolean)
+      : order.type === "DME"
+        ? ["M25.561"]
+        : [],
+  );
+  const [hcpcs, setHcpcs] = useState(order.type === "DME" ? restoredCode : "");
+  const [resultMedium, setResultMedium] = useState(savedValue("Result Medium"));
+  const [includePdf, setIncludePdf] = useState(savedValue("Include Chart Note PDF") === "Yes");
+  const [specimenCollected, setSpecimenCollected] = useState(savedValue("Specimen Collected") === "Yes");
+  const [dispenseAsWritten, setDispenseAsWritten] = useState(savedValue("Dispense as written") === "Yes");
 
-  // The prior authorization tracker bills off whatever code is picked here, so keep
-  // the parent in sync with the code/quantity pair rather than the catalog defaults.
+  // Keep both the billing data and the visible order form fields in the parent so
+  // submitted visit-note authorizations can reproduce this order in the tracker.
   const billingCode = (order.type === "DME" ? hcpcs : procedure).split(" - ")[0].trim();
+  const recipientSummary = recipients
+    .map((recipient) => {
+      const channels = [
+        recipient.fax ? "Fax" : "",
+        recipient.email ? "Email" : "",
+        recipient.text ? "Text" : "",
+      ].filter(Boolean);
+      return `${recipient.name} (NPI: ${recipient.npi})${channels.length ? ` · ${channels.join(", ")}` : ""}`;
+    })
+    .join("; ");
+
   useEffect(() => {
-    onFieldsChange({ cptCode: billingCode, cptUnits: quantity });
-  }, [billingCode, quantity, onFieldsChange]);
+    const fields: OrderDetailField[] = [
+      { label: "Order Name", value: orderName },
+      { label: "Include contacts from", value: contactSource },
+      { label: "Recipients", value: recipientSummary },
+    ];
+
+    if (order.type === "DME") {
+      fields.push(
+        { label: "Quantity", value: quantity },
+        { label: "Refills", value: refills },
+        { label: "ICD-10 Codes", value: icd10Codes.join(", ") },
+        { label: "Prescription SIG", value: sig },
+      );
+    }
+    if (order.type === "Procedure") {
+      fields.push(
+        { label: "Procedure Location", value: inHouse ? "Procedure administered in-house" : "External" },
+        { label: "SIG", value: sig },
+        { label: "Drug Expiry Date", value: expiry },
+        { label: "Lot Number", value: lot },
+        { label: "NDC", value: ndc },
+        { label: "Units", value: units },
+        { label: "Quantity of Units", value: quantity },
+        { label: "Route", value: route },
+        { label: "Modifiers", value: modifiers },
+      );
+    }
+    if (order.type === "Imaging") {
+      fields.push(
+        { label: "ICD-10 Codes", value: icd10 },
+        { label: "Priority", value: priority },
+        { label: "Result Medium", value: resultMedium },
+      );
+    }
+    if (order.type === "Lab") {
+      fields.push(
+        { label: "Priority", value: priority },
+        { label: "Specimen Collected", value: specimenCollected ? "Yes" : "No" },
+      );
+    }
+
+    fields.push(
+      { label: "Notes", value: notes },
+      ...(order.type === "DME"
+        ? [{ label: "Dispense as written", value: dispenseAsWritten ? "Yes" : "No" }]
+        : []),
+      { label: "Include Chart Note PDF", value: includePdf ? "Yes" : "No" },
+    );
+
+    onFieldsChange({ cptCode: billingCode, cptUnits: quantity, authDetailFields: fields });
+  }, [
+    billingCode,
+    contactSource,
+    dispenseAsWritten,
+    expiry,
+    icd10,
+    icd10Codes,
+    inHouse,
+    includePdf,
+    lot,
+    modifiers,
+    ndc,
+    notes,
+    onFieldsChange,
+    order.type,
+    orderName,
+    priority,
+    quantity,
+    recipientSummary,
+    refills,
+    resultMedium,
+    route,
+    sig,
+    specimenCollected,
+    units,
+  ]);
 
   const radioName = `${order.id}-contacts`;
   // An in-house procedure has no outside recipient, so those fields are inert.

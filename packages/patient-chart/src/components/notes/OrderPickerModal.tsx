@@ -4,6 +4,11 @@ import Icon from "../Icon";
 
 export type OrderKind = "Imaging" | "DME" | "Lab" | "Procedure" | "Medication";
 
+export type OrderDetailField = {
+  label: string;
+  value: string;
+};
+
 export type PickedOrder = {
   id: string;
   type: OrderKind;
@@ -19,6 +24,8 @@ export type PickedOrder = {
   /** Billing code and quantity as they currently stand in the expanded order form. */
   cptCode?: string;
   cptUnits?: string;
+  /** Snapshot of the visit-note order form shown in the authorization detail panel. */
+  authDetailFields?: OrderDetailField[];
   /** Sticky label for the authorization group this order was first linked into. */
   authGroupNumber?: number;
 };

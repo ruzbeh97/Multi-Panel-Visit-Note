@@ -3,9 +3,9 @@ import { createPortal } from "react-dom";
 import Icon from "../Icon";
 import Section from "./Section";
 import { useNoteReadOnly } from "./readOnly";
-import OrderPickerModal, { type PickedOrder } from "./OrderPickerModal";
+import OrderPickerModal, { type OrderDetailField, type PickedOrder } from "./OrderPickerModal";
 import OrderDetailsForm from "./OrderDetailsForm";
-import { PATIENT, PROVIDER } from "../../data/chart";
+import { CASE, PATIENT, PROVIDER } from "../../data/chart";
 
 const ICON_TONES = {
   blue: "text-[#1132ee]",
@@ -52,12 +52,14 @@ type OrderAuthorizationGroup = {
     insurance: string;
   };
   provider: string;
+  caseName: string;
   orders: Array<{
     id: string;
     title: string;
     code: string;
     trackingType: "Units";
     units: string;
+    details: OrderDetailField[];
   }>;
 };
 
@@ -100,12 +102,14 @@ function authorizationGroups(orders: PickedOrder[]): OrderAuthorizationGroup[] {
         insurance: PATIENT.insurance,
       },
       provider: PROVIDER.display,
+      caseName: CASE.name,
       orders: component.map((entry) => ({
         id: entry.id,
         title: entry.title,
         code: entry.cptCode || entry.code || "",
         trackingType: "Units",
         units: entry.cptUnits ?? (entry.code === "J1010" ? "40" : ""),
+        details: entry.authDetailFields ?? [],
       })),
     });
   }
@@ -323,7 +327,11 @@ function OrderRow({
   onComplete: () => void;
   onRequiresAuthorizationChange: (value: boolean) => void;
   onAssociateOrder: (orderIds: string[]) => void;
-  onFieldsChange: (fields: { cptCode: string; cptUnits: string }) => void;
+  onFieldsChange: (fields: {
+    cptCode: string;
+    cptUnits: string;
+    authDetailFields: OrderDetailField[];
+  }) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -496,7 +504,10 @@ export default function OrdersSection() {
                   const entry = current.find((candidate) => candidate.id === order.id);
                   if (
                     !entry ||
-                    (entry.cptCode === fields.cptCode && entry.cptUnits === fields.cptUnits)
+                    (entry.cptCode === fields.cptCode &&
+                      entry.cptUnits === fields.cptUnits &&
+                      JSON.stringify(entry.authDetailFields ?? []) ===
+                        JSON.stringify(fields.authDetailFields))
                   ) {
                     // Same array identity keeps the form's sync effect from looping.
                     return current;

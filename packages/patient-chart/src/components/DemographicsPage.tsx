@@ -1,6 +1,8 @@
 import Icon from "./Icon";
 import { CASE, PATIENT, PHARMACY, PROVIDER } from "../data/chart";
 
+const OPEN_CREATE_AUTH_EVENT = "patient-chart:open-create-auth";
+
 type Column = { key: string; label: string; className?: string };
 type Row = Record<string, string>;
 
@@ -32,10 +34,17 @@ function SectionHeader({
   );
 }
 
-function BlueAction({ children }: { children: React.ReactNode }) {
+function BlueAction({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="flex h-7 items-center gap-1 rounded-full bg-[#1132ee] px-3 font-body text-[12px] font-medium text-white hover:bg-[#0e28be]"
     >
       <Icon name="add" size={14} />
@@ -347,7 +356,27 @@ export default function DemographicsPage() {
         </section>
 
         <section className="pb-8">
-          <SectionHeader icon="tag" title="Prior Authorization" action={<BlueAction>New Prior Auth</BlueAction>} />
+          <SectionHeader
+            icon="tag"
+            title="Prior Authorization"
+            action={
+              <BlueAction
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent(OPEN_CREATE_AUTH_EVENT, {
+                      detail: {
+                        patient: PATIENT.name,
+                        patientDob: PATIENT.dob,
+                        patientMrn: PATIENT.mrn,
+                      },
+                    }),
+                  )
+                }
+              >
+                New Prior Auth
+              </BlueAction>
+            }
+          />
           <Tabs labels={["Pre-Certified", "Referral"]} active="Pre-Certified" />
           <div className="overflow-x-auto">
             <DataTable columns={AUTH_COLUMNS} rows={AUTHORIZATIONS} actions />
