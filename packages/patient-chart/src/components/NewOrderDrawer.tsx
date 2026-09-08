@@ -25,6 +25,25 @@ const blockTitleClass = "font-body text-[13px] font-bold text-[#1a1a1a]";
 const textareaClass =
   "w-full resize-none rounded-[3px] border border-[#ededed] bg-white px-3 py-2.5 font-body text-[14px] leading-[22px] text-[#303030] outline-none placeholder:text-[#b8b8b8]";
 const ORDER_AUTHORIZATIONS_EVENT = "patient-chart:order-authorizations";
+const ASSIGNEE_OPTIONS = [
+  "Ashton Roy",
+  "Bailey Moon",
+  "Brad Hope",
+  "Leo Wood",
+  "Olivia Grace",
+  "Ethan Sky",
+  "Sophia Sun",
+  "Noah Rain",
+  "Isabella Star",
+  "Caleb Stone",
+  "Ava Brooks",
+  "Ryan Field",
+  "Hazel Cloud",
+  "Dylan River",
+  "Piper West",
+  "Gavin Lake",
+  "Violet Ash",
+];
 
 function codeFromSelection(value: string) {
   return value.split(/\s+[—-]\s+/)[0]?.trim() ?? "";
@@ -115,6 +134,73 @@ function SelectField({
               </li>
             );
           })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function AssigneeDropdown({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative w-fit max-w-full">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => setOpen((current) => !current)}
+        className="flex max-w-full items-center gap-0.5 text-left"
+      >
+        <span className={`truncate font-body text-[14px] leading-[22px] ${value ? "text-[#1a1a1a]" : "text-[#b3b3b3]"}`}>
+          {value || "Assign to..."}
+        </span>
+        <Icon name="arrow_drop_down" size={18} className="shrink-0 text-[#8a8a8a]" />
+      </button>
+      {open ? (
+        <ul
+          role="listbox"
+          className="absolute left-0 top-[calc(100%+4px)] z-30 max-h-[280px] w-[240px] overflow-y-auto rounded-md bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.16)]"
+        >
+          {ASSIGNEE_OPTIONS.map((option) => (
+            <li key={option} role="option" aria-selected={option === value}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={`flex w-full px-3 py-2 text-left font-body text-[13px] ${
+                  option === value ? "bg-[#eceefe] text-[#1132ee]" : "text-[#303030] hover:bg-[#f5f5f5]"
+                }`}
+              >
+                {option}
+              </button>
+            </li>
+          ))}
         </ul>
       ) : null}
     </div>
@@ -244,6 +330,7 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
   const [requestType, setRequestType] = useState("");
   const [expectsResponse, setExpectsResponse] = useState(false);
   const [requiresAuthorization, setRequiresAuthorization] = useState(false);
+  const [assignedTo, setAssignedTo] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [referringProvider, setReferringProvider] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
@@ -318,6 +405,7 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
                   insurance: payer || PATIENT.insurance,
                 },
                 provider: provider || PROVIDER.display,
+                assignedTo: assignedTo || "Unassigned",
                 orders: [
                   {
                     id,
@@ -421,15 +509,22 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
           </div>
 
           <h3 className={`${sectionTitleClass} mb-2 mt-5`}>Authorization</h3>
-          <label className="flex items-center gap-2.5">
-            <input
-              type="checkbox"
-              checked={requiresAuthorization}
-              onChange={(event) => setRequiresAuthorization(event.target.checked)}
-              className="size-[17px] rounded-[2px] border-[#9a9a9a] accent-[#1132ee]"
-            />
-            <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
-          </label>
+          <div className="flex flex-col items-start gap-3">
+            <label className="flex items-center gap-2.5">
+              <input
+                type="checkbox"
+                checked={requiresAuthorization}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setRequiresAuthorization(checked);
+                  if (!checked) setAssignedTo("");
+                }}
+                className="size-[17px] rounded-[2px] border-[#9a9a9a] accent-[#1132ee]"
+              />
+              <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
+            </label>
+            {requiresAuthorization ? <AssigneeDropdown value={assignedTo} onChange={setAssignedTo} /> : null}
+          </div>
 
           <h3 className={`${sectionTitleClass} mb-2 mt-5`}>
             {orderType === "Outbound Referral" ? "Referral" : orderType === "Custom" ? "Custom Order" : orderType}
