@@ -1,0 +1,82 @@
+/* Snippet picker that appears when "." is typed in a visit-note field. */
+
+.vn-snippet-dropdown {
+  position: fixed;
+  z-index: 2000;
+  width: 320px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+}
+
+.vn-snippet-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 10px;
+}
+
+.vn-snippet-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #111827;
+  background: transparent;
+  font-family: inherit;
+}
+
+.vn-snippet-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.vn-snippet-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 4px 8px;
+  font-family: inherit;
+}
+
+.vn-snippet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vn-snippet-chip {
+  max-width: 130px;
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.12s, border-color 0.12s;
+  font-family: inherit;
+}
+
+.vn-snippet-chip:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.vn-snippet-empty {
+  font-size: 13px;
+  color: #9ca3af;
+  padding: 4px;
+}

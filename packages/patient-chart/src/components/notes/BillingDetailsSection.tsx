@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
 import Section, { headingId } from "./Section";
 import { useNoteReadOnly } from "./readOnly";
-import { DIAGNOSIS_CODES } from "../../data/chart";
+import { CURRENT_VISIT_NOTE_ID, DIAGNOSIS_CODES, VISIT_NOTE_DIAGNOSES } from "../../data/chart";
 import ServicesSection from "./ServicesSection";
+import { useNoteStore, usePastNoteSource } from "./noteStore";
+import { useOptionalSnippetEffects } from "./snippets/SnippetEffectsContext";
 
 type DiagnosisOption = {
   code: string;
@@ -36,12 +38,32 @@ const ALL_DIAGNOSES: DiagnosisOption[] = (() => {
   return list;
 })();
 
+function parseDiagnosisCode(raw: string): DiagnosisOption | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const split = trimmed.split(/\s*[-·–]\s*/);
+  const code = (split[0] || "").trim();
+  if (!code) return null;
+  const known = ALL_DIAGNOSES.find((item) => item.code.toLowerCase() === code.toLowerCase());
+  if (known) return known;
+  return {
+    code,
+    description: split.slice(1).join(" - ").trim() || code,
+  };
+}
+
 function DiagnosisCodes() {
   const readOnly = useNoteReadOnly();
-  const [selected, setSelected] = useState<DiagnosisOption[]>([
-    FEATURED_DIAGNOSES[0],
-    FEATURED_DIAGNOSES[1],
-  ]);
+  const { blankVisit } = useNoteStore();
+  const pastNoteId = usePastNoteSource();
+  const snippetEffects = useOptionalSnippetEffects();
+  const [selected, setSelected] = useState<DiagnosisOption[]>(() => {
+    // A signed note shows the codes that visit was billed with.
+    if (readOnly && pastNoteId && pastNoteId !== CURRENT_VISIT_NOTE_ID) {
+      return VISIT_NOTE_DIAGNOSES[pastNoteId] ?? [];
+    }
+    return blankVisit ? [] : [FEATURED_DIAGNOSES[0], FEATURED_DIAGNOSES[1]];
+  });
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -55,6 +77,25 @@ function DiagnosisCodes() {
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
+
+  useEffect(() => {
+    if (readOnly || !snippetEffects) return;
+    snippetEffects.registerDiagnosesHandler((codes) => {
+      setSelected((current) => {
+        const existing = new Set(current.map((item) => item.code.toLowerCase()));
+        const added = codes
+          .map(parseDiagnosisCode)
+          .filter((item): item is DiagnosisOption => Boolean(item))
+          .filter((item) => {
+            if (existing.has(item.code.toLowerCase())) return false;
+            existing.add(item.code.toLowerCase());
+            return true;
+          });
+        return added.length ? [...current, ...added] : current;
+      });
+    });
+    return () => snippetEffects.registerDiagnosesHandler(null);
+  }, [readOnly, snippetEffects]);
 
   const selectedCodes = useMemo(() => new Set(selected.map((item) => item.code)), [selected]);
   const results = ALL_DIAGNOSES.filter((item) => {

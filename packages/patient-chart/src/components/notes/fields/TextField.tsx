@@ -1,4 +1,4 @@
-import { useEffect, useRef, type TextareaHTMLAttributes } from "react";
+import { useEffect, useRef, forwardRef, type TextareaHTMLAttributes } from "react";
 import { useNoteReadOnly } from "../readOnly";
 
 type TextFieldProps = {
@@ -16,21 +16,24 @@ function resizeTextarea(textarea: HTMLTextAreaElement | null) {
   textarea.style.height = `${textarea.scrollHeight}px`;
 }
 
-export function AutoGrowTextarea({
-  value,
-  className = "",
-  ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement> & { value: string }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+export const AutoGrowTextarea = forwardRef<
+  HTMLTextAreaElement,
+  TextareaHTMLAttributes<HTMLTextAreaElement> & { value: string }
+>(function AutoGrowTextarea({ value, className = "", ...props }, forwardedRef) {
+  const localRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    resizeTextarea(ref.current);
+    resizeTextarea(localRef.current);
   }, [value]);
 
   return (
     <textarea
       {...props}
-      ref={ref}
+      ref={(node) => {
+        localRef.current = node;
+        if (typeof forwardedRef === "function") forwardedRef(node);
+        else if (forwardedRef) forwardedRef.current = node;
+      }}
       value={value}
       rows={props.rows ?? 2}
       className={`overflow-hidden ${className}`}
@@ -40,7 +43,7 @@ export function AutoGrowTextarea({
       }}
     />
   );
-}
+});
 
 export default function TextField({
   label,

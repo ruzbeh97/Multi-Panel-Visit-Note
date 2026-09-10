@@ -39,12 +39,14 @@ import ResizableSidePanel, {
 } from "./components/ResizableSidePanel";
 import AiSummaryCard from "./components/notes/AiSummaryCard";
 import AssessmentSection from "./components/notes/AssessmentSection";
-import { NoteStoreProvider } from "./components/notes/noteStore";
+import { DEFAULT_NOTE_VISIT_ID, NoteStoreProvider } from "./components/notes/noteStore";
+import { SnippetEffectsProvider } from "./components/notes/snippets/SnippetEffectsContext";
 import ObjectiveSection from "./components/notes/ObjectiveSection";
 import OrdersSection from "./components/notes/OrdersSection";
 import BillingDetailsSection from "./components/notes/BillingDetailsSection";
 import PlanSection from "./components/notes/PlanSection";
 import SubjectiveSection from "./components/notes/SubjectiveSection";
+import { CURRENT_VISIT_NOTE_ID } from "./data/chart";
 
 const SIDE_PANELS = [
   PAST_NOTE_ICON,
@@ -78,7 +80,9 @@ export default function PatientChartPage({
   const [openedPastNoteId, setOpenedPastNoteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Visits & Notes");
   const [currentVisitOpen, setCurrentVisitOpen] = useState(false);
+  const [blankVisitId, setBlankVisitId] = useState<string | null>(null);
   const noteScrollRef = useRef<HTMLDivElement>(null);
+  const openVisitId = blankVisitId ?? DEFAULT_NOTE_VISIT_ID;
 
   const assistantOpen = assistantOpenProp ?? internalAssistantOpen;
 
@@ -102,7 +106,16 @@ export default function PatientChartPage({
   }
 
   function openPastVisit(noteId: string) {
+    // Today's visit is the editable note, not a signed one.
+    if (noteId === CURRENT_VISIT_NOTE_ID) {
+      setBlankVisitId(null);
+      setOpenedPastNoteId(null);
+      setCurrentVisitOpen(true);
+      setActivePanel(null);
+      return;
+    }
     setCurrentVisitOpen(false);
+    setBlankVisitId(null);
     setOpenedPastNoteId(noteId);
     setActivePanel(null);
   }
@@ -110,6 +123,7 @@ export default function PatientChartPage({
   function selectTab(tab: string) {
     setActiveTab(tab);
     setCurrentVisitOpen(false);
+    setBlankVisitId(null);
     setOpenedPastNoteId(null);
     setActivePanel(null);
   }
@@ -214,10 +228,16 @@ export default function PatientChartPage({
             ) : visitsTabOpen && !currentVisitOpen && !openedPastNoteId ? (
               <VisitsNotesPage
                 onOpenCurrentVisit={() => {
+                  setBlankVisitId(null);
                   setCurrentVisitOpen(true);
                   setOpenedPastNoteId(null);
                 }}
                 onOpenPastVisit={openPastVisit}
+                onOpenBlankVisit={(noteId) => {
+                  setBlankVisitId(noteId);
+                  setCurrentVisitOpen(true);
+                  setOpenedPastNoteId(null);
+                }}
               />
             ) : openedPastNoteId ? (
               <PastVisitNoteView
@@ -241,19 +261,20 @@ export default function PatientChartPage({
                     }`}
                   >
                     <main
+                      key={openVisitId}
                       // The trailing space lets the last section (Billing Details) scroll up
                       // to the top of the viewport instead of being stuck at the bottom.
                       className={`flex w-full flex-col items-start gap-10 px-4 pt-10 pb-[70vh] ${
                         sidePanelOpen ? "" : "max-w-[900px]"
                       }`}
                     >
-                      <AiSummaryCard />
+                      {!blankVisitId && <AiSummaryCard />}
                       <SubjectiveSection />
                       <ObjectiveSection />
                       <AssessmentSection />
                       <PlanSection />
-                      <OrdersSection />
-                      <BillingDetailsSection />
+                      <OrdersSection key={`orders-${openVisitId}`} />
+                      <BillingDetailsSection key={`billing-${openVisitId}`} />
                     </main>
                   </div>
                 </div>
@@ -297,17 +318,25 @@ export default function PatientChartPage({
   );
 
   const chart = (
-    <NoteStoreProvider>
-      <div
-        className={
-          demo
-            ? "flex h-full min-h-0 w-full flex-1 items-start gap-2"
-            : "flex h-full min-h-0 min-w-0 flex-1 items-stretch"
-        }
-      >
-        {noteFrame}
-        {demo && assistantOpen && <AssistantColumn />}
-      </div>
+    <NoteStoreProvider
+      activeVisit={
+        currentVisitOpen
+          ? { id: openVisitId, blank: Boolean(blankVisitId) }
+          : undefined
+      }
+    >
+      <SnippetEffectsProvider>
+        <div
+          className={
+            demo
+              ? "flex h-full min-h-0 w-full flex-1 items-start gap-2"
+              : "flex h-full min-h-0 min-w-0 flex-1 items-stretch"
+          }
+        >
+          {noteFrame}
+          {demo && assistantOpen && <AssistantColumn />}
+        </div>
+      </SnippetEffectsProvider>
     </NoteStoreProvider>
   );
 

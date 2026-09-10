@@ -253,7 +253,7 @@ export default function PatientHeader({
               <div className="flex h-full items-center gap-4">
                 <span className="whitespace-nowrap font-body text-[16px] text-[#1a1a1a]">{CASE.visitDate}</span>
                 <Divider />
-                <SelectField label="Established Patient" />
+                <SelectField label="New Patient" />
                 <Divider />
                 <SelectField label="Clinical Note Type" />
                 <Divider />

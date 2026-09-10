@@ -514,16 +514,12 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
               <input
                 type="checkbox"
                 checked={requiresAuthorization}
-                onChange={(event) => {
-                  const checked = event.target.checked;
-                  setRequiresAuthorization(checked);
-                  if (!checked) setAssignedTo("");
-                }}
+                onChange={(event) => setRequiresAuthorization(event.target.checked)}
                 className="size-[17px] rounded-[2px] border-[#9a9a9a] accent-[#1132ee]"
               />
               <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
             </label>
-            {requiresAuthorization ? <AssigneeDropdown value={assignedTo} onChange={setAssignedTo} /> : null}
+            <AssigneeDropdown value={assignedTo} onChange={setAssignedTo} />
           </div>
 
           <h3 className={`${sectionTitleClass} mb-2 mt-5`}>

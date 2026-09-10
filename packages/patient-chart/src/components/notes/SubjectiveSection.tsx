@@ -1,15 +1,16 @@
 import Section, { SubHeading, Block } from "./Section";
-import TextField from "./fields/TextField";
+import SnippetTextField from "./snippets/SnippetTextField";
 import DateField from "./fields/DateField";
 import RadioGroup from "./fields/RadioGroup";
 import { useNoteReadOnly } from "./readOnly";
-import { useNoteStore } from "./noteStore";
-import { PREVIOUS_VISIT } from "../../data/chart";
+import { useNoteStore, usePastNoteSource } from "./noteStore";
+import { pastVisitNote } from "../../data/chart";
 
 export default function SubjectiveSection() {
   const readOnly = useNoteReadOnly();
   const store = useNoteStore();
-  const values = readOnly ? PREVIOUS_VISIT.subjective : store.note.subjective;
+  const pastNote = pastVisitNote(usePastNoteSource());
+  const values = readOnly && pastNote ? pastNote.subjective : store.note.subjective;
   const set = (patch: Partial<typeof store.note.subjective>) => {
     if (!readOnly) store.patchSubjective(patch);
   };
@@ -19,8 +20,9 @@ export default function SubjectiveSection() {
       <div className="flex w-full flex-col items-start gap-4">
         <SubHeading title="Chief Complaint & History" />
         <Block>
-          <TextField
+          <SnippetTextField
             label="Chief Complaint"
+            noteSection="Subjective"
             value={values.chiefComplaint}
             onChange={(value) => set({ chiefComplaint: value })}
           />
@@ -49,8 +51,9 @@ export default function SubjectiveSection() {
             onChange={(value) => set({ previousSurgery: value })}
             labelWidth={181}
           />
-          <TextField
+          <SnippetTextField
             label="Name of Previous Surgery"
+            noteSection="Subjective"
             value={values.surgeryName}
             onChange={(value) => set({ surgeryName: value })}
             labelWidth={206}
@@ -62,8 +65,9 @@ export default function SubjectiveSection() {
             inline={false}
             labelWidth={220}
           />
-          <TextField
+          <SnippetTextField
             label="History of Condition"
+            noteSection="Subjective"
             value={values.historyOfCondition}
             onChange={(value) => set({ historyOfCondition: value })}
           />

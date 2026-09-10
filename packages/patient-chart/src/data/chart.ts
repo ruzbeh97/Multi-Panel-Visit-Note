@@ -26,7 +26,7 @@ export const CLINIC_ASSISTANT = "Alicia Nunez";
 export const ASSOCIATE_PROVIDER = "Dana Whitfield PA-C";
 
 export const CASE = {
-  name: "ACL Tear",
+  name: "Hip Pain",
   dateOfInjury: "04/18/2026",
   surgeryDate: "05/06/2026",
   surgery: "Right ACL reconstruction with semitendinosus autograft and partial medial meniscectomy",
@@ -224,6 +224,333 @@ export const PREVIOUS_VISIT = {
   },
 };
 
+// The fields a signed note fills in. Read-only views render these; the note
+// being written today lives in the note store instead.
+export type PastVisitNoteContent = {
+  subjective: {
+    previousSurgery: string;
+    surgeryName: string;
+    surgeryDate: string;
+    dateOfOnset: string;
+    stateOfCondition: string;
+    sideOfIssue: string;
+    chiefComplaint: string;
+    historyOfCondition: string;
+  };
+  objective: {
+    currentPain: string;
+    worstPain: string;
+    bestPain: string;
+    painDescription: string;
+  };
+  assessment: {
+    primaryDiagnosis: string;
+    dateOfOnset: string;
+    rehabPotential: string;
+    keyFindings: string;
+  };
+  plan: { patientGoal: string };
+};
+
+// The knee case before reconstruction, and the elbow episode, share their
+// history answers across the visits that belong to them.
+const KNEE_PREOP_HISTORY = {
+  previousSurgery: "No",
+  surgeryName: "",
+  surgeryDate: "",
+  dateOfOnset: CASE.dateOfInjury,
+  stateOfCondition: "New",
+  sideOfIssue: "Right",
+};
+
+const ELBOW_HISTORY = {
+  previousSurgery: "No",
+  surgeryName: "",
+  surgeryDate: "",
+  dateOfOnset: PRIOR_CASE.onset,
+  stateOfCondition: "Insidious",
+  sideOfIssue: "Right",
+};
+
+const KNEE_INJURY_STORY =
+  "Non-contact pivoting injury during a recreational soccer match on 04/18/2026 with immediate swelling and inability to bear weight. MRI on 04/22/2026 showed a complete ACL tear with a posterior horn medial meniscus tear.";
+
+const POST_OP_STORY = `${KNEE_INJURY_STORY} Reconstruction was performed 05/06/2026 at Hale Orthopedics.`;
+
+const ELBOW_STORY =
+  "Gradual onset of right lateral elbow pain beginning 07/14/2025 after a weekend of yard work, without antecedent trauma. Symptoms are provoked by gripping and lifting and localize to the lateral epicondyle.";
+
+// One signed note per past encounter, keyed by encounter id.
+export const PAST_VISIT_NOTES: Record<string, PastVisitNoteContent> = {
+  "acl-followup-12wk": PREVIOUS_VISIT,
+
+  "acl-followup-6wk": {
+    subjective: {
+      ...SURGICAL_HISTORY,
+      chiefComplaint:
+        "Right knee stiffness and weakness six weeks after ACL reconstruction. Reports 5/10 pain with prolonged standing and trouble straightening the knee all the way, and has weaned off crutches over the last two weeks.",
+      historyOfCondition: `${POST_OP_STORY} The brace was unlocked to 0-90 degrees at two weeks and he came off crutches at week four.`,
+    },
+    objective: {
+      currentPain: "5",
+      worstPain: "8",
+      bestPain: "3",
+      painDescription:
+        "Aching along the medial joint line and graft site, 5/10 after standing for an hour and 8/10 following therapy. Swelling returns most afternoons and settles with elevation overnight.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "S83.511D - Sprain of anterior cruciate ligament of right knee, subsequent encounter. Aftercare following reconstruction (Z47.89) with knee stiffness (M25.661) and quadriceps inhibition.",
+      dateOfOnset: CASE.dateOfInjury,
+      rehabPotential:
+        "Good. Motion and effusion are on schedule for six weeks, but quadriceps activation lags and will pace the return-to-run timeline.",
+      keyFindings:
+        "Right knee AROM 10-118 degrees versus 0-140 degrees on the left. Quadriceps index 58% by handheld dynamometry with a 2+ effusion after activity. IKDC 48.3%. Post-operative radiographs show well-positioned fixation.",
+    },
+    plan: { patientGoal: "Walk without a limp and get back into the gym for lower-body work." },
+  },
+
+  "acl-followup-2wk": {
+    subjective: {
+      ...SURGICAL_HISTORY,
+      chiefComplaint:
+        "Two-week post-operative visit after right ACL reconstruction. Incisions are dry, pain is controlled with acetaminophen during the day, and he is using crutches for community distances only.",
+      historyOfCondition: `${POST_OP_STORY} He has been weight bearing as tolerated in a brace locked in extension since surgery.`,
+    },
+    objective: {
+      currentPain: "4",
+      worstPain: "7",
+      bestPain: "2",
+      painDescription:
+        "Soreness across the patellar tendon and hamstring harvest site, 4/10 with transfers and 7/10 after the first session of home exercises each day.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "Z47.89 - Encounter for other orthopedic aftercare following right ACL reconstruction (S83.511D). Healing as expected at two weeks.",
+      dateOfOnset: CASE.dateOfInjury,
+      rehabPotential:
+        "Good. Sutures are out, the wound is closed, and he is ready for the brace to be unlocked to 0-90 degrees.",
+      keyFindings:
+        "Portals healing without drainage or erythema after suture removal. AROM 5-90 degrees with the brace unlocked, 2+ effusion, quadriceps set with a visible contraction but no straight-leg raise.",
+    },
+    plan: { patientGoal: "Get out of the brace and walk without crutches." },
+  },
+
+  "acl-wound-check": {
+    subjective: {
+      ...SURGICAL_HISTORY,
+      chiefComplaint:
+        "One-week post-operative wound check. Reports 6/10 aching at night controlled with oxycodone-acetaminophen, sleeping in the brace locked in extension, and no fevers or calf pain.",
+      historyOfCondition: `${POST_OP_STORY} This is his first visit since discharge from the surgical center.`,
+    },
+    objective: {
+      currentPain: "6",
+      worstPain: "8",
+      bestPain: "4",
+      painDescription:
+        "Deep aching throughout the knee, 6/10 at rest and 8/10 with dependent positioning, improved by elevation and ice.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "Z47.89 - Encounter for other orthopedic aftercare following right ACL reconstruction, with acute post-procedural pain (G89.18).",
+      dateOfOnset: CASE.dateOfInjury,
+      rehabPotential:
+        "Good. Wound is intact and there are no signs of infection or venous thromboembolism.",
+      keyFindings:
+        "Arthroscopy portals clean and dry without erythema or drainage. 3+ effusion. Quadriceps activation present but weak. Calves supple and non-tender with no DVT signs.",
+    },
+    plan: { patientGoal: "Keep the incisions clean and get the swelling down." },
+  },
+
+  "acl-pre-op": {
+    subjective: {
+      ...KNEE_PREOP_HISTORY,
+      chiefComplaint:
+        "Pre-operative visit ahead of right ACL reconstruction on 05/06/2026. Denies fever, cough, or new medications, and understands the surgical plan and post-operative restrictions.",
+      historyOfCondition: `${KNEE_INJURY_STORY} Reconstruction with semitendinosus autograft and partial medial meniscectomy is scheduled for 05/06/2026.`,
+    },
+    objective: {
+      currentPain: "3",
+      worstPain: "6",
+      bestPain: "1",
+      painDescription:
+        "Intermittent medial joint line pain, 3/10 with daily activity and up to 6/10 with any turning, along with a sense of the knee shifting on uneven ground.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "Z01.818 - Encounter for other preprocedural examination. Complete tear of the anterior cruciate ligament of the right knee (S83.511A) scheduled for reconstruction.",
+      dateOfOnset: CASE.dateOfInjury,
+      rehabPotential:
+        "Excellent. He has regained full extension and quadriceps control before surgery, which supports an uncomplicated recovery.",
+      keyFindings:
+        "Pre-operative laboratory panel within normal limits. Full extension with 130 degrees of flexion, 1+ effusion, positive Lachman with a soft endpoint. Cleared for surgery.",
+    },
+    plan: { patientGoal: "Be cleared for surgery and know what to expect afterward." },
+  },
+
+  "acl-surgical-consult": {
+    subjective: {
+      ...KNEE_PREOP_HISTORY,
+      chiefComplaint:
+        "Surgical consultation for a complete right ACL tear with a medial meniscus tear. Reports instability when turning and wants to return to competitive soccer.",
+      historyOfCondition: KNEE_INJURY_STORY,
+    },
+    objective: {
+      currentPain: "4",
+      worstPain: "7",
+      bestPain: "2",
+      painDescription:
+        "Medial joint line pain, 4/10 with walking and 7/10 with any pivot, accompanied by a feeling of the knee giving way.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "S83.511A - Sprain of anterior cruciate ligament of right knee, initial encounter, with a medial meniscus tear (S83.241A) and right knee pain (M25.561).",
+      dateOfOnset: CASE.dateOfInjury,
+      rehabPotential:
+        "Excellent with reconstruction. He is young, active, and motivated to return to a cutting sport, which favors surgical management over rehabilitation alone.",
+      keyFindings:
+        "MRI 04/22/2026 shows a complete ACL tear with a posterior horn medial meniscus tear. Positive Lachman and pivot shift. Motion 10-125 degrees with a 2+ effusion.",
+    },
+    plan: { patientGoal: "Understand the options and get back to competitive soccer." },
+  },
+
+  "acl-injury-visit": {
+    subjective: {
+      ...KNEE_PREOP_HISTORY,
+      chiefComplaint:
+        "Walk-in visit the evening of a non-contact pivoting injury during a recreational soccer match. Felt a pop with immediate swelling and has been unable to bear weight since.",
+      historyOfCondition:
+        "Non-contact pivoting injury during a recreational soccer match earlier today with an audible pop, immediate swelling, and inability to bear weight. No prior injury to this knee.",
+    },
+    objective: {
+      currentPain: "7",
+      worstPain: "9",
+      bestPain: "5",
+      painDescription:
+        "Diffuse throbbing pain, 7/10 at rest and 9/10 with any attempt to straighten or bear weight, with a tense knee that feels full.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "M25.561 - Pain in right knee with joint effusion (M25.461) following an acute non-contact pivoting injury. Ligamentous injury suspected pending MRI.",
+      dateOfOnset: CASE.dateOfInjury,
+      rehabPotential:
+        "Undetermined pending imaging. Immediate priorities are protection, swelling control, and a definitive diagnosis.",
+      keyFindings:
+        "Large tense effusion with motion limited to 15-95 degrees. Lachman difficult to assess through guarding. Neurovascularly intact and able to toe-touch weight bear in a knee immobilizer.",
+    },
+    plan: { patientGoal: "Find out what is wrong with the knee and get the swelling down." },
+  },
+
+  "elbow-discharge": {
+    subjective: {
+      ...ELBOW_HISTORY,
+      chiefComplaint:
+        "Discharge visit for right lateral elbow pain. Symptom free with lifting and gripping at work for the past six weeks and has returned to the gym without restriction.",
+      historyOfCondition: `${ELBOW_STORY} Treated with bracing and activity modification, then a corticosteroid injection on 09/22/2025 with resolution of symptoms.`,
+    },
+    objective: {
+      currentPain: "0",
+      worstPain: "1",
+      bestPain: "0",
+      painDescription: "No pain with gripping, lifting, or resisted wrist extension. Occasional awareness of the elbow after a long day of tool use.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "M77.11 - Lateral epicondylitis of the right elbow, resolved following corticosteroid injection and a home eccentric program.",
+      dateOfOnset: PRIOR_CASE.onset,
+      rehabPotential: "Resolved. No further follow-up planned; he will return as needed if symptoms recur.",
+      keyFindings:
+        "No tenderness over the lateral epicondyle. Negative Cozen and Mill tests. Grip strength symmetric at 52 kg bilaterally with full painless elbow motion.",
+    },
+    plan: { patientGoal: "Stay pain free at work and in the gym." },
+  },
+
+  "elbow-injection-followup": {
+    subjective: {
+      ...ELBOW_HISTORY,
+      chiefComplaint:
+        "Six-week follow up after a right lateral epicondyle corticosteroid injection. Reports pain down from 7/10 to 2/10 and is gripping tools at work without difficulty.",
+      historyOfCondition: `${ELBOW_STORY} A corticosteroid injection was performed on 09/22/2025 after eight weeks of bracing and activity modification.`,
+    },
+    objective: {
+      currentPain: "2",
+      worstPain: "4",
+      bestPain: "1",
+      painDescription:
+        "Mild lateral elbow ache, 2/10 with sustained gripping and up to 4/10 after repetitive tool use, resolving with rest.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "M77.11 - Lateral epicondylitis of the right elbow, markedly improved following injection on 09/22/2025.",
+      dateOfOnset: PRIOR_CASE.onset,
+      rehabPotential:
+        "Very good. Continued eccentric strengthening should carry him to full resolution without further injection.",
+      keyFindings:
+        "Mild tenderness at the lateral epicondyle. Cozen test now negative. Grip strength 48 kg on the right versus 53 kg on the left.",
+    },
+    plan: { patientGoal: "Keep the elbow quiet and finish the strengthening program." },
+  },
+
+  "elbow-injection": {
+    subjective: {
+      ...ELBOW_HISTORY,
+      chiefComplaint:
+        "Right lateral elbow pain unchanged after eight weeks of bracing and activity modification. Reports 7/10 pain with gripping and lifting, worst when carrying groceries.",
+      historyOfCondition: `${ELBOW_STORY} Counterforce bracing, activity modification, and a home program over eight weeks have not changed his symptoms.`,
+    },
+    objective: {
+      currentPain: "7",
+      worstPain: "8",
+      bestPain: "4",
+      painDescription:
+        "Sharp lateral elbow pain, 7/10 with gripping and lifting and 8/10 when carrying a load with the arm extended, easing to 4/10 at rest.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "M77.11 - Lateral epicondylitis of the right elbow with elbow pain (M25.521), refractory to eight weeks of conservative care.",
+      dateOfOnset: PRIOR_CASE.onset,
+      rehabPotential:
+        "Good with injection. A corticosteroid injection today should allow him to tolerate the eccentric loading program he has been unable to start.",
+      keyFindings:
+        "Point tenderness 1 cm distal to the lateral epicondyle with positive Cozen and Mill tests. Full elbow motion. Grip strength 34 kg on the right versus 53 kg on the left.",
+    },
+    plan: { patientGoal: "Get relief so I can grip tools at work again." },
+  },
+
+  "elbow-new-patient": {
+    subjective: {
+      ...ELBOW_HISTORY,
+      chiefComplaint:
+        "New patient visit for six weeks of gradually worsening right lateral elbow pain that began after a weekend of yard work. Reports 6/10 pain with gripping and no numbness or tingling.",
+      historyOfCondition: ELBOW_STORY,
+    },
+    objective: {
+      currentPain: "6",
+      worstPain: "8",
+      bestPain: "3",
+      painDescription:
+        "Lateral elbow pain, 6/10 with gripping and 8/10 with resisted wrist extension, occasionally radiating into the forearm extensors.",
+    },
+    assessment: {
+      primaryDiagnosis:
+        "M77.11 - Lateral epicondylitis of the right elbow with elbow pain (M25.521). Insidious onset after repetitive gripping, without antecedent trauma.",
+      dateOfOnset: PRIOR_CASE.onset,
+      rehabPotential:
+        "Good. Most cases respond to counterforce bracing, activity modification, and an eccentric loading program over eight to twelve weeks.",
+      keyFindings:
+        "Tenderness over the lateral epicondyle with pain on resisted wrist extension. Elbow motion full and symmetric, no effusion, neurovascularly intact.",
+    },
+    plan: { patientGoal: "Understand why the elbow hurts and start treatment." },
+  },
+};
+
+/** Signed content for a past note, or null when the id is the note being written today. */
+export function pastVisitNote(noteId: string | null | undefined): PastVisitNoteContent | null {
+  if (noteId === CURRENT_VISIT_NOTE_ID) return null;
+  if (!noteId) return PREVIOUS_VISIT;
+  return PAST_VISIT_NOTES[noteId] ?? PREVIOUS_VISIT;
+}
+
 // Generated summary of the last signed note, shown above Subjective so the
 // provider can orient without opening the past-note panel.
 export const PREVIOUS_VISIT_SUMMARY = {
@@ -311,7 +638,7 @@ function chartDateValue(date: string) {
 const ACL_TAG = `${CASE.name} - DOI ${CASE.dateOfInjury}`;
 const ELBOW_TAG = `${PRIOR_CASE.name} - Onset ${PRIOR_CASE.onset}`;
 
-type OrderItem = {
+export type OrderItem = {
   type: "order";
   title: string;
   detail: string;
@@ -363,8 +690,8 @@ export const ENCOUNTERS: Encounter[] = [
     date: "08/10/2026",
     time: "11:50am",
     caseName: CASE.name,
-    visitType: "Established Patient",
-    title: "14-Week Post-Op Follow Up",
+    visitType: "New Patient",
+    title: "New Patient",
     provider: PROVIDER.short,
     codes: CASE.diagnosisCodes,
     items: [
@@ -978,6 +1305,24 @@ const ALL_CHART_ITEMS: EncounterItem[] = [
   ...OUTSIDE_VISIT_ACTIVITY.map((entry) => entry.item),
 ];
 
+// The diagnoses each visit was coded with, keyed by encounter id.
+export const VISIT_NOTE_DIAGNOSES: Record<string, { code: string; description: string }[]> =
+  Object.fromEntries(
+    ENCOUNTERS.map((visit) => [
+      visit.id,
+      visit.codes.map((code) => ({
+        code,
+        description: DIAGNOSIS_CODES[code]?.description ?? code,
+      })),
+    ]),
+  );
+
+// The orders each visit placed, keyed by encounter id, so a signed note can be
+// rendered with the orders it actually contained.
+export const VISIT_NOTE_ORDERS: Record<string, OrderItem[]> = Object.fromEntries(
+  ENCOUNTERS.map((visit) => [visit.id, visit.items.filter(isOrderItem)]),
+);
+
 const PAST_ENCOUNTERS = ENCOUNTERS.filter((visit) => visit.date !== CASE.visitDateLong);
 
 function formatAppointmentTime(time: string) {
@@ -987,6 +1332,22 @@ function formatAppointmentTime(time: string) {
 // Signed notes available in the past-note picker. The operating room encounter
 // produces an operative report rather than an office note, so it is excluded.
 export const PAST_NOTES = PAST_ENCOUNTERS.filter((visit) => visit.visitType !== "Surgery").map((visit) => ({
+  id: visit.id,
+  caseName: visit.caseName,
+  title: visit.title,
+  provider: visit.provider,
+  visitType: visit.visitType,
+  date: visit.date,
+  time: formatAppointmentTime(visit.time),
+}));
+
+/** The visit being documented today — the note the main pane is editing. */
+export const CURRENT_VISIT_NOTE_ID = ENCOUNTERS[0].id;
+
+// Every visit that has a note behind it, matching the Visits & Notes table:
+// today's visit first, then each signed note. The operating room encounter is
+// excluded because it produces an operative report rather than an office note.
+export const VISIT_NOTE_OPTIONS = ENCOUNTERS.filter((visit) => visit.visitType !== "Surgery").map((visit) => ({
   id: visit.id,
   caseName: visit.caseName,
   title: visit.title,

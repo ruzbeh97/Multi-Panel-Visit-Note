@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import Icon from "../Icon";
 import { useNoteReadOnly } from "./readOnly";
-import { useNoteStore } from "./noteStore";
+import { useNoteStore, usePastNoteSource } from "./noteStore";
+import { CURRENT_VISIT_NOTE_ID } from "../../data/chart";
 
 export function headingId(title: string, readOnly = false) {
   const slug = title
@@ -31,12 +32,15 @@ export function SectionHeading({ title }: { title: string }) {
 export function SubHeading({ title }: { title: string }) {
   const readOnly = useNoteReadOnly();
   const store = useNoteStore();
+  const pastNoteId = usePastNoteSource();
 
   function carryForward() {
-    store.importSection(title, store.carryAction);
+    store.importSection(title, store.carryAction, pastNoteId);
   }
 
   if (readOnly) {
+    // Nothing to carry forward when the note on screen is the one being written.
+    const canCarryForward = pastNoteId !== CURRENT_VISIT_NOTE_ID;
     return (
       <div
         id={headingId(title, true)}
@@ -47,14 +51,16 @@ export function SubHeading({ title }: { title: string }) {
         <div className="flex flex-1 items-center gap-1 py-1">
           <h2 className="flex-1 font-body text-[24px] font-bold leading-none text-black">{title}</h2>
         </div>
-        <button
-          type="button"
-          onClick={carryForward}
-          className="flex shrink-0 items-start rounded-full p-1 hover:bg-black/5"
-          aria-label={`Carry ${title} forward into the current note (${store.carryAction})`}
-        >
-          <Icon name="move_up" size={20} className="text-[#1132ee]" />
-        </button>
+        {canCarryForward && (
+          <button
+            type="button"
+            onClick={carryForward}
+            className="flex shrink-0 items-start rounded-full p-1 hover:bg-black/5"
+            aria-label={`Carry ${title} forward into the current note (${store.carryAction})`}
+          >
+            <Icon name="move_up" size={20} className="text-[#1132ee]" />
+          </button>
+        )}
       </div>
     );
   }

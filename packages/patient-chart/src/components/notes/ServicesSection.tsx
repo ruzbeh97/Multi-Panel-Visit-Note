@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon";
 import { headingId } from "./Section";
 import { useNoteReadOnly } from "./readOnly";
+import { useNoteStore } from "./noteStore";
+import { useOptionalSnippetEffects } from "./snippets/SnippetEffectsContext";
+import type { SnippetServiceLine } from "./snippets/adapters";
 
 type ServiceKind = "procedure" | "hcpcs";
 
@@ -461,8 +464,26 @@ function ServiceLine({
 
 export default function ServicesSection() {
   const readOnly = useNoteReadOnly();
+  const { blankVisit } = useNoteStore();
+  const snippetEffects = useOptionalSnippetEffects();
   const [open, setOpen] = useState(true);
-  const [services, setServices] = useState<ServiceRow[]>(INITIAL_SERVICES);
+  const [services, setServices] = useState<ServiceRow[]>(() => (blankVisit ? [] : INITIAL_SERVICES));
+
+  useEffect(() => {
+    if (readOnly || !snippetEffects) return;
+    snippetEffects.registerServicesHandler((incoming: SnippetServiceLine[]) => {
+      setServices((current) => {
+        const existing = new Set(current.map((service) => service.code.toLowerCase()));
+        const added = incoming.filter((service) => {
+          if (existing.has(service.code.toLowerCase())) return false;
+          existing.add(service.code.toLowerCase());
+          return true;
+        });
+        return added.length ? [...current, ...added] : current;
+      });
+    });
+    return () => snippetEffects.registerServicesHandler(null);
+  }, [readOnly, snippetEffects]);
 
   const procedures = services.filter((service) => service.kind === "procedure");
   const hcpcs = services.filter((service) => service.kind === "hcpcs");

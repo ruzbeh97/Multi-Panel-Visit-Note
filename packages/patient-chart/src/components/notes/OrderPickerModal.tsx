@@ -18,11 +18,21 @@ export type PickedOrder = {
   tone: "blue" | "orange" | "green";
   meta: string;
   createdAt: string;
+  /** Authorization workflow state mirrored from the prior-auth tracker. */
   status: string;
+  /** Recipient-delivery state, independent from the authorization workflow. */
+  sent?: boolean;
   requiresAuthorization: boolean;
   associatedOrderIds: string[];
   /** Assignee for the linked authorization group in the prior auth tracker. */
   assignedTo?: string;
+  /** Payer/insurance for the linked authorization in the prior auth tracker. */
+  insurance?: string;
+  /** Shared authorization details mirrored in the prior auth tracker. */
+  authNumber?: string;
+  startDate?: string;
+  endDate?: string;
+  authNotes?: string;
   /** Billing code and quantity as they currently stand in the expanded order form. */
   cptCode?: string;
   cptUnits?: string;
@@ -77,6 +87,15 @@ const ORDER_SETS: OrderSet[] = [
       { id: "lab-cbc", type: "Lab", title: "Complete cbc, automated", code: "85027" },
       { id: "procedure-joint-inj", type: "Procedure", title: "Drain/inj joint/bursa w/o us", code: "20610" },
       { id: "procedure-methylpred", type: "Procedure", title: "Injection, methylprednisolone acetate, 1 mg", code: "J1010" },
+    ],
+  },
+  {
+    id: "hip-injection-only",
+    title: "Hip Injection Only",
+    description: "Drain/inj joint/bursa w/o us, Injection, methylprednisolone acetate, 1 mg",
+    orders: [
+      { id: "hip-only-joint-inj", type: "Procedure", title: "Drain/inj joint/bursa w/o us", code: "20610" },
+      { id: "hip-only-methylpred", type: "Procedure", title: "Injection, methylprednisolone acetate, 1 mg", code: "J1010" },
     ],
   },
   {

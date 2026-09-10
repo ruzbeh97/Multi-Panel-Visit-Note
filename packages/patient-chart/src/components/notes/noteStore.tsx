@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { CURRENT_VISIT, PREVIOUS_VISIT } from "../../data/chart";
+import { CURRENT_VISIT, PREVIOUS_VISIT, pastVisitNote, type PastVisitNoteContent } from "../../data/chart";
 
 // "blend" is treated like an overwrite here since there is no real AI merge in the prototype.
 export type ImportAction = "overwrite" | "append" | "prepend" | "blend";
@@ -49,6 +49,48 @@ export type EditableNote = {
   };
 };
 
+export const DEFAULT_NOTE_VISIT_ID = "acl-followup-14wk";
+
+function emptyNote(): EditableNote {
+  return {
+    subjective: {
+      chiefComplaint: "",
+      dateOfOnset: "",
+      stateOfCondition: "",
+      sideOfIssue: "",
+      previousSurgery: "",
+      surgeryName: "",
+      surgeryDate: "",
+      historyOfCondition: "",
+    },
+    objective: {
+      currentPain: "",
+      worstPain: "",
+      bestPain: "",
+      painDescription: "",
+      hipLeft: [],
+      hipRight: [],
+      kneeLeft: [],
+      kneeRight: [],
+    },
+    assessment: {
+      primaryDiagnosis: "",
+      dateOfOnset: "",
+      rehabPotential: "",
+      keyFindings: "",
+      goalProgress: [],
+    },
+    plan: {
+      patientGoal: "",
+      educationTopics: [],
+      goals: [],
+      treatments: [],
+      planForward: [],
+      careAgreement: "",
+    },
+  };
+}
+
 function initialNote(): EditableNote {
   return {
     subjective: { ...CURRENT_VISIT.subjective },
@@ -95,16 +137,14 @@ function mergeSingle(existing: string, incoming: string, action: ImportAction) {
   return incoming;
 }
 
-function mergeMulti(existing: string[], incoming: string[], action: ImportAction) {
-  if (action === "append") return [...existing, ...incoming.filter((value) => !existing.includes(value))];
-  if (action === "prepend") return [...incoming, ...existing.filter((value) => !incoming.includes(value))];
-  return [...incoming];
-}
-
 // Maps each SubHeading title to the fields it owns, so a carry-forward only
 // moves the content that lives under that heading.
-function applyImport(note: EditableNote, title: string, action: ImportAction): EditableNote {
-  const source = PREVIOUS_VISIT;
+function applyImport(
+  note: EditableNote,
+  title: string,
+  action: ImportAction,
+  source: PastVisitNoteContent = PREVIOUS_VISIT,
+): EditableNote {
 
   switch (title) {
     case "Chief Complaint & History":
@@ -122,27 +162,14 @@ function applyImport(note: EditableNote, title: string, action: ImportAction): E
         },
       };
 
+    case "Objective":
     case "Pain Assessment":
-      return {
-        ...note,
-        objective: {
-          ...note.objective,
-          currentPain: mergeSingle(note.objective.currentPain, source.objective.currentPain, action),
-          worstPain: mergeSingle(note.objective.worstPain, source.objective.worstPain, action),
-          bestPain: mergeSingle(note.objective.bestPain, source.objective.bestPain, action),
-          painDescription: mergeText(note.objective.painDescription, source.objective.painDescription, action),
-        },
-      };
-
     case "Muscle Strength":
       return {
         ...note,
         objective: {
           ...note.objective,
-          hipLeft: [...source.objective.hip.left],
-          hipRight: [...source.objective.hip.right],
-          kneeLeft: [...source.objective.knee.left],
-          kneeRight: [...source.objective.knee.right],
+          painDescription: mergeText(note.objective.painDescription, source.objective.painDescription, action),
         },
       };
 
@@ -159,11 +186,13 @@ function applyImport(note: EditableNote, title: string, action: ImportAction): E
       };
 
     case "Goals & Progress":
+      // Plan-of-care goals are tracked on the case rather than per note, so they
+      // always carry over from the last signed visit.
       return {
         ...note,
         assessment: {
           ...note.assessment,
-          goalProgress: source.assessment.goals.map((goal) => goal.initialProgress),
+          goalProgress: PREVIOUS_VISIT.assessment.goals.map((goal) => goal.initialProgress),
         },
       };
 
@@ -171,22 +200,14 @@ function applyImport(note: EditableNote, title: string, action: ImportAction): E
       return {
         ...note,
         plan: {
+          ...note.plan,
           patientGoal: mergeText(note.plan.patientGoal, source.plan.patientGoal, action),
-          educationTopics: mergeMulti(note.plan.educationTopics, source.plan.educationTopics, action),
-          goals: mergeMulti(note.plan.goals, source.plan.goals, action),
-          treatments: mergeMulti(note.plan.treatments, source.plan.treatments, action),
-          planForward: mergeMulti(note.plan.planForward, source.plan.planForward, action),
-          careAgreement: mergeSingle(note.plan.careAgreement, source.plan.careAgreement, action),
         },
       };
 
     default:
       return note;
   }
-}
-
-function blankCells(count: number) {
-  return Array.from({ length: count }, () => "");
 }
 
 // Empties only the fields under the given SubHeading, matching the same
@@ -208,27 +229,14 @@ function applyClear(note: EditableNote, title: string): EditableNote {
         },
       };
 
+    case "Objective":
     case "Pain Assessment":
-      return {
-        ...note,
-        objective: {
-          ...note.objective,
-          currentPain: "",
-          worstPain: "",
-          bestPain: "",
-          painDescription: "",
-        },
-      };
-
     case "Muscle Strength":
       return {
         ...note,
         objective: {
           ...note.objective,
-          hipLeft: blankCells(note.objective.hipLeft.length),
-          hipRight: blankCells(note.objective.hipRight.length),
-          kneeLeft: blankCells(note.objective.kneeLeft.length),
-          kneeRight: blankCells(note.objective.kneeRight.length),
+          painDescription: "",
         },
       };
 
@@ -257,12 +265,8 @@ function applyClear(note: EditableNote, title: string): EditableNote {
       return {
         ...note,
         plan: {
+          ...note.plan,
           patientGoal: "",
-          educationTopics: [],
-          goals: [],
-          treatments: [],
-          planForward: [],
-          careAgreement: "",
         },
       };
 
@@ -274,30 +278,32 @@ function applyClear(note: EditableNote, title: string): EditableNote {
 // Every SubHeading that carry-forward knows how to move, in note order.
 const IMPORTABLE_SECTIONS = [
   "Chief Complaint & History",
-  "Pain Assessment",
-  "Muscle Strength",
+  "Objective",
   "Diagnosis & Findings",
-  "Goals & Progress",
   "Visit Plan",
 ];
 
 export const CARRY_FORWARD_SECTIONS = [
   { label: "Entire note", titles: IMPORTABLE_SECTIONS },
   { label: "Subjective", titles: ["Chief Complaint & History"] },
-  { label: "Objective", titles: ["Pain Assessment", "Muscle Strength"] },
-  { label: "Assessment", titles: ["Diagnosis & Findings", "Goals & Progress"] },
+  { label: "Objective", titles: ["Objective"] },
+  { label: "Assessment", titles: ["Diagnosis & Findings"] },
   { label: "Plan", titles: ["Visit Plan"] },
 ] as const;
 
 type NoteStore = {
   note: EditableNote;
+  visitId: string;
+  blankVisit: boolean;
+  activateVisit: (visitId: string, options?: { blank?: boolean }) => void;
   patchSubjective: (patch: Partial<EditableNote["subjective"]>) => void;
   patchObjective: (patch: Partial<EditableNote["objective"]>) => void;
   patchAssessment: (patch: Partial<EditableNote["assessment"]>) => void;
   patchPlan: (patch: Partial<EditableNote["plan"]>) => void;
-  importSection: (title: string, action: ImportAction) => void;
+  /** `sourceNoteId` selects which signed note the content comes from. */
+  importSection: (title: string, action: ImportAction, sourceNoteId?: string | null) => void;
   clearSection: (title: string) => void;
-  importSections: (titles: string[]) => void;
+  importSections: (titles: string[], sourceNoteId?: string | null) => void;
   importWholeNote: () => void;
   undoImportWholeNote: () => void;
   canUndoImportWholeNote: boolean;
@@ -313,60 +319,139 @@ export function useNoteStore() {
   return store;
 }
 
-export function NoteStoreProvider({ children }: { children: ReactNode }) {
-  const [note, setNote] = useState<EditableNote>(initialNote);
+export function NoteStoreProvider({
+  children,
+  activeVisit,
+}: {
+  children: ReactNode;
+  activeVisit?: { id: string; blank?: boolean };
+}) {
+  const [visitId, setVisitId] = useState(activeVisit?.id ?? DEFAULT_NOTE_VISIT_ID);
+  const [notesByVisit, setNotesByVisit] = useState<Record<string, EditableNote>>({
+    [DEFAULT_NOTE_VISIT_ID]: initialNote(),
+  });
+  const [blankByVisit, setBlankByVisit] = useState<Record<string, boolean>>({
+    [DEFAULT_NOTE_VISIT_ID]: false,
+  });
   const [carryAction, setCarryAction] = useState<ImportAction>("overwrite");
   // Snapshot taken before a whole-note carry-forward so it can be undone.
   const [preImportNote, setPreImportNote] = useState<EditableNote | null>(null);
 
+  const resolvedVisitId = activeVisit?.id ?? visitId;
+  let resolvedNotes = notesByVisit;
+  let resolvedBlank = blankByVisit;
+  if (activeVisit && !notesByVisit[activeVisit.id]) {
+    resolvedNotes = {
+      ...notesByVisit,
+      [activeVisit.id]: activeVisit.blank ? emptyNote() : initialNote(),
+    };
+  }
+  if (activeVisit && !(activeVisit.id in blankByVisit)) {
+    resolvedBlank = { ...blankByVisit, [activeVisit.id]: Boolean(activeVisit.blank) };
+  }
+  if (activeVisit && (visitId !== activeVisit.id || resolvedNotes !== notesByVisit || resolvedBlank !== blankByVisit)) {
+    setVisitId(activeVisit.id);
+    if (resolvedNotes !== notesByVisit) setNotesByVisit(resolvedNotes);
+    if (resolvedBlank !== blankByVisit) setBlankByVisit(resolvedBlank);
+  }
+
+  const note = resolvedNotes[resolvedVisitId] ?? (activeVisit?.blank ? emptyNote() : initialNote());
+  const blankVisit = Boolean(resolvedBlank[resolvedVisitId]);
+
+  const activateVisit = useCallback((id: string, options?: { blank?: boolean }) => {
+    setVisitId(id);
+    setNotesByVisit((current) => {
+      if (current[id]) return current;
+      return { ...current, [id]: options?.blank ? emptyNote() : initialNote() };
+    });
+    setBlankByVisit((current) => {
+      if (id in current) return current;
+      return { ...current, [id]: Boolean(options?.blank) };
+    });
+  }, []);
+
   const patchSubjective = useCallback(
     (patch: Partial<EditableNote["subjective"]>) =>
-      setNote((current) => ({ ...current, subjective: { ...current.subjective, ...patch } })),
-    [],
+      setNotesByVisit((current) => {
+        const active = current[resolvedVisitId] ?? initialNote();
+        return { ...current, [resolvedVisitId]: { ...active, subjective: { ...active.subjective, ...patch } } };
+      }),
+    [resolvedVisitId],
   );
   const patchObjective = useCallback(
     (patch: Partial<EditableNote["objective"]>) =>
-      setNote((current) => ({ ...current, objective: { ...current.objective, ...patch } })),
-    [],
+      setNotesByVisit((current) => {
+        const active = current[resolvedVisitId] ?? initialNote();
+        return { ...current, [resolvedVisitId]: { ...active, objective: { ...active.objective, ...patch } } };
+      }),
+    [resolvedVisitId],
   );
   const patchAssessment = useCallback(
     (patch: Partial<EditableNote["assessment"]>) =>
-      setNote((current) => ({ ...current, assessment: { ...current.assessment, ...patch } })),
-    [],
+      setNotesByVisit((current) => {
+        const active = current[resolvedVisitId] ?? initialNote();
+        return { ...current, [resolvedVisitId]: { ...active, assessment: { ...active.assessment, ...patch } } };
+      }),
+    [resolvedVisitId],
   );
   const patchPlan = useCallback(
     (patch: Partial<EditableNote["plan"]>) =>
-      setNote((current) => ({ ...current, plan: { ...current.plan, ...patch } })),
-    [],
+      setNotesByVisit((current) => {
+        const active = current[resolvedVisitId] ?? initialNote();
+        return { ...current, [resolvedVisitId]: { ...active, plan: { ...active.plan, ...patch } } };
+      }),
+    [resolvedVisitId],
   );
   const importSection = useCallback(
-    (title: string, action: ImportAction) => setNote((current) => applyImport(current, title, action)),
-    [],
+    (title: string, action: ImportAction, sourceNoteId?: string | null) =>
+      setNotesByVisit((current) => {
+        const active = current[resolvedVisitId] ?? initialNote();
+        const source = pastVisitNote(sourceNoteId) ?? PREVIOUS_VISIT;
+        return { ...current, [resolvedVisitId]: applyImport(active, title, action, source) };
+      }),
+    [resolvedVisitId],
   );
   const clearSection = useCallback(
-    (title: string) => setNote((current) => applyClear(current, title)),
-    [],
+    (title: string) =>
+      setNotesByVisit((current) => {
+        const active = current[resolvedVisitId] ?? initialNote();
+        return { ...current, [resolvedVisitId]: applyClear(active, title) };
+      }),
+    [resolvedVisitId],
   );
   const importSections = useCallback(
-    (titles: string[]) => {
+    (titles: string[], sourceNoteId?: string | null) => {
       if (titles.length === 0) return;
       setPreImportNote(note);
-      setNote(titles.reduce((draft, title) => applyImport(draft, title, carryAction), note));
+      setNotesByVisit((current) => {
+        const active = current[resolvedVisitId] ?? note;
+        const source = pastVisitNote(sourceNoteId) ?? PREVIOUS_VISIT;
+        return {
+          ...current,
+          [resolvedVisitId]: titles.reduce(
+            (draft, title) => applyImport(draft, title, carryAction, source),
+            active,
+          ),
+        };
+      });
     },
-    [note, carryAction],
+    [note, carryAction, resolvedVisitId],
   );
   const importWholeNote = useCallback(() => {
     importSections(IMPORTABLE_SECTIONS);
   }, [importSections]);
   const undoImportWholeNote = useCallback(() => {
     if (!preImportNote) return;
-    setNote(preImportNote);
+    setNotesByVisit((current) => ({ ...current, [resolvedVisitId]: preImportNote }));
     setPreImportNote(null);
-  }, [preImportNote]);
+  }, [preImportNote, resolvedVisitId]);
 
   const value = useMemo(
     () => ({
       note,
+      visitId: resolvedVisitId,
+      blankVisit,
+      activateVisit,
       patchSubjective,
       patchObjective,
       patchAssessment,
@@ -382,6 +467,9 @@ export function NoteStoreProvider({ children }: { children: ReactNode }) {
     }),
     [
       note,
+      resolvedVisitId,
+      blankVisit,
+      activateVisit,
       patchSubjective,
       patchObjective,
       patchAssessment,

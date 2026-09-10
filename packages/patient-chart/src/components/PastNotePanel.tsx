@@ -10,13 +10,13 @@ import PlanSection from "./notes/PlanSection";
 import OrdersSection from "./notes/OrdersSection";
 import BillingDetailsSection from "./notes/BillingDetailsSection";
 import { PanelTitle } from "./chartPanelUi";
-import { PAST_NOTES } from "../data/chart";
+import { CURRENT_VISIT_NOTE_ID, PAST_NOTES, VISIT_NOTE_OPTIONS } from "../data/chart";
 
-function noteLabel(note: (typeof PAST_NOTES)[number]) {
+function noteLabel(note: (typeof VISIT_NOTE_OPTIONS)[number]) {
   return `${note.caseName} | ${note.visitType} | ${note.provider} ${note.date} ${note.time}`;
 }
 
-function noteMeta(note: (typeof PAST_NOTES)[number]) {
+function noteMeta(note: (typeof VISIT_NOTE_OPTIONS)[number]) {
   return `${note.caseName} · ${note.visitType} · ${note.provider} · ${note.date} · ${note.time}`;
 }
 
@@ -73,7 +73,8 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
   const store = useNoteStore();
   const carriedForward = store.canUndoImportWholeNote;
 
-  const selected = PAST_NOTES.find((note) => note.id === selectedId) ?? PAST_NOTES[0];
+  const selected = VISIT_NOTE_OPTIONS.find((note) => note.id === selectedId) ?? VISIT_NOTE_OPTIONS[0];
+  const viewingCurrentVisit = selected.id === CURRENT_VISIT_NOTE_ID;
   const sectionChoices = CARRY_FORWARD_SECTIONS.filter((section) => section.label !== "Entire note");
   const allSectionsSelected = sectionChoices.every((section) => selectedSections.includes(section.label));
 
@@ -110,7 +111,7 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
     const titles = sectionChoices
       .filter((section) => selectedSections.includes(section.label))
       .flatMap((section) => [...section.titles]);
-    store.importSections(titles);
+    store.importSections(titles, selected.id);
     setCarryOpen(false);
   }
 
@@ -132,12 +133,15 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
               <div className="h-9 w-1 shrink-0 bg-[#1132ee]" />
               <Icon name="comments_disabled" size={20} className="text-[#1132ee]" />
               <span className="min-w-0 flex-1 font-body text-[14px] leading-[22px] text-[#1a1a1a]">
-                This visit note is read only.
+                {viewingCurrentVisit
+                  ? "This is today's visit note. Edit it in the main note."
+                  : "This visit note is read only."}
               </span>
             </div>
           </div>
         </div>
 
+        {!viewingCurrentVisit && (
         <div className="flex w-full items-center px-4 pt-3">
           <div className="w-[33px] shrink-0" aria-hidden />
           <div className="ml-4 min-w-0 flex-1">
@@ -165,6 +169,7 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
             </div>
           </div>
         </div>
+        )}
 
         <div className="flex w-full items-start px-4 pt-2 pb-3">
           <div className="w-[33px] shrink-0" aria-hidden />
@@ -194,7 +199,7 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
                   aria-label="Past visit notes"
                   className="scrollbar-thin absolute left-0 top-[calc(100%+4px)] z-30 flex max-h-[320px] w-[min(360px,calc(100vw-48px))] flex-col overflow-y-auto rounded-xl border border-[#e6e6e6] bg-white py-2 shadow-[0px_12px_32px_rgba(0,0,0,0.14)]"
                 >
-                  {PAST_NOTES.map((note) => {
+                  {VISIT_NOTE_OPTIONS.map((note) => {
                     const active = note.id === selected.id;
                     return (
                       <button
@@ -241,7 +246,7 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
               </button>
 
             <div ref={carryRef} className="relative flex shrink-0 items-start">
-              {carriedForward ? (
+              {viewingCurrentVisit ? null : carriedForward ? (
                 <button
                   type="button"
                   onClick={() => store.undoImportWholeNote()}
@@ -326,7 +331,7 @@ export default function PastNotePanel({ onClose, onOpenVisit }: PastNotePanelPro
         <div className="ml-4 flex min-w-0 flex-1 flex-col items-start pb-10">
           <NoteReadOnlyProvider>
             <PastNoteSourceProvider noteId={selected.id}>
-              <div className="flex w-full flex-col items-start gap-10">
+              <div key={selected.id} className="flex w-full flex-col items-start gap-10">
                 <SubjectiveSection />
                 <ObjectiveSection />
                 <AssessmentSection />

@@ -1,9 +1,11 @@
+import { useState } from "react";
 import Icon from "./Icon";
 import { ENCOUNTERS, PATIENT, type Encounter } from "../data/chart";
 
 type VisitsNotesPageProps = {
   onOpenCurrentVisit: () => void;
   onOpenPastVisit: (noteId: string) => void;
+  onOpenBlankVisit: (noteId: string) => void;
 };
 
 type VisitRow = {
@@ -19,6 +21,7 @@ type VisitRow = {
   facility: string;
   caseId: string;
   current?: boolean;
+  blank?: boolean;
 };
 
 function formatTime(time: string) {
@@ -33,7 +36,12 @@ function visitRow(encounter: Encounter, index: number): VisitRow {
     status: index === 0 ? "Checked In" : "Completed",
     caseName: encounter.caseName,
     provider: encounter.provider,
-    clinicalNoteType: encounter.visitType === "Surgery" ? "Operative Note" : "Progress Note",
+    clinicalNoteType:
+      encounter.visitType === "Surgery"
+        ? "Operative Note"
+        : encounter.visitType === "New Patient"
+          ? "Initial Evaluation"
+          : "Progress Note",
     appointmentType: encounter.title,
     insurance: PATIENT.insurance,
     facility: encounter.visitType === "Surgery" ? "Riverside Surgical Center" : "MAIN OFFICE",
@@ -45,6 +53,8 @@ function visitRow(encounter: Encounter, index: number): VisitRow {
 // Office-note encounters can be opened from this table. The surgical encounter
 // has an operative report rather than a visit note, so it is not listed here.
 const VISITS = ENCOUNTERS.filter((encounter) => encounter.visitType !== "Surgery").map(visitRow);
+
+let persistedBookedVisits: VisitRow[] = [];
 
 // Actions stay reachable while the rest of the wide table scrolls sideways.
 const stickyActions = "sticky right-0";
@@ -87,9 +97,53 @@ function SmallChip({ children, green = false }: { children: string; green?: bool
   );
 }
 
-export default function VisitsNotesPage({ onOpenCurrentVisit, onOpenPastVisit }: VisitsNotesPageProps) {
+function padDatePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function formatBookedVisitDate(date: Date) {
+  const hours24 = date.getHours();
+  const hours = hours24 % 12 || 12;
+  const minutes = padDatePart(date.getMinutes());
+  const suffix = hours24 >= 12 ? "PM" : "AM";
+  return {
+    date: `${padDatePart(date.getMonth() + 1)}/${padDatePart(date.getDate())}/${date.getFullYear()}`,
+    time: `${hours}:${minutes} ${suffix}`,
+  };
+}
+
+export default function VisitsNotesPage({
+  onOpenCurrentVisit,
+  onOpenPastVisit,
+  onOpenBlankVisit,
+}: VisitsNotesPageProps) {
+  const [bookedVisits, setBookedVisits] = useState<VisitRow[]>(persistedBookedVisits);
+  const visits = [...bookedVisits, ...VISITS];
+
+  function bookVisit() {
+    const when = formatBookedVisitDate(new Date());
+    const template = VISITS[0];
+    const row: VisitRow = {
+      id: `booked-visit-${Date.now()}`,
+      date: when.date,
+      time: when.time,
+      status: "Scheduled",
+      caseName: template?.caseName ?? PATIENT.insurance,
+      provider: template?.provider ?? "",
+      clinicalNoteType: "Injection Type",
+      appointmentType: "Injection Visit",
+      insurance: PATIENT.insurance,
+      facility: template?.facility ?? "MAIN OFFICE",
+      caseId: template?.caseId ?? "",
+      blank: true,
+    };
+    persistedBookedVisits = [row, ...persistedBookedVisits];
+    setBookedVisits(persistedBookedVisits);
+  }
+
   function openVisit(visit: VisitRow) {
-    if (visit.current) onOpenCurrentVisit();
+    if (visit.blank) onOpenBlankVisit(visit.id);
+    else if (visit.current) onOpenCurrentVisit();
     else onOpenPastVisit(visit.id);
   }
 
@@ -121,6 +175,7 @@ export default function VisitsNotesPage({ onOpenCurrentVisit, onOpenPastVisit }:
           </button>
           <button
             type="button"
+            onClick={bookVisit}
             className="flex h-8 items-center gap-1 rounded-full bg-[#1132ee] px-3.5 text-white"
           >
             <Icon name="add" size={15} />
@@ -161,7 +216,7 @@ export default function VisitsNotesPage({ onOpenCurrentVisit, onOpenPastVisit }:
             </tr>
           </thead>
           <tbody>
-            {VISITS.map((visit, index) => (
+            {visits.map((visit, index) => (
               <tr
                 key={visit.id}
                 className={`group h-11 border-b border-[#e6e6e6] hover:bg-[#f7f9ff] ${

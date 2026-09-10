@@ -41,6 +41,18 @@ const ASSIGNEE_OPTIONS = [
   "Gavin Lake",
   "Violet Ash",
 ];
+const INSURANCE_OPTIONS = [
+  "Priority Health",
+  "California Blue Shield",
+  "Self-pay",
+  "Aetna",
+  "UHC",
+  "UnitedHealthcare",
+  "Cigna",
+  "BCBS",
+  "Medicare",
+  "Humana",
+];
 type Recipient = {
   id: string;
   name: string;
@@ -567,18 +579,29 @@ function RecipientPicker({
 export default function OrderDetailsForm({
   order,
   relatedOrders,
-  onComplete,
+  onRequestAuthorization,
+  onSendToRecipient,
   onRequiresAuthorizationChange,
   onAssociateOrder,
   onAssignedToChange,
+  onInsuranceChange,
+  onAuthDetailsChange: _onAuthDetailsChange,
   onFieldsChange,
 }: {
   order: PickedOrder;
   relatedOrders: PickedOrder[];
-  onComplete: () => void;
+  onRequestAuthorization: () => void;
+  onSendToRecipient: () => void;
   onRequiresAuthorizationChange: (value: boolean) => void;
   onAssociateOrder: (orderIds: string[]) => void;
   onAssignedToChange: (assignee: string) => void;
+  onInsuranceChange: (insurance: string) => void;
+  onAuthDetailsChange: (patch: {
+    authNumber?: string;
+    startDate?: string;
+    endDate?: string;
+    authNotes?: string;
+  }) => void;
   onFieldsChange: (fields: {
     cptCode: string;
     cptUnits: string;
@@ -626,10 +649,10 @@ export default function OrderDetailsForm({
   const [modifiers, setModifiers] = useState(savedValue("Modifiers"));
   const [notes, setNotes] = useState(savedValue("Notes"));
   const [priority, setPriority] = useState(savedValue("Priority") || (order.type === "Lab" ? "No Priority" : ""));
-  const [icd10, setIcd10] = useState(savedValue("ICD-10 Codes"));
+  const [icd10, setIcd10] = useState(savedValue("Diagnosis Codes") || savedValue("ICD-10 Codes"));
   const [icd10Codes, setIcd10Codes] = useState<string[]>(
-    savedValue("ICD-10 Codes")
-      ? savedValue("ICD-10 Codes").split(", ").filter(Boolean)
+    (savedValue("Diagnosis Codes") || savedValue("ICD-10 Codes"))
+      ? (savedValue("Diagnosis Codes") || savedValue("ICD-10 Codes")).split(", ").filter(Boolean)
       : order.type === "DME"
         ? ["M25.561"]
         : [],
@@ -665,13 +688,14 @@ export default function OrderDetailsForm({
       fields.push(
         { label: "Quantity", value: quantity },
         { label: "Refills", value: refills },
-        { label: "ICD-10 Codes", value: icd10Codes.join(", ") },
+        { label: "Diagnosis Codes", value: icd10Codes.join(", ") },
         { label: "Prescription SIG", value: sig },
       );
     }
     if (order.type === "Procedure") {
       fields.push(
         { label: "Procedure Location", value: inHouse ? "Procedure administered in-house" : "External" },
+        { label: "Diagnosis Codes", value: icd10 },
         { label: "SIG", value: sig },
         { label: "Drug Expiry Date", value: expiry },
         { label: "Lot Number", value: lot },
@@ -684,13 +708,14 @@ export default function OrderDetailsForm({
     }
     if (order.type === "Imaging") {
       fields.push(
-        { label: "ICD-10 Codes", value: icd10 },
+        { label: "Diagnosis Codes", value: icd10 },
         { label: "Priority", value: priority },
         { label: "Result Medium", value: resultMedium },
       );
     }
     if (order.type === "Lab") {
       fields.push(
+        { label: "Diagnosis Codes", value: icd10 },
         { label: "Priority", value: priority },
         { label: "Specimen Collected", value: specimenCollected ? "Yes" : "No" },
       );
@@ -734,7 +759,7 @@ export default function OrderDetailsForm({
 
   const radioName = `${order.id}-contacts`;
   // An in-house procedure has no outside recipient, so those fields are inert.
-  const contactsDisabled = readOnly || (order.type === "Procedure" && inHouse && !order.requiresAuthorization);
+  const contactsDisabled = readOnly || (order.type === "Procedure" && inHouse);
   const associatedIds = order.associatedOrderIds ?? [];
 
   return (
@@ -814,12 +839,59 @@ export default function OrderDetailsForm({
                 onChange={onAssociateOrder}
               />
               <Dropdown
+                value={order.insurance || "Priority Health"}
+                placeholder="Select insurance"
+                options={
+                  order.insurance && !INSURANCE_OPTIONS.includes(order.insurance)
+                    ? [...INSURANCE_OPTIONS, order.insurance]
+                    : INSURANCE_OPTIONS
+                }
+                disabled={readOnly}
+                compact
+                onChange={onInsuranceChange}
+              />
+              <Dropdown
                 value={order.assignedTo && order.assignedTo !== "Unassigned" ? order.assignedTo : ""}
                 placeholder="Assign to..."
                 options={ASSIGNEE_OPTIONS}
                 disabled={readOnly}
                 compact
                 onChange={onAssignedToChange}
+              />
+              <input
+                value={order.authNumber ?? ""}
+                disabled
+                readOnly
+                placeholder="Authorization Number"
+                className={VALUE}
+              />
+              <span className="flex min-w-0 w-full items-center gap-2">
+                <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
+                <input
+                  value={order.startDate ?? ""}
+                  disabled
+                  readOnly
+                  placeholder="Start Date (MM/DD/YYYY)"
+                  className={VALUE}
+                />
+              </span>
+              <span className="flex min-w-0 w-full items-center gap-2">
+                <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
+                <input
+                  value={order.endDate ?? ""}
+                  disabled
+                  readOnly
+                  placeholder="End Date (MM/DD/YYYY)"
+                  className={VALUE}
+                />
+              </span>
+              <textarea
+                value={order.authNotes ?? ""}
+                disabled
+                readOnly
+                placeholder="Auth Notes"
+                rows={2}
+                className={`${VALUE} resize-none`}
               />
             </>
           ) : null}
@@ -854,15 +926,11 @@ export default function OrderDetailsForm({
             <input
               type="checkbox"
               checked={inHouse}
-              disabled={readOnly || order.requiresAuthorization}
+              disabled={readOnly}
               onChange={(event) => setInHouse(event.target.checked)}
               className="size-4 accent-[#1132ee] disabled:opacity-40"
             />
-            <span
-              className={`font-body text-[14px] ${
-                order.requiresAuthorization ? "text-[#c4c4c4]" : "text-[#303030]"
-              }`}
-            >
+            <span className="font-body text-[14px] text-[#303030]">
               Procedure administered in-house
             </span>
           </label>
@@ -904,7 +972,7 @@ export default function OrderDetailsForm({
       {order.type === "DME" && (
         <>
           <div className={ROW}>
-            <span className={LABEL}>ICD-10 Codes</span>
+            <span className={LABEL}>Diagnosis Codes</span>
             <ChipSelect
               values={icd10Codes}
               placeholder="Add here..."
@@ -929,6 +997,16 @@ export default function OrderDetailsForm({
 
       {order.type === "Procedure" && (
         <>
+          <div className={ROW}>
+            <span className={LABEL}>Diagnosis Codes</span>
+            <Dropdown
+              value={icd10}
+              placeholder="Search for diagnosis codes..."
+              options={ICD10_OPTIONS}
+              disabled={readOnly}
+              onChange={setIcd10}
+            />
+          </div>
           <div className={ROW}>
             <span className={LABEL}>SIG</span>
             <textarea
@@ -1014,7 +1092,7 @@ export default function OrderDetailsForm({
       {order.type === "Imaging" && (
         <>
           <div className={ROW}>
-            <span className={LABEL}>ICD-10 Codes</span>
+            <span className={LABEL}>Diagnosis Codes</span>
             <Dropdown value={icd10} placeholder="Add here..." options={ICD10_OPTIONS} disabled={readOnly} onChange={setIcd10} />
           </div>
           <div className={ROW}>
@@ -1041,16 +1119,28 @@ export default function OrderDetailsForm({
       )}
 
       {order.type === "Lab" && (
-        <div className={ROW}>
-          <span className={LABEL}>Priority</span>
-          <Dropdown
-            value={priority}
-            placeholder="Select priority"
-            options={PRIORITY_OPTIONS}
-            disabled={readOnly}
-            onChange={setPriority}
-          />
-        </div>
+        <>
+          <div className={ROW}>
+            <span className={LABEL}>Diagnosis Codes</span>
+            <Dropdown
+              value={icd10}
+              placeholder="Search for diagnosis codes..."
+              options={ICD10_OPTIONS}
+              disabled={readOnly}
+              onChange={setIcd10}
+            />
+          </div>
+          <div className={ROW}>
+            <span className={LABEL}>Priority</span>
+            <Dropdown
+              value={priority}
+              placeholder="Select priority"
+              options={PRIORITY_OPTIONS}
+              disabled={readOnly}
+              onChange={setPriority}
+            />
+          </div>
+        </>
       )}
 
       <div className={ROW}>
@@ -1095,13 +1185,24 @@ export default function OrderDetailsForm({
       <div className="flex w-full items-center gap-4 pt-4">
         <span className="font-body text-[12px] text-[#8a8a8a]">Created by Ruzbeh Irani</span>
         {!readOnly && (
-          <button
-            type="button"
-            onClick={onComplete}
-            className="font-body text-[13px] font-medium text-[#1132ee] hover:underline"
-          >
-            Complete & Send Order
-          </button>
+          <div className="flex items-center gap-4">
+            {order.requiresAuthorization && (
+              <button
+                type="button"
+                onClick={onRequestAuthorization}
+                className="font-body text-[13px] font-medium text-[#1132ee] hover:underline"
+              >
+                Request Authorization
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onSendToRecipient}
+              className="font-body text-[13px] font-medium text-[#1132ee] hover:underline"
+            >
+              Send Order To Recipient
+            </button>
+          </div>
         )}
       </div>
     </div>
