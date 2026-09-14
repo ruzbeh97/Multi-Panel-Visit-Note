@@ -172,7 +172,7 @@ function authorizationGroups(orders: PickedOrder[]): OrderAuthorizationGroup[] {
 // A group keeps the number it was first given, so later authorizations become 2, 3, and so on
 // even when earlier groups grow, shrink, or get removed. A standalone order that requires
 // authorization counts as its own group.
-function withAuthGroupNumbers(orders: PickedOrder[]): PickedOrder[] {
+export function withAuthGroupNumbers(orders: PickedOrder[]): PickedOrder[] {
   const assigned = new Map<string, number>();
   let highest = orders.reduce((max, entry) => Math.max(max, entry.authGroupNumber ?? 0), 0);
 
@@ -191,7 +191,7 @@ function withAuthGroupNumbers(orders: PickedOrder[]): PickedOrder[] {
   });
 }
 
-function linkedOrderIds(orders: PickedOrder[], sourceId: string) {
+export function linkedOrderIds(orders: PickedOrder[], sourceId: string) {
   const source = orders.find((entry) => entry.id === sourceId);
   const ids = new Set<string>([sourceId, ...(source?.associatedOrderIds ?? [])]);
   for (const entry of orders) {
@@ -273,7 +273,7 @@ function withTrackerAuthStates(orders: PickedOrder[]): PickedOrder[] {
   });
 }
 
-function withRequestedAuthorization(orders: PickedOrder[], ids: string[]) {
+export function withRequestedAuthorization(orders: PickedOrder[], ids: string[]) {
   const submit = new Set(ids);
   return orders.map((entry) => {
     if (!submit.has(entry.id) || !entry.requiresAuthorization) return entry;
@@ -286,7 +286,7 @@ function withRequestedAuthorization(orders: PickedOrder[], ids: string[]) {
   });
 }
 
-function withSentToRecipient(orders: PickedOrder[], ids: string[]) {
+export function withSentToRecipient(orders: PickedOrder[], ids: string[]) {
   const submit = new Set(ids);
   return orders.map((entry) =>
     submit.has(entry.id)
@@ -300,7 +300,7 @@ function withSentToRecipient(orders: PickedOrder[], ids: string[]) {
   );
 }
 
-function publishAuthorizations(orders: PickedOrder[]) {
+export function publishAuthorizations(orders: PickedOrder[]) {
   const submitted = orders.filter((order) => order.status !== "Draft");
   window.dispatchEvent(
     new CustomEvent(ORDER_AUTHORIZATIONS_EVENT, {
@@ -309,7 +309,7 @@ function publishAuthorizations(orders: PickedOrder[]) {
   );
 }
 
-function orderStatusChipClass(status: string) {
+export function orderStatusChipClass(status: string) {
   if (status === "Sent" || status === "Authorized" || status === "Scheduled" || status === "Ready To Schedule") {
     return "bg-[#e6f4ea] text-[#137333]";
   }
@@ -319,24 +319,24 @@ function orderStatusChipClass(status: string) {
   return "bg-[#ececec] text-[#5f5f5f]";
 }
 
-function withLinkedAssignee(orders: PickedOrder[], sourceId: string, assignedTo: string): PickedOrder[] {
+export function withLinkedAssignee(orders: PickedOrder[], sourceId: string, assignedTo: string): PickedOrder[] {
   const linkedIds = new Set(linkedOrderIds(orders, sourceId));
   return orders.map((entry) => (linkedIds.has(entry.id) ? { ...entry, assignedTo } : entry));
 }
 
-function withLinkedInsurance(orders: PickedOrder[], sourceId: string, insurance: string): PickedOrder[] {
+export function withLinkedInsurance(orders: PickedOrder[], sourceId: string, insurance: string): PickedOrder[] {
   const linkedIds = new Set(linkedOrderIds(orders, sourceId));
   return orders.map((entry) => (linkedIds.has(entry.id) ? { ...entry, insurance } : entry));
 }
 
 type AuthDetailPatch = Pick<PickedOrder, "authNumber" | "startDate" | "endDate" | "authNotes">;
 
-function withLinkedAuthDetails(orders: PickedOrder[], sourceId: string, patch: AuthDetailPatch): PickedOrder[] {
+export function withLinkedAuthDetails(orders: PickedOrder[], sourceId: string, patch: AuthDetailPatch): PickedOrder[] {
   const linkedIds = new Set(linkedOrderIds(orders, sourceId));
   return orders.map((entry) => (linkedIds.has(entry.id) ? { ...entry, ...patch } : entry));
 }
 
-function withLinkedAuthorization(
+export function withLinkedAuthorization(
   orders: PickedOrder[],
   sourceId: string,
   patch: Partial<Pick<PickedOrder, "requiresAuthorization" | "associatedOrderIds">>,

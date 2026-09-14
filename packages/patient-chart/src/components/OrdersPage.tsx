@@ -7,6 +7,8 @@ import ManageTemplatesDrawer, {
 } from "./ManageTemplatesDrawer";
 import NewOrderDrawer from "./NewOrderDrawer";
 import OrderSetDrawer from "./OrderSetDrawer";
+import type { OrderKind, PickedOrder } from "./notes/OrderPickerModal";
+import { ORDER_AUTH_STATE_EVENT } from "./notes/OrdersSection";
 import { ASSOCIATE_PROVIDER, CLINIC_ASSISTANT, PATIENT, PROVIDER } from "../data/chart";
 
 type OrderStatus =
@@ -35,6 +37,7 @@ const ORDER_TYPES = [
 
 const SHARED_COLUMNS: Column[] = [
   { key: "status", label: "Status", minWidth: "82px" },
+  { key: "authState", label: "Auth State", minWidth: "150px" },
   { key: "patient", label: "Patient Name", minWidth: "135px" },
   { key: "expects", label: "Expects Response", minWidth: "125px" },
   { key: "priority", label: "Priority", minWidth: "95px" },
@@ -68,6 +71,7 @@ const LAB_COLUMNS: Column[] = [
 
 const HEALTH_GORILLA_COLUMNS: Column[] = [
   { key: "status", label: "Status", minWidth: "95px" },
+  { key: "authState", label: "Auth State", minWidth: "150px" },
   { key: "interpretation", label: "Interpretation", minWidth: "145px" },
   { key: "patient", label: "Patient Name", minWidth: "140px" },
   { key: "priority", label: "Priority", minWidth: "100px" },
@@ -95,6 +99,7 @@ const PROCEDURE_COLUMNS: Column[] = [
 
 const MEDICATION_COLUMNS: Column[] = [
   { key: "status", label: "Status", minWidth: "170px" },
+  { key: "authState", label: "Auth State", minWidth: "150px" },
   { key: "patient", label: "Patient", minWidth: "145px" },
   { key: "drug", label: "Drug Name", minWidth: "130px" },
   { key: "sig", label: "Sig", minWidth: "190px" },
@@ -262,6 +267,132 @@ const MEDICATIONS: OrderRow[] = [
     pharmacy: "CVS Pharmacy",
   }),
 ];
+
+// Orders drafted in the Order Set drawer keep their row after the drawer closes,
+// and survive a refresh the same way the working note does.
+type CreatedOrder = { kind: OrderKind; sourceOrderId: string; row: OrderRow };
+
+const CREATED_ORDERS_KEY = "patient-chart:order-set-rows";
+const ORDER_AUTH_STORAGE_KEY = "prior-auth:order-records";
+const TRACKER_AUTH_STATES = new Set([
+  "Needs Authorization",
+  "Auth Requested",
+  "Authorized",
+  "Ready To Schedule",
+  "Scheduled",
+  "Schedule Attempt 1",
+  "Schedule Attempt 2",
+  "Schedule Attempt 3",
+  "Archived",
+]);
+
+function sourceOrderIdOf(entry: CreatedOrder): string {
+  return entry.sourceOrderId || String(entry.row.id).replace(/^set-/, "");
+}
+
+function authStateByOrderId(): Map<string, string> {
+  const byId = new Map<string, string>();
+  try {
+    const raw = window.localStorage.getItem(ORDER_AUTH_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!Array.isArray(parsed)) return byId;
+    for (const record of parsed as Array<{ state?: string; orderCpts?: Array<{ orderId?: string }> }>) {
+      if (!record.state) continue;
+      for (const order of record.orderCpts ?? []) {
+        if (order.orderId) byId.set(order.orderId, record.state);
+      }
+    }
+  } catch {
+    // Storage can be unavailable in private browsing; live events still update an open page.
+  }
+  return byId;
+}
+
+function orderAuthState(order: PickedOrder): string {
+  const fromTracker = authStateByOrderId().get(order.id);
+  if (fromTracker) return fromTracker;
+  if (!order.requiresAuthorization) return "-";
+  if (TRACKER_AUTH_STATES.has(order.status)) return order.status;
+  if (order.status === "Needs Auth") return "Needs Authorization";
+  if (order.status !== "Draft" && order.status !== "Sent") return order.status;
+  return "-";
+}
+
+function withTrackerAuthStates(entries: CreatedOrder[]): CreatedOrder[] {
+  const byId = authStateByOrderId();
+  return entries.map((entry) => {
+    const sourceOrderId = sourceOrderIdOf(entry);
+    const state = byId.get(sourceOrderId);
+    if (!state) return { ...entry, sourceOrderId };
+    return { ...entry, sourceOrderId, row: { ...entry.row, authState: state } };
+  });
+}
+
+function loadCreatedOrders(): CreatedOrder[] {
+  try {
+    const raw = window.localStorage.getItem(CREATED_ORDERS_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? withTrackerAuthStates(parsed as CreatedOrder[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function storeCreatedOrders(entries: CreatedOrder[]) {
+  try {
+    window.localStorage.setItem(CREATED_ORDERS_KEY, JSON.stringify(entries));
+  } catch {
+    // Storage can be unavailable in private browsing; the page still works in memory.
+  }
+}
+
+function createdOrderRow(order: PickedOrder, appointment: string): OrderRow {
+  const base: OrderRow = {
+    id: `set-${order.id}`,
+    status: order.sent || order.status === "Sent" ? "Sent" : "Draft",
+    authState: orderAuthState(order),
+    patient,
+    expects: "No",
+    priority: "-",
+    provider: PROVIDER.name,
+    recipients: "-",
+    date: order.createdAt.split(" ")[0] || order.createdAt,
+    facility: "MAIN OFFICE",
+    appointment,
+    note: "-",
+  };
+
+  if (order.type === "Imaging") return { ...base, medium: "-", description: order.title };
+  if (order.type === "Lab") return { ...base, note: order.title };
+  if (order.type === "DME") return { ...base, prescription: "-", note: order.title };
+  if (order.type === "Procedure") return { ...base, procedure: order.title };
+  return {
+    ...base,
+    drug: order.title,
+    sig: "Take as directed",
+    controlled: "Non-Ctrl",
+    createdBy: PROVIDER.name,
+    quantity: "1",
+    refills: "0",
+    pharmacy: "-",
+  };
+}
+
+function AuthStateChip({ state }: { state: string }) {
+  if (!state || state === "-") return <span>-</span>;
+  if (state === "Authorized" || state === "Scheduled" || state === "Ready To Schedule") {
+    return (
+      <span className="inline-flex rounded-lg bg-[#e6f2d9] px-2 py-0.5 font-body text-[11px] font-medium text-[#4f7326]">
+        {state}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex whitespace-nowrap rounded-lg bg-[#ececec] px-2 py-0.5 font-body text-[11px] font-medium text-[#303030]">
+      {state}
+    </span>
+  );
+}
 
 function StatusPill({ status }: { status: OrderStatus }) {
   if (status === "Cancelled" || status === "Denied") {
@@ -439,6 +570,8 @@ function OrderTable({
                       >
                         {column.key === "status" ? (
                           <StatusPill status={order.status} />
+                        ) : column.key === "authState" ? (
+                          <AuthStateChip state={String(order.authState || "-")} />
                         ) : column.key === "controlled" && order.controlled ? (
                           <span className="inline-flex rounded-full bg-[#ececec] px-2.5 py-0.5 font-body text-[11px] font-medium text-[#5f5f5f]">
                             {order.controlled}
@@ -463,12 +596,21 @@ function OrderTable({
   );
 }
 
-function MedicationSection({ siteWide = false }: { siteWide?: boolean }) {
+function MedicationSection({
+  siteWide = false,
+  createdRows = [],
+}: {
+  siteWide?: boolean;
+  createdRows?: OrderRow[];
+}) {
   const [tab, setTab] = useState<"Controlled" | "Non-Controlled">("Non-Controlled");
   const rows = tab === "Non-Controlled"
-    ? siteWide
-      ? siteRows(MEDICATIONS, true).sort((a, b) => String(a.patient).localeCompare(String(b.patient)))
-      : MEDICATIONS
+    ? [
+        ...createdRows,
+        ...(siteWide
+          ? siteRows(MEDICATIONS, true).sort((a, b) => String(a.patient).localeCompare(String(b.patient)))
+          : MEDICATIONS),
+      ]
     : [];
 
   return (
@@ -517,6 +659,36 @@ export default function OrdersPage({ siteWide = false }: OrdersPageProps) {
   const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
   const templateMenuRef = useRef<HTMLDivElement>(null);
   const orderMenuRef = useRef<HTMLDivElement>(null);
+  const [createdOrders, setCreatedOrders] = useState<CreatedOrder[]>(loadCreatedOrders);
+
+  useEffect(() => {
+    storeCreatedOrders(createdOrders);
+  }, [createdOrders]);
+
+  useEffect(() => {
+    function applyAuthState(event: Event) {
+      const detail = (event as CustomEvent<{ orderIds?: string[]; state?: string }>).detail;
+      if (!detail.orderIds?.length || !detail.state) return;
+      const ids = new Set(detail.orderIds);
+      setCreatedOrders((current) =>
+        current.map((entry) => {
+          const sourceOrderId = sourceOrderIdOf(entry);
+          if (!ids.has(sourceOrderId)) return entry;
+          return {
+            ...entry,
+            sourceOrderId,
+            row: { ...entry.row, authState: detail.state },
+          };
+        }),
+      );
+    }
+    window.addEventListener(ORDER_AUTH_STATE_EVENT, applyAuthState);
+    return () => window.removeEventListener(ORDER_AUTH_STATE_EVENT, applyAuthState);
+  }, []);
+
+  const createdRows = (kind: OrderKind) =>
+    createdOrders.filter((entry) => entry.kind === kind).map((entry) => entry.row);
+  const withCreated = (kind: OrderKind, rows: OrderRow[]) => [...createdRows(kind), ...rows];
 
   useEffect(() => {
     if (!templateMenuOpen && !orderMenuOpen) return;
@@ -576,7 +748,22 @@ export default function OrdersPage({ siteWide = false }: OrdersPageProps) {
   return (
     <div className="scrollbar-thin min-h-0 min-w-0 flex-1 self-stretch overflow-y-auto bg-white">
       {orderOpen ? <NewOrderDrawer onClose={() => setOrderOpen(false)} /> : null}
-      {orderSetOpen ? <OrderSetDrawer onClose={() => setOrderSetOpen(false)} /> : null}
+      {orderSetOpen ? (
+        <OrderSetDrawer
+          onClose={() => setOrderSetOpen(false)}
+          onSave={(orders, appointment) =>
+            setCreatedOrders((current) => {
+              const saved = orders.map((order) => ({
+                kind: order.type,
+                sourceOrderId: order.id,
+                row: createdOrderRow(order, appointment),
+              }));
+              const savedIds = new Set(saved.map((entry) => entry.row.id));
+              return [...saved, ...current.filter((entry) => !savedIds.has(entry.row.id))];
+            })
+          }
+        />
+      ) : null}
       {manageTemplatesOpen ? (
         <ManageTemplatesDrawer
           templates={templates}
@@ -728,13 +915,13 @@ export default function OrdersPage({ siteWide = false }: OrdersPageProps) {
           </div>
         </div>
 
-        <MedicationSection siteWide={siteWide} />
+        <MedicationSection siteWide={siteWide} createdRows={createdRows("Medication")} />
         <OrderTable title="Referral" columns={REFERRAL_COLUMNS} rows={siteWide ? siteRows(REFERRALS) : REFERRALS} />
-        <OrderTable title="Imaging" columns={IMAGING_COLUMNS} rows={siteWide ? siteRows(IMAGING) : IMAGING} />
-        <OrderTable title="Lab" columns={LAB_COLUMNS} rows={siteWide ? siteRows(LABS) : LABS} />
+        <OrderTable title="Imaging" columns={IMAGING_COLUMNS} rows={withCreated("Imaging", siteWide ? siteRows(IMAGING) : IMAGING)} />
+        <OrderTable title="Lab" columns={LAB_COLUMNS} rows={withCreated("Lab", siteWide ? siteRows(LABS) : LABS)} />
         <OrderTable title="HealthGorilla Labs" columns={HEALTH_GORILLA_COLUMNS} rows={siteWide ? siteRows(HEALTH_GORILLA) : HEALTH_GORILLA} actions="view" />
-        <OrderTable title="DME" columns={DME_COLUMNS} rows={siteWide ? siteRows(DME) : DME} />
-        <OrderTable title="Procedures & Injections" columns={PROCEDURE_COLUMNS} rows={siteWide ? siteRows(PROCEDURES) : PROCEDURES} />
+        <OrderTable title="DME" columns={DME_COLUMNS} rows={withCreated("DME", siteWide ? siteRows(DME) : DME)} />
+        <OrderTable title="Procedures & Injections" columns={PROCEDURE_COLUMNS} rows={withCreated("Procedure", siteWide ? siteRows(PROCEDURES) : PROCEDURES)} />
         <OrderTable
           title="Custom"
           columns={SHARED_COLUMNS}

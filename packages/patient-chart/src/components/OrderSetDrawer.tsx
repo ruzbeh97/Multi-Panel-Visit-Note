@@ -5,6 +5,18 @@ import OrderPickerModal, {
   type OrderDetailField,
   type PickedOrder,
 } from "./notes/OrderPickerModal";
+import {
+  linkedOrderIds,
+  orderStatusChipClass,
+  publishAuthorizations,
+  withAuthGroupNumbers,
+  withLinkedAssignee,
+  withLinkedAuthDetails,
+  withLinkedAuthorization,
+  withLinkedInsurance,
+  withRequestedAuthorization,
+  withSentToRecipient,
+} from "./notes/OrdersSection";
 
 const ICON_TONES = {
   blue: "text-[#1132ee]",
@@ -16,21 +28,21 @@ function deliveryStatus(order: PickedOrder) {
   return order.sent || order.status === "Sent" ? "Sent" : "Draft";
 }
 
-function statusClass(status: string) {
-  return status === "Sent"
-    ? "bg-[#e6f4ea] text-[#137333]"
-    : "bg-[rgba(17,50,238,0.08)] text-[#1132ee]";
-}
-
 function DrawerOrderRow({
   order,
   orders,
-  onChange,
+  onOrdersChange,
+  onFieldsChange,
   onRemove,
 }: {
   order: PickedOrder;
   orders: PickedOrder[];
-  onChange: (update: (order: PickedOrder) => PickedOrder) => void;
+  onOrdersChange: (update: (orders: PickedOrder[]) => PickedOrder[]) => void;
+  onFieldsChange: (fields: {
+    cptCode: string;
+    cptUnits: string;
+    authDetailFields: OrderDetailField[];
+  }) => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -59,13 +71,38 @@ function DrawerOrderRow({
             />
           </button>
           <div className="flex shrink-0 items-center gap-2">
-            {order.requiresAuthorization && order.status !== "Draft" && order.status !== "Sent" ? (
-              <span className="whitespace-nowrap rounded-md bg-[#ececec] px-2 py-0.5 font-body text-[12px] font-medium leading-4.5 text-[#5f5f5f]">
-                {order.status}
+            {order.requiresAuthorization && (
+              <span
+                className="flex size-6 items-center justify-center rounded-full bg-[#ececec] font-body text-[12px] font-medium text-[#5f5f5f]"
+                title={
+                  order.authGroupNumber
+                    ? `Authorization group ${order.authGroupNumber}`
+                    : "Requires authorization"
+                }
+                aria-label={
+                  order.authGroupNumber
+                    ? `Authorization group ${order.authGroupNumber}`
+                    : "Requires authorization"
+                }
+              >
+                {order.authGroupNumber ? (
+                  order.authGroupNumber
+                ) : (
+                  <Icon name="assignment" size={16} className="text-[#5f5f5f]" />
+                )}
+              </span>
+            )}
+            {order.requiresAuthorization &&
+            order.status !== "Draft" &&
+            order.status !== "Sent" ? (
+              <span
+                className={`whitespace-nowrap rounded-md px-2 py-0.5 font-body text-[12px] font-medium leading-4.5 ${orderStatusChipClass(order.status)}`}
+              >
+                {order.status === "Needs Auth" ? "Needs Authorization" : order.status}
               </span>
             ) : null}
             <span
-              className={`whitespace-nowrap rounded-md px-2 py-0.5 font-body text-[12px] font-medium leading-4.5 ${statusClass(delivery)}`}
+              className={`whitespace-nowrap rounded-md px-2 py-0.5 font-body text-[12px] font-medium leading-4.5 ${orderStatusChipClass(delivery)}`}
             >
               {delivery}
             </span>
@@ -86,49 +123,50 @@ function DrawerOrderRow({
               order={order}
               relatedOrders={orders.filter((entry) => entry.id !== order.id)}
               onRequestAuthorization={() =>
-                onChange((entry) => ({
-                  ...entry,
-                  status: entry.requiresAuthorization ? "Needs Authorization" : entry.status,
-                }))
-              }
-              onSendToRecipient={() => onChange((entry) => ({ ...entry, sent: true }))}
-              onRequiresAuthorizationChange={(value) =>
-                onChange((entry) => ({
-                  ...entry,
-                  requiresAuthorization: value,
-                  status: value ? entry.status : "Draft",
-                  associatedOrderIds: value ? entry.associatedOrderIds : [],
-                }))
-              }
-              onAssociateOrder={(associatedOrderIds) =>
-                onChange((entry) => ({ ...entry, associatedOrderIds }))
-              }
-              onAssignedToChange={(assignedTo) =>
-                onChange((entry) => ({ ...entry, assignedTo }))
-              }
-              onInsuranceChange={(insurance) =>
-                onChange((entry) => ({ ...entry, insurance }))
-              }
-              onAuthDetailsChange={(patch) =>
-                onChange((entry) => ({ ...entry, ...patch }))
-              }
-              onFieldsChange={(fields: {
-                cptCode: string;
-                cptUnits: string;
-                authDetailFields: OrderDetailField[];
-              }) =>
-                onChange((entry) => {
-                  if (
-                    entry.cptCode === fields.cptCode &&
-                    entry.cptUnits === fields.cptUnits &&
-                    JSON.stringify(entry.authDetailFields ?? []) ===
-                      JSON.stringify(fields.authDetailFields)
-                  ) {
-                    return entry;
-                  }
-                  return { ...entry, ...fields };
+                onOrdersChange((current) => {
+                  const next = withRequestedAuthorization(
+                    current,
+                    linkedOrderIds(current, order.id),
+                  );
+                  publishAuthorizations(next);
+                  return next;
                 })
               }
+              onSendToRecipient={() =>
+                onOrdersChange((current) => withSentToRecipient(current, [order.id]))
+              }
+              onRequiresAuthorizationChange={(value) =>
+                onOrdersChange((current) =>
+                  withLinkedAuthorization(current, order.id, { requiresAuthorization: value }),
+                )
+              }
+              onAssociateOrder={(associatedOrderIds) =>
+                onOrdersChange((current) =>
+                  withLinkedAuthorization(current, order.id, { associatedOrderIds }),
+                )
+              }
+              onAssignedToChange={(assignee) =>
+                onOrdersChange((current) => {
+                  const next = withLinkedAssignee(current, order.id, assignee || "Unassigned");
+                  if (next.some((entry) => entry.status !== "Draft")) publishAuthorizations(next);
+                  return next;
+                })
+              }
+              onInsuranceChange={(insurance) =>
+                onOrdersChange((current) => {
+                  const next = withLinkedInsurance(current, order.id, insurance);
+                  if (next.some((entry) => entry.status !== "Draft")) publishAuthorizations(next);
+                  return next;
+                })
+              }
+              onAuthDetailsChange={(patch) =>
+                onOrdersChange((current) => {
+                  const next = withLinkedAuthDetails(current, order.id, patch);
+                  if (next.some((entry) => entry.status !== "Draft")) publishAuthorizations(next);
+                  return next;
+                })
+              }
+              onFieldsChange={onFieldsChange}
             />
           </div>
         ) : null}
@@ -137,27 +175,37 @@ function DrawerOrderRow({
   );
 }
 
-export default function OrderSetDrawer({ onClose }: { onClose: () => void }) {
+export default function OrderSetDrawer({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void;
+  onSave?: (orders: PickedOrder[], appointment: string) => void;
+}) {
   const [appointment, setAppointment] = useState("08/10/2026 11:50 AM");
-  const [orders, setOrders] = useState<PickedOrder[]>([]);
+  const [orders, setOrdersState] = useState<PickedOrder[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const addOrderRef = useRef<HTMLButtonElement>(null);
 
+  // Closing hands the orders to the Orders page, so drafts land in their tables.
+  const saveRef = useRef<() => void>(() => {});
+  saveRef.current = () => {
+    if (orders.length > 0) onSave?.(orders, appointment);
+    onClose();
+  };
+  const closeDrawer = () => saveRef.current();
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !pickerOpen) onClose();
+      if (event.key === "Escape" && !pickerOpen) saveRef.current();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, pickerOpen]);
+  }, [pickerOpen]);
 
-  const updateOrder = (
-    orderId: string,
-    update: (order: PickedOrder) => PickedOrder,
-  ) => {
-    setOrders((current) =>
-      current.map((entry) => (entry.id === orderId ? update(entry) : entry)),
-    );
+  // Authorization groups renumber on every change, exactly as they do in the note.
+  const setOrders = (update: (orders: PickedOrder[]) => PickedOrder[]) => {
+    setOrdersState((current) => withAuthGroupNumbers(update(current)));
   };
 
   return (
@@ -166,14 +214,14 @@ export default function OrderSetDrawer({ onClose }: { onClose: () => void }) {
         type="button"
         aria-label="Close order set"
         className="absolute inset-0 bg-black/20"
-        onClick={onClose}
+        onClick={closeDrawer}
       />
       <aside className="relative flex h-full w-[min(1000px,100vw)] flex-col bg-[#f7f7f7] shadow-[-8px_0_32px_rgba(0,0,0,0.12)]">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#dedede] bg-white px-7">
           <h2 className="font-body text-[20px] font-medium text-[#1a1a1a]">Order Set</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeDrawer}
             aria-label="Close"
             className="flex size-9 items-center justify-center rounded-full border border-[#e1e1e1] text-[#666666] hover:bg-[#f5f5f5]"
           >
@@ -224,17 +272,15 @@ export default function OrderSetDrawer({ onClose }: { onClose: () => void }) {
               type="button"
               disabled={orders.length === 0}
               onClick={() =>
-                setOrders((current) =>
-                  current.map((entry) => ({
-                    ...entry,
-                    sent: true,
-                    status: entry.requiresAuthorization
-                      ? entry.status === "Draft"
-                        ? "Needs Authorization"
-                        : entry.status
-                      : "Sent",
-                  })),
-                )
+                setOrders((current) => {
+                  const ids = current.map((entry) => entry.id);
+                  const next = withSentToRecipient(
+                    withRequestedAuthorization(current, ids),
+                    ids,
+                  );
+                  publishAuthorizations(next);
+                  return next;
+                })
               }
               className="font-body text-[14px] font-medium text-[#1132ee] hover:underline disabled:text-[#c4c4c4] disabled:no-underline"
             >
@@ -253,11 +299,27 @@ export default function OrderSetDrawer({ onClose }: { onClose: () => void }) {
                   key={order.id}
                   order={order}
                   orders={orders}
-                  onChange={(update) => updateOrder(order.id, update)}
+                  onOrdersChange={setOrders}
+                  onFieldsChange={(fields) =>
+                    setOrders((current) => {
+                      const entry = current.find((candidate) => candidate.id === order.id);
+                      if (
+                        !entry ||
+                        (entry.cptCode === fields.cptCode &&
+                          entry.cptUnits === fields.cptUnits &&
+                          JSON.stringify(entry.authDetailFields ?? []) ===
+                            JSON.stringify(fields.authDetailFields))
+                      ) {
+                        // Same array identity keeps the form's sync effect from looping.
+                        return current;
+                      }
+                      return current.map((candidate) =>
+                        candidate.id === order.id ? { ...candidate, ...fields } : candidate,
+                      );
+                    })
+                  }
                   onRemove={() =>
-                    setOrders((current) =>
-                      current.filter((entry) => entry.id !== order.id),
-                    )
+                    setOrders((current) => current.filter((entry) => entry.id !== order.id))
                   }
                 />
               ))
@@ -269,9 +331,7 @@ export default function OrderSetDrawer({ onClose }: { onClose: () => void }) {
           <OrderPickerModal
             anchorRef={addOrderRef}
             onClose={() => setPickerOpen(false)}
-            onSelect={(selected) =>
-              setOrders((current) => [...current, ...selected])
-            }
+            onSelect={(selected) => setOrders((current) => [...current, ...selected])}
           />
         ) : null}
       </aside>
