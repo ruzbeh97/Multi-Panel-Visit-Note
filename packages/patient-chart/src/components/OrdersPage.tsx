@@ -6,6 +6,7 @@ import ManageTemplatesDrawer, {
   type SavedTemplate,
 } from "./ManageTemplatesDrawer";
 import NewOrderDrawer from "./NewOrderDrawer";
+import OrderSetDrawer from "./OrderSetDrawer";
 import { ASSOCIATE_PROVIDER, CLINIC_ASSISTANT, PATIENT, PROVIDER } from "../data/chart";
 
 type OrderStatus =
@@ -507,22 +508,27 @@ export type OrdersPageProps = {
 export default function OrdersPage({ siteWide = false }: OrdersPageProps) {
   const [statusTab, setStatusTab] = useState("All");
   const [orderOpen, setOrderOpen] = useState(false);
+  const [orderSetOpen, setOrderSetOpen] = useState(false);
+  const [orderMenuOpen, setOrderMenuOpen] = useState(false);
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [templateBuilderOpen, setTemplateBuilderOpen] = useState(false);
   const [manageTemplatesOpen, setManageTemplatesOpen] = useState(false);
   const [templates, setTemplates] = useState<SavedTemplate[]>(INITIAL_TEMPLATES);
   const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
   const templateMenuRef = useRef<HTMLDivElement>(null);
+  const orderMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!templateMenuOpen) return;
+    if (!templateMenuOpen && !orderMenuOpen) return;
     function onPointerDown(event: MouseEvent) {
-      if (!templateMenuRef.current?.contains(event.target as Node)) {
-        setTemplateMenuOpen(false);
-      }
+      const target = event.target as Node;
+      if (!templateMenuRef.current?.contains(target)) setTemplateMenuOpen(false);
+      if (!orderMenuRef.current?.contains(target)) setOrderMenuOpen(false);
     }
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setTemplateMenuOpen(false);
+      if (event.key !== "Escape") return;
+      setTemplateMenuOpen(false);
+      setOrderMenuOpen(false);
     }
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -530,7 +536,7 @@ export default function OrdersPage({ siteWide = false }: OrdersPageProps) {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [templateMenuOpen]);
+  }, [templateMenuOpen, orderMenuOpen]);
 
   if (templateBuilderOpen) {
     return (
@@ -570,6 +576,7 @@ export default function OrdersPage({ siteWide = false }: OrdersPageProps) {
   return (
     <div className="scrollbar-thin min-h-0 min-w-0 flex-1 self-stretch overflow-y-auto bg-white">
       {orderOpen ? <NewOrderDrawer onClose={() => setOrderOpen(false)} /> : null}
+      {orderSetOpen ? <OrderSetDrawer onClose={() => setOrderSetOpen(false)} /> : null}
       {manageTemplatesOpen ? (
         <ManageTemplatesDrawer
           templates={templates}
@@ -638,14 +645,49 @@ export default function OrdersPage({ siteWide = false }: OrdersPageProps) {
                 </div>
               ) : null}
             </div>
-            <button
-              type="button"
-              onClick={() => setOrderOpen(true)}
-              className="flex h-8 items-center gap-1 rounded-full bg-[#1132ee] px-4 text-white"
-            >
-              <Icon name="add" size={16} />
-              <span className="font-body text-[13px] font-medium">Order</span>
-            </button>
+            <div ref={orderMenuRef} className="relative">
+              <div className="flex h-8 overflow-hidden rounded-full bg-[#1132ee] text-white">
+                <button
+                  type="button"
+                  onClick={() => setOrderSetOpen(true)}
+                  className="flex items-center gap-1 px-4"
+                  aria-label="Add order set"
+                >
+                  <Icon name="add" size={16} />
+                  <span className="font-body text-[13px] font-medium">Order Set</span>
+                </button>
+                <span className="w-px self-stretch bg-white/35" aria-hidden />
+                <button
+                  type="button"
+                  aria-label="More order actions"
+                  aria-haspopup="menu"
+                  aria-expanded={orderMenuOpen}
+                  onClick={() => setOrderMenuOpen((open) => !open)}
+                  className="flex w-8 items-center justify-center hover:bg-white/10"
+                >
+                  <Icon name="arrow_drop_down" size={18} />
+                </button>
+              </div>
+              {orderMenuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute left-0 top-[calc(100%+6px)] z-30 min-w-[220px] overflow-hidden rounded-xl bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOrderMenuOpen(false);
+                      setOrderOpen(true);
+                    }}
+                    className="flex h-11 w-full items-center gap-2 px-4 text-left font-body text-[16px] text-[#1a1a1a] hover:bg-[#f5f5f5]"
+                  >
+                    <Icon name="add" size={18} />
+                    Order
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
