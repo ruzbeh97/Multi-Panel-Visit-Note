@@ -8,8 +8,22 @@ const LABEL = "w-[168px] shrink-0 pt-1.5 font-body text-[13px] leading-[18px] te
 const NESTED_LABEL = "w-[168px] shrink-0 pt-1.5 pl-5 font-body text-[13px] leading-[18px] text-[#8a8a8a]";
 const VALUE = "min-w-0 flex-1 font-body text-[14px] leading-[22px] text-[#1a1a1a] outline-none placeholder:text-[#b3b3b3] bg-transparent disabled:text-[#808080]";
 const ROW = "flex w-full items-start gap-6 py-2";
-const TRACKER_SOURCE_TOOLTIP =
-  "This value comes from the linked authorization in the Prior Auth Tracker and updates when that record changes.";
+const ASSOCIATE_ORDERS_TOOLTIP =
+  "Select other orders on this visit to include on the same authorization request. They will share one row in the Prior Auth Tracker.";
+const INSURANCE_TOOLTIP =
+  "Choose the insurance payer for this authorization. The linked row in the Prior Auth Tracker uses this payer.";
+const ASSIGNEE_TOOLTIP =
+  "Choose who is responsible for working this authorization. The linked row in the Prior Auth Tracker is assigned to this person.";
+const AUTH_NUMBER_TOOLTIP =
+  "The authorization number from the linked row in the Prior Auth Tracker. It appears here after someone enters or updates that number in the tracker.";
+const START_DATE_TOOLTIP =
+  "The date this authorization becomes valid, copied from the linked row in the Prior Auth Tracker.";
+const END_DATE_TOOLTIP =
+  "The date this authorization expires, copied from the linked row in the Prior Auth Tracker.";
+const AUTH_NOTES_TOOLTIP =
+  "Notes written on the linked authorization in the Prior Auth Tracker. Edits made there show up here.";
+const ACTIVITY_TIMELINE_TOOLTIP =
+  "All updates to the authorization from the prior authorization table for this order will be reflected here.";
 const ORDER_AUTH_STORAGE_KEY = "prior-auth:order-records";
 const AUTH_TIMELINE_KEY = "prior-auth:auth-timelines";
 const AUTH_TIMELINE_EVENT = "prior-auth:auth-timelines";
@@ -216,7 +230,7 @@ function AuthActivityTimeline({ entries }: { entries: AuthTimelineEntry[] }) {
   const newestFirst = [...entries].reverse();
   return (
     <div className={ROW}>
-      <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>Activity Timeline</NestedLabel>
+      <NestedLabel tooltip={ACTIVITY_TIMELINE_TOOLTIP}>Activity Timeline</NestedLabel>
       <div className="min-w-0 flex-1 pt-0.5">
         {newestFirst.length === 0 ? (
           <p className="font-body text-[13px] leading-[18px] text-[#8a8a8a]">No activity recorded yet.</p>
@@ -1111,7 +1125,7 @@ export default function OrderDetailsForm({
       {order.requiresAuthorization ? (
         <>
           <div className={ROW}>
-            <NestedLabel tooltip="Links this order to another order on the visit so they share one authorization in the Prior Auth Tracker.">
+            <NestedLabel tooltip={ASSOCIATE_ORDERS_TOOLTIP}>
               Add orders to this authorization request
             </NestedLabel>
             <div className="flex min-w-0 flex-1 items-start pt-0.5">
@@ -1131,7 +1145,7 @@ export default function OrderDetailsForm({
             </div>
           </div>
           <div className={ROW}>
-            <NestedLabel tooltip="Sets the payer on the linked authorization in the Prior Auth Tracker.">
+            <NestedLabel tooltip={INSURANCE_TOOLTIP}>
               Insurance
             </NestedLabel>
             <Dropdown
@@ -1148,7 +1162,7 @@ export default function OrderDetailsForm({
             />
           </div>
           <div className={ROW}>
-            <NestedLabel tooltip="Sets who owns the linked authorization in the Prior Auth Tracker.">
+            <NestedLabel tooltip={ASSIGNEE_TOOLTIP}>
               Assigned to
             </NestedLabel>
             <Dropdown
@@ -1161,7 +1175,7 @@ export default function OrderDetailsForm({
             />
           </div>
           <div className={ROW}>
-            <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>Authorization Number</NestedLabel>
+            <NestedLabel tooltip={AUTH_NUMBER_TOOLTIP}>Authorization Number</NestedLabel>
             <input
               value={order.authNumber ?? ""}
               disabled
@@ -1171,7 +1185,7 @@ export default function OrderDetailsForm({
             />
           </div>
           <div className={ROW}>
-            <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>Start Date</NestedLabel>
+            <NestedLabel tooltip={START_DATE_TOOLTIP}>Start Date</NestedLabel>
             <span className="flex min-w-0 flex-1 items-center gap-2">
               <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
               <input
@@ -1184,7 +1198,7 @@ export default function OrderDetailsForm({
             </span>
           </div>
           <div className={ROW}>
-            <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>End Date</NestedLabel>
+            <NestedLabel tooltip={END_DATE_TOOLTIP}>End Date</NestedLabel>
             <span className="flex min-w-0 flex-1 items-center gap-2">
               <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
               <input
@@ -1197,7 +1211,7 @@ export default function OrderDetailsForm({
             </span>
           </div>
           <div className={ROW}>
-            <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>Auth Notes</NestedLabel>
+            <NestedLabel tooltip={AUTH_NOTES_TOOLTIP}>Auth Notes</NestedLabel>
             <textarea
               value={order.authNotes ?? ""}
               disabled
