@@ -867,6 +867,7 @@ export default function OrderDetailsForm({
   const readOnly = useNoteReadOnly();
   const coded = codedValue(order);
   const [authTimeline, setAuthTimeline] = useState<AuthTimelineEntry[]>(() => loadAuthTimeline(order));
+  const [authSectionOpen, setAuthSectionOpen] = useState(order.requiresAuthorization);
   const savedValue = (label: string) =>
     order.authDetailFields?.find((field) => field.label === label)?.value ?? "";
   const restoredCode =
@@ -1110,19 +1111,35 @@ export default function OrderDetailsForm({
       </div>
 
       <div className={ROW}>
-        <span className={LABEL}>Submit an Authorization Request</span>
+        <button
+          type="button"
+          onClick={() => setAuthSectionOpen((open) => !open)}
+          aria-expanded={authSectionOpen}
+          className={`${LABEL} flex items-start gap-1 text-left hover:text-[#303030]`}
+        >
+          <Icon
+            name={authSectionOpen ? "keyboard_arrow_down" : "chevron_right"}
+            size={18}
+            className="mt-px shrink-0 text-[#303030]"
+          />
+          Submit an Authorization Request
+        </button>
         <label className="flex shrink-0 items-center gap-2 pt-1.5">
           <input
             type="checkbox"
             checked={order.requiresAuthorization}
             disabled={readOnly}
-            onChange={(event) => onRequiresAuthorizationChange(event.target.checked)}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              onRequiresAuthorizationChange(checked);
+              if (checked) setAuthSectionOpen(true);
+            }}
             className="size-4 accent-[#1132ee]"
           />
           <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
         </label>
       </div>
-      {order.requiresAuthorization ? (
+      {order.requiresAuthorization && authSectionOpen ? (
         <>
           <div className={ROW}>
             <NestedLabel tooltip={ASSOCIATE_ORDERS_TOOLTIP}>
@@ -1211,12 +1228,12 @@ export default function OrderDetailsForm({
             </span>
           </div>
           <div className={ROW}>
-            <NestedLabel tooltip={AUTH_NOTES_TOOLTIP}>Auth Notes</NestedLabel>
+            <NestedLabel tooltip={AUTH_NOTES_TOOLTIP}>Authorization Notes</NestedLabel>
             <textarea
               value={order.authNotes ?? ""}
               disabled
               readOnly
-              placeholder="Auth Notes"
+              placeholder="Authorization Notes"
               rows={2}
               className={`${VALUE} resize-none`}
             />
