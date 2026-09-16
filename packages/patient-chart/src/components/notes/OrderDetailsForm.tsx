@@ -1,11 +1,253 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Icon from "../Icon";
 import { useNoteReadOnly } from "./readOnly";
 import type { OrderDetailField, PickedOrder } from "./OrderPickerModal";
 
 const LABEL = "w-[168px] shrink-0 pt-1.5 font-body text-[13px] leading-[18px] text-[#8a8a8a]";
+const NESTED_LABEL = "w-[168px] shrink-0 pt-1.5 pl-5 font-body text-[13px] leading-[18px] text-[#8a8a8a]";
 const VALUE = "min-w-0 flex-1 font-body text-[14px] leading-[22px] text-[#1a1a1a] outline-none placeholder:text-[#b3b3b3] bg-transparent disabled:text-[#808080]";
 const ROW = "flex w-full items-start gap-6 py-2";
+const TRACKER_SOURCE_TOOLTIP =
+  "This value comes from the linked authorization in the Prior Auth Tracker and updates when that record changes.";
+const ORDER_AUTH_STORAGE_KEY = "prior-auth:order-records";
+const AUTH_TIMELINE_KEY = "prior-auth:auth-timelines";
+const AUTH_TIMELINE_EVENT = "prior-auth:auth-timelines";
+const ORDER_AUTH_STATE_EVENT = "patient-chart:order-auth-state";
+
+function LabelTooltip({ label, top, left }: { label: string; top: number; left: number }) {
+  return createPortal(
+    <div
+      role="tooltip"
+      className="pointer-events-none fixed z-110 flex max-w-[240px] flex-col items-center"
+      style={{ top, left, transform: "translate(-50%, 0)" }}
+    >
+      <span
+        aria-hidden
+        className="h-0 w-0 border-x-[5px] border-x-transparent border-b-[6px] border-b-[#292929]"
+      />
+      <span className="rounded-md bg-[#292929] px-2.5 py-1.5 font-body text-[12px] font-medium leading-4 text-white shadow-[0px_4px_12px_rgba(0,0,0,0.18)]">
+        {label}
+      </span>
+    </div>,
+    document.body,
+  );
+}
+
+function NestedLabel({
+  children,
+  tooltip,
+}: {
+  children: string;
+  tooltip?: string;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [hovered, setHovered] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!hovered || !buttonRef.current) {
+      setPosition(null);
+      return;
+    }
+
+    function update() {
+      const button = buttonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      setPosition({ top: rect.bottom + 6, left: rect.left + rect.width / 2 });
+    }
+
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [hovered]);
+
+  return (
+    <span className={NESTED_LABEL}>
+      {children}
+      {tooltip ? (
+        <button
+          ref={buttonRef}
+          type="button"
+          aria-label={tooltip}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          onFocus={() => setHovered(true)}
+          onBlur={() => setHovered(false)}
+          className="ml-0.5 inline-flex size-4 shrink-0 -translate-y-0.5 items-center justify-center align-middle text-[#8a8a8a] hover:text-[#303030]"
+        >
+          <Icon name="info" size={14} />
+        </button>
+      ) : null}
+      {hovered && position && tooltip ? (
+        <LabelTooltip label={tooltip} top={position.top} left={position.left} />
+      ) : null}
+    </span>
+  );
+}
+
+type AuthTimelineAction =
+  | { kind: "appointment_moved"; apptDateTime: string; apptType: "completed" | "scheduled"; fromAuth: string; toAuth: string }
+  | { kind: "detail_changed"; field: string; from: string; to: string }
+  | { kind: "note_added"; text: string };
+
+type AuthTimelineEntry = {
+  id: string;
+  timestamp: string;
+  author: string;
+  action: AuthTimelineAction;
+};
+
+type AuthTimelineSnapshot = {
+  byOrderId?: Record<string, AuthTimelineEntry[] | undefined>;
+  byAuthNumber?: Record<string, AuthTimelineEntry[] | undefined>;
+};
+
+function uniqueTimeline(entries: AuthTimelineEntry[]) {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    const key = entry.id || `${entry.timestamp}:${entry.author}:${JSON.stringify(entry.action)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function isTimelineEntry(value: unknown): value is AuthTimelineEntry {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as AuthTimelineEntry;
+  return typeof entry.timestamp === "string" && typeof entry.author === "string" && Boolean(entry.action?.kind);
+}
+
+function timelineFromUnknown(value: unknown): AuthTimelineEntry[] {
+  return Array.isArray(value) ? uniqueTimeline(value.filter(isTimelineEntry)) : [];
+}
+
+function readJson(key: string): unknown {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadAuthTimeline(order: PickedOrder): AuthTimelineEntry[] {
+  const orderIds = new Set([order.id, ...(order.associatedOrderIds ?? [])]);
+  const authNumber = order.authNumber?.trim();
+  const collected: AuthTimelineEntry[] = [];
+
+  const snapshot = readJson(AUTH_TIMELINE_KEY) as AuthTimelineSnapshot | null;
+  if (snapshot && typeof snapshot === "object") {
+    for (const id of orderIds) {
+      collected.push(...timelineFromUnknown(snapshot.byOrderId?.[id]));
+    }
+    if (authNumber) collected.push(...timelineFromUnknown(snapshot.byAuthNumber?.[authNumber]));
+  }
+
+  const records = readJson(ORDER_AUTH_STORAGE_KEY);
+  if (Array.isArray(records)) {
+    for (const record of records as Array<{
+      authNumber?: string;
+      timeline?: unknown;
+      orderCpts?: Array<{ orderId?: string }>;
+    }>) {
+      const linked = (record.orderCpts ?? []).some((cpt) => cpt.orderId && orderIds.has(cpt.orderId));
+      const sameNumber = Boolean(authNumber && record.authNumber?.trim() === authNumber);
+      if (linked || sameNumber) collected.push(...timelineFromUnknown(record.timeline));
+    }
+  }
+
+  return uniqueTimeline(collected).sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+}
+
+function formatTimelineDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const hours = date.getHours();
+  const suffix = hours >= 12 ? "pm" : "am";
+  const hour = hours % 12 || 12;
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${date.getMonth() + 1}/${date.getDate()} ${hour}:${minutes} ${suffix}`;
+}
+
+function timelineDescription(action: AuthTimelineAction) {
+  switch (action.kind) {
+    case "appointment_moved":
+      return (
+        <>
+          Moved {action.apptType} appt <span className="font-medium">{action.apptDateTime}</span> from{" "}
+          <span className="font-medium">{action.fromAuth}</span> to{" "}
+          <span className="font-medium">{action.toAuth}</span>
+        </>
+      );
+    case "detail_changed":
+      return (
+        <>
+          Changed <span className="font-medium">{action.field}</span> from{" "}
+          <span className="text-[#8a8a8a] line-through">{action.from || "--"}</span> to{" "}
+          <span className="font-medium">{action.to || "--"}</span>
+        </>
+      );
+    case "note_added":
+      return (
+        <>
+          Added note:{" "}
+          <span className="italic">
+            “{action.text.length > 60 ? `${action.text.slice(0, 60)}...` : action.text}”
+          </span>
+        </>
+      );
+  }
+}
+
+function timelineIcon(kind: AuthTimelineAction["kind"]) {
+  if (kind === "appointment_moved") return { name: "swap_horiz", className: "text-[#1132ee]" };
+  if (kind === "note_added") return { name: "description", className: "text-[#22c55e]" };
+  return { name: "edit", className: "text-[#f59e0b]" };
+}
+
+function AuthActivityTimeline({ entries }: { entries: AuthTimelineEntry[] }) {
+  const newestFirst = [...entries].reverse();
+  return (
+    <div className={ROW}>
+      <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>Activity Timeline</NestedLabel>
+      <div className="min-w-0 flex-1 pt-0.5">
+        {newestFirst.length === 0 ? (
+          <p className="font-body text-[13px] leading-[18px] text-[#8a8a8a]">No activity recorded yet.</p>
+        ) : (
+          <div className="relative pl-[30px]">
+            <div className="absolute top-5 bottom-3 left-[8.5px] w-px bg-[#e6e6e6]" />
+            {newestFirst.map((entry) => {
+              const icon = timelineIcon(entry.action.kind);
+              return (
+                <div key={entry.id || `${entry.timestamp}-${entry.author}`} className="relative pb-4 last:pb-0">
+                  <div className="absolute top-px left-[-30px] flex size-[18px] items-center justify-center bg-white">
+                    <Icon name={icon.name} size={16} className={icon.className} />
+                  </div>
+                  <p className="font-body text-[12px] leading-[18px] text-[#1a1a1a]">
+                    {timelineDescription(entry.action)}
+                  </p>
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <span className="font-body text-[10px] text-[#8a8a8a]">•</span>
+                    <span className="font-body text-[10px] text-[#8a8a8a]">{entry.author}</span>
+                    <span className="font-body text-[10px] text-[#8a8a8a]">•</span>
+                    <span className="font-body text-[10px] text-[#8a8a8a]">{formatTimelineDate(entry.timestamp)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const PROCEDURE_OPTIONS = [
   "J1010 - Injection, methylprednisolone acetate, 1 mg",
@@ -610,6 +852,7 @@ export default function OrderDetailsForm({
 }) {
   const readOnly = useNoteReadOnly();
   const coded = codedValue(order);
+  const [authTimeline, setAuthTimeline] = useState<AuthTimelineEntry[]>(() => loadAuthTimeline(order));
   const savedValue = (label: string) =>
     order.authDetailFields?.find((field) => field.label === label)?.value ?? "";
   const restoredCode =
@@ -676,6 +919,48 @@ export default function OrderDetailsForm({
       return `${recipient.name} (NPI: ${recipient.npi})${channels.length ? ` · ${channels.join(", ")}` : ""}`;
     })
     .join("; ");
+
+  useEffect(() => {
+    function refresh(event?: Event) {
+      const detail = event
+        ? (
+            event as CustomEvent<{
+              orderIds?: string[];
+              authNumber?: string;
+              timeline?: AuthTimelineEntry[];
+              byOrderId?: Record<string, AuthTimelineEntry[] | undefined>;
+              byAuthNumber?: Record<string, AuthTimelineEntry[] | undefined>;
+            }>
+          ).detail
+        : undefined;
+      const fromEvent = timelineFromUnknown(detail?.timeline);
+      const matchesOrder =
+        detail?.orderIds?.includes(order.id) ||
+        (order.associatedOrderIds ?? []).some((id) => detail?.orderIds?.includes(id));
+      const matchesNumber = Boolean(order.authNumber && detail?.authNumber === order.authNumber);
+      const fromSnapshot = uniqueTimeline([
+        ...timelineFromUnknown(detail?.byOrderId?.[order.id]),
+        ...(order.associatedOrderIds ?? []).flatMap((id) => timelineFromUnknown(detail?.byOrderId?.[id])),
+        ...timelineFromUnknown(order.authNumber ? detail?.byAuthNumber?.[order.authNumber] : []),
+      ]);
+      if ((matchesOrder || matchesNumber) && fromEvent.length > 0) {
+        setAuthTimeline(fromEvent);
+        return;
+      }
+      if (fromSnapshot.length > 0) {
+        setAuthTimeline(fromSnapshot);
+        return;
+      }
+      setAuthTimeline(loadAuthTimeline(order));
+    }
+    refresh();
+    window.addEventListener(AUTH_TIMELINE_EVENT, refresh);
+    window.addEventListener(ORDER_AUTH_STATE_EVENT, refresh);
+    return () => {
+      window.removeEventListener(AUTH_TIMELINE_EVENT, refresh);
+      window.removeEventListener(ORDER_AUTH_STATE_EVENT, refresh);
+    };
+  }, [order]);
 
   useEffect(() => {
     const fields: OrderDetailField[] = [
@@ -811,24 +1096,29 @@ export default function OrderDetailsForm({
       </div>
 
       <div className={ROW}>
-        <span className={LABEL}>Requires Authorization</span>
-        <div className="flex min-w-0 flex-1 flex-col items-start gap-3 pt-1.5">
-          <label className="flex shrink-0 items-center gap-2">
-            <input
-              type="checkbox"
-              checked={order.requiresAuthorization}
-              disabled={readOnly}
-              onChange={(event) => onRequiresAuthorizationChange(event.target.checked)}
-              className="size-4 accent-[#1132ee]"
-            />
-            <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
-          </label>
-          {order.requiresAuthorization ? (
-            <>
+        <span className={LABEL}>Submit an Authorization Request</span>
+        <label className="flex shrink-0 items-center gap-2 pt-1.5">
+          <input
+            type="checkbox"
+            checked={order.requiresAuthorization}
+            disabled={readOnly}
+            onChange={(event) => onRequiresAuthorizationChange(event.target.checked)}
+            className="size-4 accent-[#1132ee]"
+          />
+          <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
+        </label>
+      </div>
+      {order.requiresAuthorization ? (
+        <>
+          <div className={ROW}>
+            <NestedLabel tooltip="Links this order to another order on the visit so they share one authorization in the Prior Auth Tracker.">
+              Add orders to this authorization request
+            </NestedLabel>
+            <div className="flex min-w-0 flex-1 items-start pt-0.5">
               <MultiSelectDropdown
                 selectedIds={associatedIds}
                 placeholder={
-                  relatedOrders.length === 0 ? "No other orders on this visit" : "Associate with another order"
+                  relatedOrders.length === 0 ? "No other orders on this visit" : "Select an order"
                 }
                 options={relatedOrders.map((entry) => ({
                   id: entry.id,
@@ -838,65 +1128,88 @@ export default function OrderDetailsForm({
                 muted={relatedOrders.length === 0}
                 onChange={onAssociateOrder}
               />
-              <Dropdown
-                value={order.insurance || "Priority Health"}
-                placeholder="Select insurance"
-                options={
-                  order.insurance && !INSURANCE_OPTIONS.includes(order.insurance)
-                    ? [...INSURANCE_OPTIONS, order.insurance]
-                    : INSURANCE_OPTIONS
-                }
-                disabled={readOnly}
-                compact
-                onChange={onInsuranceChange}
-              />
-              <Dropdown
-                value={order.assignedTo && order.assignedTo !== "Unassigned" ? order.assignedTo : ""}
-                placeholder="Assign to..."
-                options={ASSIGNEE_OPTIONS}
-                disabled={readOnly}
-                compact
-                onChange={onAssignedToChange}
-              />
+            </div>
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip="Sets the payer on the linked authorization in the Prior Auth Tracker.">
+              Insurance
+            </NestedLabel>
+            <Dropdown
+              value={order.insurance || "Priority Health"}
+              placeholder="Select insurance"
+              options={
+                order.insurance && !INSURANCE_OPTIONS.includes(order.insurance)
+                  ? [...INSURANCE_OPTIONS, order.insurance]
+                  : INSURANCE_OPTIONS
+              }
+              disabled={readOnly}
+              compact
+              onChange={onInsuranceChange}
+            />
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip="Sets who owns the linked authorization in the Prior Auth Tracker.">
+              Assigned to
+            </NestedLabel>
+            <Dropdown
+              value={order.assignedTo && order.assignedTo !== "Unassigned" ? order.assignedTo : ""}
+              placeholder="Assign to..."
+              options={ASSIGNEE_OPTIONS}
+              disabled={readOnly}
+              compact
+              onChange={onAssignedToChange}
+            />
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>Authorization Number</NestedLabel>
+            <input
+              value={order.authNumber ?? ""}
+              disabled
+              readOnly
+              placeholder="Authorization Number"
+              className={VALUE}
+            />
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>Start Date</NestedLabel>
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
               <input
-                value={order.authNumber ?? ""}
+                value={order.startDate ?? ""}
                 disabled
                 readOnly
-                placeholder="Authorization Number"
+                placeholder="MM/DD/YYYY"
                 className={VALUE}
               />
-              <span className="flex min-w-0 w-full items-center gap-2">
-                <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
-                <input
-                  value={order.startDate ?? ""}
-                  disabled
-                  readOnly
-                  placeholder="Start Date (MM/DD/YYYY)"
-                  className={VALUE}
-                />
-              </span>
-              <span className="flex min-w-0 w-full items-center gap-2">
-                <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
-                <input
-                  value={order.endDate ?? ""}
-                  disabled
-                  readOnly
-                  placeholder="End Date (MM/DD/YYYY)"
-                  className={VALUE}
-                />
-              </span>
-              <textarea
-                value={order.authNotes ?? ""}
+            </span>
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>End Date</NestedLabel>
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
+              <input
+                value={order.endDate ?? ""}
                 disabled
                 readOnly
-                placeholder="Auth Notes"
-                rows={2}
-                className={`${VALUE} resize-none`}
+                placeholder="MM/DD/YYYY"
+                className={VALUE}
               />
-            </>
-          ) : null}
-        </div>
-      </div>
+            </span>
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={TRACKER_SOURCE_TOOLTIP}>Auth Notes</NestedLabel>
+            <textarea
+              value={order.authNotes ?? ""}
+              disabled
+              readOnly
+              placeholder="Auth Notes"
+              rows={2}
+              className={`${VALUE} resize-none`}
+            />
+          </div>
+          <AuthActivityTimeline entries={authTimeline} />
+        </>
+      ) : null}
 
       {order.type === "DME" && (
         <div className={ROW}>

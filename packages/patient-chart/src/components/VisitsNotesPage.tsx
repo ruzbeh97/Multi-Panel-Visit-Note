@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Icon from "./Icon";
+import NewAppointmentDrawer, { type NewAppointmentValues } from "./NewAppointmentDrawer";
 import { ENCOUNTERS, PATIENT, type Encounter } from "../data/chart";
 
 type VisitsNotesPageProps = {
@@ -112,33 +113,42 @@ function formatBookedVisitDate(date: Date) {
   };
 }
 
+function noteTypeForAppointment(appointmentType: string) {
+  if (appointmentType === "New Patient") return "Initial Evaluation";
+  if (appointmentType === "Injection Visit") return "Injection Type";
+  return "Progress Note";
+}
+
 export default function VisitsNotesPage({
   onOpenCurrentVisit,
   onOpenPastVisit,
   onOpenBlankVisit,
 }: VisitsNotesPageProps) {
   const [bookedVisits, setBookedVisits] = useState<VisitRow[]>(persistedBookedVisits);
+  const [appointmentDrawerOpen, setAppointmentDrawerOpen] = useState(false);
   const visits = [...bookedVisits, ...VISITS];
 
-  function bookVisit() {
-    const when = formatBookedVisitDate(new Date());
+  function bookVisit(values: NewAppointmentValues) {
+    const when = formatBookedVisitDate(values.date);
     const template = VISITS[0];
     const row: VisitRow = {
       id: `booked-visit-${Date.now()}`,
       date: when.date,
-      time: when.time,
+      // The drawer captures a range, while the table shows the start of the visit.
+      time: values.time.split(/\s*[–—-]\s*/)[0]?.toUpperCase() || when.time,
       status: "Scheduled",
-      caseName: template?.caseName ?? PATIENT.insurance,
-      provider: template?.provider ?? "",
-      clinicalNoteType: "Injection Type",
-      appointmentType: "Injection Visit",
-      insurance: PATIENT.insurance,
-      facility: template?.facility ?? "MAIN OFFICE",
+      caseName: values.caseName,
+      provider: values.provider,
+      clinicalNoteType: noteTypeForAppointment(values.appointmentType),
+      appointmentType: values.appointmentType,
+      insurance: values.insurance,
+      facility: values.facility,
       caseId: template?.caseId ?? "",
       blank: true,
     };
     persistedBookedVisits = [row, ...persistedBookedVisits];
     setBookedVisits(persistedBookedVisits);
+    setAppointmentDrawerOpen(false);
   }
 
   function openVisit(visit: VisitRow) {
@@ -149,6 +159,12 @@ export default function VisitsNotesPage({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 self-stretch flex-col bg-white">
+      {appointmentDrawerOpen ? (
+        <NewAppointmentDrawer
+          onClose={() => setAppointmentDrawerOpen(false)}
+          onCreate={bookVisit}
+        />
+      ) : null}
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
         <h1 className="font-body text-[18px] font-medium leading-7 text-[#1a1a1a]">All Visits &amp; Notes</h1>
         <div className="flex items-center gap-2">
@@ -175,7 +191,7 @@ export default function VisitsNotesPage({
           </button>
           <button
             type="button"
-            onClick={bookVisit}
+            onClick={() => setAppointmentDrawerOpen(true)}
             className="flex h-8 items-center gap-1 rounded-full bg-[#1132ee] px-3.5 text-white"
           >
             <Icon name="add" size={15} />
