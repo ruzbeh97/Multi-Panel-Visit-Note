@@ -17,6 +17,9 @@ type ServiceRow = {
   icd10: string[];
   units: string;
   bookmarked: boolean;
+  ndc?: string;
+  lotNumber?: string;
+  expirationDate?: string;
 };
 
 type CatalogItem = { id: string; code: string; description: string; kind: ServiceKind };
@@ -79,6 +82,14 @@ const INITIAL_SERVICES: ServiceRow[] = [
     bookmarked: false,
   },
 ];
+
+function isJCode(code: string) {
+  return /^J/i.test(code.trim());
+}
+
+function emptyDrugFields() {
+  return { ndc: "", lotNumber: "", expirationDate: "" };
+}
 
 function catalogFor(kind: ServiceKind) {
   const seen = new Set<string>();
@@ -319,6 +330,10 @@ function ServiceLine({
   const catalog = catalogFor(service.kind);
   const codes = catalog.map((item) => item.code);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [drugDetailsOpen, setDrugDetailsOpen] = useState(
+    Boolean(service.ndc || service.lotNumber || service.expirationDate),
+  );
+  const jCode = isJCode(service.code);
 
   const setCode = (code: string) => {
     const match = catalog.find((item) => item.code === code);
@@ -350,6 +365,7 @@ function ServiceLine({
   };
 
   return (
+    <div className="flex w-full flex-col">
     <div className="flex w-full items-start gap-3 py-2">
       <div className="flex min-w-0 flex-1 items-start gap-2 pt-0.5">
         <CompactSelect
@@ -459,6 +475,61 @@ function ServiceLine({
         </button>
       </div>
     </div>
+    {jCode ? (
+      <div className="flex w-full flex-col gap-2 pb-2">
+        <button
+          type="button"
+          onClick={() => setDrugDetailsOpen((open) => !open)}
+          aria-expanded={drugDetailsOpen}
+          className="flex items-center gap-0.5 self-start font-body text-[12px] font-medium text-[#1132ee] hover:underline"
+        >
+          <Icon
+            name={drugDetailsOpen ? "keyboard_arrow_down" : "chevron_right"}
+            size={16}
+            className="text-current"
+          />
+          NDC, Lot #, Expiration
+        </button>
+        {drugDetailsOpen ? (
+          <div className="flex w-full flex-wrap items-end gap-3">
+            <label className="flex min-w-[160px] flex-1 flex-col items-start gap-1.5">
+              <span className="font-body text-[11px] font-medium leading-[14px] text-[#666666]">NDC</span>
+              <input
+                value={service.ndc ?? ""}
+                disabled={readOnly}
+                onChange={(event) => onChange({ ndc: event.target.value })}
+                placeholder="Enter NDC"
+                className="h-8 w-full rounded border border-[#d9d9d9] bg-white px-2 font-body text-[13px] leading-[18px] text-[#1a1a1a] outline-none placeholder:text-[#b3b3b3] disabled:text-[#808080]"
+              />
+            </label>
+            <label className="flex min-w-[140px] flex-1 flex-col items-start gap-1.5">
+              <span className="font-body text-[11px] font-medium leading-[14px] text-[#666666]">Lot #</span>
+              <input
+                value={service.lotNumber ?? ""}
+                disabled={readOnly}
+                onChange={(event) => onChange({ lotNumber: event.target.value })}
+                placeholder="Enter lot #"
+                className="h-8 w-full rounded border border-[#d9d9d9] bg-white px-2 font-body text-[13px] leading-[18px] text-[#1a1a1a] outline-none placeholder:text-[#b3b3b3] disabled:text-[#808080]"
+              />
+            </label>
+            <label className="flex min-w-[180px] flex-1 flex-col items-start gap-1.5">
+              <span className="font-body text-[11px] font-medium leading-[14px] text-[#666666]">Expiration Date</span>
+              <span className="flex h-8 w-full items-center gap-2 rounded border border-[#d9d9d9] bg-white px-2">
+                <Icon name="calendar_today" size={16} className="shrink-0 text-[#8a8a8a]" />
+                <input
+                  type="date"
+                  value={service.expirationDate ?? ""}
+                  disabled={readOnly}
+                  onChange={(event) => onChange({ expirationDate: event.target.value })}
+                  className="min-w-0 flex-1 bg-transparent font-body text-[13px] leading-[18px] text-[#1a1a1a] outline-none disabled:text-[#808080]"
+                />
+              </span>
+            </label>
+          </div>
+        ) : null}
+      </div>
+    ) : null}
+    </div>
   );
 }
 
@@ -516,6 +587,7 @@ export default function ServicesSection() {
         icd10: [defaultIcd],
         units: "1",
         bookmarked: false,
+        ...emptyDrugFields(),
       })),
     ]);
   };

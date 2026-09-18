@@ -4,6 +4,7 @@ import { ASSOCIATE_PROVIDER, PATIENT, PROVIDER } from "../data/chart";
 import Icon from "./Icon";
 import { TEMPLATE_FORM_CLASS } from "./CustomTemplateBuilder";
 import { SURGERY_ORDER_CONTENT } from "./ManageTemplatesDrawer";
+import { AssigneePickerPopover } from "./AssigneePicker";
 
 const ORDER_TYPES = [
   "DME",
@@ -27,6 +28,7 @@ const textareaClass =
 const ORDER_AUTHORIZATIONS_EVENT = "patient-chart:order-authorizations";
 const ASSIGNEE_OPTIONS = [
   "Ashton Roy",
+  "Ashton Lee",
   "Bailey Moon",
   "Brad Hope",
   "Leo Wood",
@@ -43,6 +45,11 @@ const ASSIGNEE_OPTIONS = [
   "Piper West",
   "Gavin Lake",
   "Violet Ash",
+  "James Harden",
+  "Molly Harden",
+  "James Franco",
+  "Natasha Smith",
+  "Ronald Regin",
 ];
 
 function codeFromSelection(value: string) {
@@ -148,30 +155,14 @@ function AssigneeDropdown({
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div ref={rootRef} className="relative w-fit max-w-full">
+    <div className="relative w-fit max-w-full">
       <button
+        ref={triggerRef}
         type="button"
         aria-expanded={open}
-        aria-haspopup="listbox"
         onClick={() => setOpen((current) => !current)}
         className="flex max-w-full items-center gap-0.5 text-left"
       >
@@ -181,27 +172,16 @@ function AssigneeDropdown({
         <Icon name="arrow_drop_down" size={18} className="shrink-0 text-[#8a8a8a]" />
       </button>
       {open ? (
-        <ul
-          role="listbox"
-          className="absolute left-0 top-[calc(100%+4px)] z-30 max-h-[280px] w-[240px] overflow-y-auto rounded-md bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.16)]"
-        >
-          {ASSIGNEE_OPTIONS.map((option) => (
-            <li key={option} role="option" aria-selected={option === value}>
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(option);
-                  setOpen(false);
-                }}
-                className={`flex w-full px-3 py-2 text-left font-body text-[13px] ${
-                  option === value ? "bg-[#eceefe] text-[#1132ee]" : "text-[#303030] hover:bg-[#f5f5f5]"
-                }`}
-              >
-                {option}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <AssigneePickerPopover
+          anchorRef={triggerRef}
+          selected={value ? [value] : []}
+          individuals={ASSIGNEE_OPTIONS}
+          onSelect={(name) => {
+            onChange(name);
+            setOpen(false);
+          }}
+          onDismiss={() => setOpen(false)}
+        />
       ) : null}
     </div>
   );
@@ -506,20 +486,6 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
               />
               <span className="font-body text-[14px] text-[#303030]">Expects Response</span>
             </label>
-          </div>
-
-          <h3 className={`${sectionTitleClass} mb-2 mt-5`}>Authorization</h3>
-          <div className="flex flex-col items-start gap-3">
-            <label className="flex items-center gap-2.5">
-              <input
-                type="checkbox"
-                checked={requiresAuthorization}
-                onChange={(event) => setRequiresAuthorization(event.target.checked)}
-                className="size-[17px] rounded-[2px] border-[#9a9a9a] accent-[#1132ee]"
-              />
-              <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
-            </label>
-            <AssigneeDropdown value={assignedTo} onChange={setAssignedTo} />
           </div>
 
           <h3 className={`${sectionTitleClass} mb-2 mt-5`}>
@@ -961,6 +927,20 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
           </div>
 
           <p className="mt-5 text-center font-body text-[14px] text-[#8a8a8a]">No attachments uploaded yet</p>
+
+          <h3 className={`${sectionTitleClass} mb-2 mt-6`}>Authorization</h3>
+          <div className="flex flex-col items-start gap-3">
+            <label className="flex items-center gap-2.5">
+              <input
+                type="checkbox"
+                checked={requiresAuthorization}
+                onChange={(event) => setRequiresAuthorization(event.target.checked)}
+                className="size-[17px] rounded-[2px] border-[#9a9a9a] accent-[#1132ee]"
+              />
+              <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
+            </label>
+            <AssigneeDropdown value={assignedTo} onChange={setAssignedTo} />
+          </div>
         </div>
 
         <footer className="flex shrink-0 items-center gap-3 bg-[#f7f7f7] px-5 pb-5 pt-3">

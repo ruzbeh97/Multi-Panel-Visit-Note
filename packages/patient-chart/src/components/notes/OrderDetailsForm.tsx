@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Icon from "../Icon";
+import { useAssigneeGroups } from "../../assigneeGroups";
+import { AssigneePickerPopover } from "../AssigneePicker";
 import { useNoteReadOnly } from "./readOnly";
 import type { OrderDetailField, PickedOrder } from "./OrderPickerModal";
 
@@ -280,6 +282,7 @@ const HCPCS_OPTIONS = ["L0180 - Cervical, multiple post collar", "L0120 - Cervic
 const ICD10_OPTIONS = ["M25.561", "M25.551", "M25.552", "S83.511A"];
 const ASSIGNEE_OPTIONS = [
   "Ashton Roy",
+  "Ashton Lee",
   "Bailey Moon",
   "Brad Hope",
   "Leo Wood",
@@ -296,6 +299,11 @@ const ASSIGNEE_OPTIONS = [
   "Piper West",
   "Gavin Lake",
   "Violet Ash",
+  "James Harden",
+  "Molly Harden",
+  "James Franco",
+  "Natasha Smith",
+  "Ronald Regin",
 ];
 const INSURANCE_OPTIONS = [
   "Priority Health",
@@ -384,6 +392,7 @@ function Dropdown({
   value,
   placeholder,
   options,
+  groupOptions,
   disabled,
   muted = false,
   compact = false,
@@ -392,6 +401,7 @@ function Dropdown({
   value: string;
   placeholder: string;
   options: string[];
+  groupOptions?: string[];
   disabled: boolean;
   muted?: boolean;
   compact?: boolean;
@@ -399,19 +409,25 @@ function Dropdown({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // Passing groupOptions marks this as an assignee field, which uses the shared picker.
+  const isAssignee = Boolean(groupOptions);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isAssignee) return;
     const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
+  }, [open, isAssignee]);
+
+  const catalog = options;
 
   return (
     <div ref={rootRef} className={`relative min-w-0 ${compact ? "w-fit max-w-full" : "flex-1"}`}>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         aria-expanded={open}
@@ -427,29 +443,43 @@ function Dropdown({
         </span>
         <Icon name="arrow_drop_down" size={18} className={`shrink-0 ${muted ? "text-[#c4c4c4]" : "text-[#8a8a8a]"}`} />
       </button>
-      {open ? (
-        <ul
-          className={`absolute left-0 top-[calc(100%+4px)] z-20 min-w-full overflow-hidden rounded-md bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.16)] ${
-            compact ? "w-max max-w-[420px]" : "right-0"
+      {open && isAssignee ? (
+        <AssigneePickerPopover
+          anchorRef={triggerRef}
+          selected={value ? [value] : []}
+          individuals={options}
+          onSelect={(name) => {
+            onChange(name);
+            setOpen(false);
+          }}
+          onDismiss={() => setOpen(false)}
+        />
+      ) : null}
+      {open && !isAssignee ? (
+        <div
+          className={`absolute left-0 top-[calc(100%+4px)] z-20 overflow-hidden rounded-md bg-white shadow-[0_4px_16px_rgba(0,0,0,0.16)] ${
+            compact ? "w-max min-w-[240px] max-w-[420px]" : "right-0 min-w-full"
           }`}
         >
-          {options.map((option) => (
-            <li key={option}>
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(option);
-                  setOpen(false);
-                }}
-                className={`flex w-full px-3 py-2 text-left font-body text-[13px] ${
-                  option === value ? "bg-[#eceefe] text-[#1132ee]" : "text-[#303030] hover:bg-[#f5f5f5]"
-                }`}
-              >
-                {option}
-              </button>
-            </li>
-          ))}
-        </ul>
+          <ul className="max-h-[240px] overflow-y-auto py-1">
+            {catalog.map((option) => (
+              <li key={option}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(option);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full px-3 py-1.5 text-left font-body text-[13px] ${
+                    option === value ? "bg-[#eceefe] text-[#1132ee]" : "text-[#303030] hover:bg-[#f5f5f5]"
+                  }`}
+                >
+                  {option}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
     </div>
   );
@@ -865,6 +895,7 @@ export default function OrderDetailsForm({
   }) => void;
 }) {
   const readOnly = useNoteReadOnly();
+  const groupOptions = useAssigneeGroups();
   const coded = codedValue(order);
   const [authTimeline, setAuthTimeline] = useState<AuthTimelineEntry[]>(() => loadAuthTimeline(order));
   const [authSectionOpen, setAuthSectionOpen] = useState(order.requiresAuthorization);
@@ -1109,138 +1140,6 @@ export default function OrderDetailsForm({
           className={VALUE}
         />
       </div>
-
-      <div className={ROW}>
-        <button
-          type="button"
-          onClick={() => setAuthSectionOpen((open) => !open)}
-          aria-expanded={authSectionOpen}
-          className={`${LABEL} flex items-start gap-1 text-left hover:text-[#303030]`}
-        >
-          <Icon
-            name={authSectionOpen ? "keyboard_arrow_down" : "chevron_right"}
-            size={18}
-            className="mt-px shrink-0 text-[#303030]"
-          />
-          Submit an Authorization Request
-        </button>
-        <label className="flex shrink-0 items-center gap-2 pt-1.5">
-          <input
-            type="checkbox"
-            checked={order.requiresAuthorization}
-            disabled={readOnly}
-            onChange={(event) => {
-              const checked = event.target.checked;
-              onRequiresAuthorizationChange(checked);
-              if (checked) setAuthSectionOpen(true);
-            }}
-            className="size-4 accent-[#1132ee]"
-          />
-          <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
-        </label>
-      </div>
-      {order.requiresAuthorization && authSectionOpen ? (
-        <>
-          <div className={ROW}>
-            <NestedLabel tooltip={ASSOCIATE_ORDERS_TOOLTIP}>
-              Add orders to this authorization request
-            </NestedLabel>
-            <div className="flex min-w-0 flex-1 items-start pt-0.5">
-              <MultiSelectDropdown
-                selectedIds={associatedIds}
-                placeholder={
-                  relatedOrders.length === 0 ? "No other orders on this visit" : "Select an order"
-                }
-                options={relatedOrders.map((entry) => ({
-                  id: entry.id,
-                  label: `${entry.title} · Created on ${entry.createdAt}`,
-                }))}
-                disabled={readOnly || relatedOrders.length === 0}
-                muted={relatedOrders.length === 0}
-                onChange={onAssociateOrder}
-              />
-            </div>
-          </div>
-          <div className={ROW}>
-            <NestedLabel tooltip={INSURANCE_TOOLTIP}>
-              Insurance
-            </NestedLabel>
-            <Dropdown
-              value={order.insurance || "Priority Health"}
-              placeholder="Select insurance"
-              options={
-                order.insurance && !INSURANCE_OPTIONS.includes(order.insurance)
-                  ? [...INSURANCE_OPTIONS, order.insurance]
-                  : INSURANCE_OPTIONS
-              }
-              disabled={readOnly}
-              compact
-              onChange={onInsuranceChange}
-            />
-          </div>
-          <div className={ROW}>
-            <NestedLabel tooltip={ASSIGNEE_TOOLTIP}>
-              Assigned to
-            </NestedLabel>
-            <Dropdown
-              value={order.assignedTo && order.assignedTo !== "Unassigned" ? order.assignedTo : ""}
-              placeholder="Assign to..."
-              options={ASSIGNEE_OPTIONS}
-              disabled={readOnly}
-              compact
-              onChange={onAssignedToChange}
-            />
-          </div>
-          <div className={ROW}>
-            <NestedLabel tooltip={AUTH_NUMBER_TOOLTIP}>Authorization Number</NestedLabel>
-            <input
-              value={order.authNumber ?? ""}
-              disabled
-              readOnly
-              placeholder="Authorization Number"
-              className={VALUE}
-            />
-          </div>
-          <div className={ROW}>
-            <NestedLabel tooltip={START_DATE_TOOLTIP}>Start Date</NestedLabel>
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
-              <input
-                value={order.startDate ?? ""}
-                disabled
-                readOnly
-                placeholder="MM/DD/YYYY"
-                className={VALUE}
-              />
-            </span>
-          </div>
-          <div className={ROW}>
-            <NestedLabel tooltip={END_DATE_TOOLTIP}>End Date</NestedLabel>
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
-              <input
-                value={order.endDate ?? ""}
-                disabled
-                readOnly
-                placeholder="MM/DD/YYYY"
-                className={VALUE}
-              />
-            </span>
-          </div>
-          <div className={ROW}>
-            <NestedLabel tooltip={AUTH_NOTES_TOOLTIP}>Authorization Notes</NestedLabel>
-            <textarea
-              value={order.authNotes ?? ""}
-              disabled
-              readOnly
-              placeholder="Authorization Notes"
-              rows={2}
-              className={`${VALUE} resize-none`}
-            />
-          </div>
-          <AuthActivityTimeline entries={authTimeline} />
-        </>
-      ) : null}
 
       {order.type === "DME" && (
         <div className={ROW}>
@@ -1525,6 +1424,139 @@ export default function OrderDetailsForm({
           <Toggle on={includePdf} disabled={readOnly} onToggle={() => setIncludePdf((current) => !current)} />
         </div>
       </div>
+
+      <div className={ROW}>
+        <button
+          type="button"
+          onClick={() => setAuthSectionOpen((open) => !open)}
+          aria-expanded={authSectionOpen}
+          className={`${LABEL} flex items-start gap-1 text-left hover:text-[#303030]`}
+        >
+          <Icon
+            name={authSectionOpen ? "keyboard_arrow_down" : "chevron_right"}
+            size={18}
+            className="mt-px shrink-0 text-[#303030]"
+          />
+          Submit an Authorization Request
+        </button>
+        <label className="flex shrink-0 items-center gap-2 pt-1.5">
+          <input
+            type="checkbox"
+            checked={order.requiresAuthorization}
+            disabled={readOnly}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              onRequiresAuthorizationChange(checked);
+              if (checked) setAuthSectionOpen(true);
+            }}
+            className="size-4 accent-[#1132ee]"
+          />
+          <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
+        </label>
+      </div>
+      {order.requiresAuthorization && authSectionOpen ? (
+        <>
+          <div className={ROW}>
+            <NestedLabel tooltip={ASSOCIATE_ORDERS_TOOLTIP}>
+              Add orders to this authorization request
+            </NestedLabel>
+            <div className="flex min-w-0 flex-1 items-start pt-0.5">
+              <MultiSelectDropdown
+                selectedIds={associatedIds}
+                placeholder={
+                  relatedOrders.length === 0 ? "No other orders on this visit" : "Select an order"
+                }
+                options={relatedOrders.map((entry) => ({
+                  id: entry.id,
+                  label: `${entry.title} · Created on ${entry.createdAt}`,
+                }))}
+                disabled={readOnly || relatedOrders.length === 0}
+                muted={relatedOrders.length === 0}
+                onChange={onAssociateOrder}
+              />
+            </div>
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={INSURANCE_TOOLTIP}>
+              Insurance
+            </NestedLabel>
+            <Dropdown
+              value={order.insurance || "Priority Health"}
+              placeholder="Select insurance"
+              options={
+                order.insurance && !INSURANCE_OPTIONS.includes(order.insurance)
+                  ? [...INSURANCE_OPTIONS, order.insurance]
+                  : INSURANCE_OPTIONS
+              }
+              disabled={readOnly}
+              compact
+              onChange={onInsuranceChange}
+            />
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={ASSIGNEE_TOOLTIP}>
+              Assigned to
+            </NestedLabel>
+            <Dropdown
+              value={order.assignedTo && order.assignedTo !== "Unassigned" ? order.assignedTo : ""}
+              placeholder="Assign to..."
+              options={ASSIGNEE_OPTIONS}
+              groupOptions={groupOptions}
+              disabled={readOnly}
+              compact
+              onChange={onAssignedToChange}
+            />
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={AUTH_NUMBER_TOOLTIP}>Authorization Number</NestedLabel>
+            <input
+              value={order.authNumber ?? ""}
+              disabled
+              readOnly
+              placeholder="Authorization Number"
+              className={VALUE}
+            />
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={START_DATE_TOOLTIP}>Start Date</NestedLabel>
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
+              <input
+                value={order.startDate ?? ""}
+                disabled
+                readOnly
+                placeholder="MM/DD/YYYY"
+                className={VALUE}
+              />
+            </span>
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={END_DATE_TOOLTIP}>End Date</NestedLabel>
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <Icon name="calendar_today" size={16} className="shrink-0 text-[#b3b3b3]" />
+              <input
+                value={order.endDate ?? ""}
+                disabled
+                readOnly
+                placeholder="MM/DD/YYYY"
+                className={VALUE}
+              />
+            </span>
+          </div>
+          <div className={ROW}>
+            <NestedLabel tooltip={AUTH_NOTES_TOOLTIP}>Authorization Notes</NestedLabel>
+            <textarea
+              value={order.authNotes ?? ""}
+              disabled
+              readOnly
+              placeholder="Authorization Notes"
+              rows={2}
+              className={`${VALUE} resize-none`}
+            />
+          </div>
+          <AuthActivityTimeline entries={authTimeline} />
+        </>
+      ) : null}
 
       <div className="flex w-full items-center gap-4 pt-4">
         <span className="font-body text-[12px] text-[#8a8a8a]">Created by Ruzbeh Irani</span>
