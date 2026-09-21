@@ -16,7 +16,15 @@ import {
   withLinkedInsurance,
   withRequestedAuthorization,
   withSentToRecipient,
-} from "./notes/OrdersSection";
+} from "./notes/orderAuthorization";
+import {
+  AUTH_VERSION_HINTS,
+  AuthBundleBoard,
+  AuthSelectionList,
+  AuthVersionSwitch,
+  createOrderAuthHandlers,
+  useAuthUxVersion,
+} from "./notes/OrderAuthVariants";
 
 const ICON_TONES = {
   blue: "text-[#1132ee]",
@@ -184,6 +192,7 @@ export default function OrderSetDrawer({
 }) {
   const [appointment, setAppointment] = useState("08/10/2026 11:50 AM");
   const [orders, setOrdersState] = useState<PickedOrder[]>([]);
+  const [authVersion, setAuthVersion] = useAuthUxVersion();
   const [pickerOpen, setPickerOpen] = useState(false);
   const addOrderRef = useRef<HTMLButtonElement>(null);
 
@@ -207,6 +216,8 @@ export default function OrderSetDrawer({
   const setOrders = (update: (orders: PickedOrder[]) => PickedOrder[]) => {
     setOrdersState((current) => withAuthGroupNumbers(update(current)));
   };
+
+  const authHandlers = createOrderAuthHandlers(setOrders);
 
   return (
     <div className="fixed inset-0 z-80 flex justify-end">
@@ -252,7 +263,9 @@ export default function OrderSetDrawer({
             </span>
           </label>
 
-          <div className="mt-7 flex items-center justify-end gap-8">
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
+            <AuthVersionSwitch value={authVersion} onChange={setAuthVersion} />
+            <div className="flex items-center gap-8">
             <button
               ref={addOrderRef}
               type="button"
@@ -286,13 +299,24 @@ export default function OrderSetDrawer({
             >
               Submit All
             </button>
+            </div>
           </div>
+
+          {authVersion === "V1" ? null : (
+            <p className="mt-3 w-full font-body text-[13px] leading-[18px] text-[#8a8a8a]">
+              {AUTH_VERSION_HINTS[authVersion]}
+            </p>
+          )}
 
           <div className="mt-3 flex w-full flex-col">
             {orders.length === 0 ? (
               <p className="py-14 text-center font-body text-[14px] text-[#8a8a8a]">
                 Add an order or order set to begin.
               </p>
+            ) : authVersion === "V2" ? (
+              <AuthSelectionList orders={orders} handlers={authHandlers} />
+            ) : authVersion === "V3" ? (
+              <AuthBundleBoard orders={orders} handlers={authHandlers} />
             ) : (
               orders.map((order) => (
                 <DrawerOrderRow

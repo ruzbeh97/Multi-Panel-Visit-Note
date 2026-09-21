@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ASSOCIATE_PROVIDER, PATIENT, PROVIDER } from "../data/chart";
 import Icon from "./Icon";
 import { TEMPLATE_FORM_CLASS } from "./CustomTemplateBuilder";
 import { SURGERY_ORDER_CONTENT } from "./ManageTemplatesDrawer";
-import { AssigneePickerPopover } from "./AssigneePicker";
 
 const ORDER_TYPES = [
   "DME",
@@ -155,14 +154,30 @@ function AssigneeDropdown({
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   return (
-    <div className="relative w-fit max-w-full">
+    <div ref={rootRef} className="relative w-fit max-w-full">
       <button
-        ref={triggerRef}
         type="button"
         aria-expanded={open}
+        aria-haspopup="listbox"
         onClick={() => setOpen((current) => !current)}
         className="flex max-w-full items-center gap-0.5 text-left"
       >
@@ -172,16 +187,27 @@ function AssigneeDropdown({
         <Icon name="arrow_drop_down" size={18} className="shrink-0 text-[#8a8a8a]" />
       </button>
       {open ? (
-        <AssigneePickerPopover
-          anchorRef={triggerRef}
-          selected={value ? [value] : []}
-          individuals={ASSIGNEE_OPTIONS}
-          onSelect={(name) => {
-            onChange(name);
-            setOpen(false);
-          }}
-          onDismiss={() => setOpen(false)}
-        />
+        <ul
+          role="listbox"
+          className="absolute left-0 top-[calc(100%+4px)] z-30 max-h-[280px] w-[240px] overflow-y-auto rounded-md bg-white py-1 shadow-[0_4px_16px_rgba(0,0,0,0.16)]"
+        >
+          {ASSIGNEE_OPTIONS.map((option) => (
+            <li key={option} role="option" aria-selected={option === value}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={`flex w-full px-3 py-2 text-left font-body text-[13px] ${
+                  option === value ? "bg-[#eceefe] text-[#1132ee]" : "text-[#303030] hover:bg-[#f5f5f5]"
+                }`}
+              >
+                {option}
+              </button>
+            </li>
+          ))}
+        </ul>
       ) : null}
     </div>
   );
@@ -300,6 +326,71 @@ function Radio({ label, checked, onSelect }: { label: string; checked: boolean; 
   );
 }
 
+const TEMPLATES_WITH_FORM = ["Surgery Order V3", "Surgery Order", "Surgical Order v2"];
+
+/**
+ * React rewrites innerHTML whenever the dangerouslySetInnerHTML object changes identity, which
+ * would wipe out whatever was typed into the template. Memoizing on the markup keeps the
+ * rendered template alive across drawer re-renders.
+ */
+const TemplateMarkup = memo(function TemplateMarkup({ html }: { html: string }) {
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+});
+
+/** Template fields are raw markup, so they are tracked by their own name or by position. */
+function templateFieldKey(field: Element, index: number) {
+  return (field as HTMLElement).dataset?.field || `field-${index}`;
+}
+
+/** Reads what the user typed and picked inside the template. */
+function readTemplateValues(root: HTMLElement | null): Record<string, string> {
+  if (!root) return {};
+  const values: Record<string, string> = {};
+  root.querySelectorAll("input, textarea, select").forEach((field, index) => {
+    const key = templateFieldKey(field, index);
+    if (field instanceof HTMLInputElement && (field.type === "checkbox" || field.type === "radio")) {
+      values[key] = field.checked ? "Yes" : "";
+    } else if (
+      field instanceof HTMLInputElement ||
+      field instanceof HTMLTextAreaElement ||
+      field instanceof HTMLSelectElement
+    ) {
+      values[key] = field.value;
+    }
+  });
+  return values;
+}
+
+/**
+ * Rebuilds the template from its markup with those values written in, so the authorization
+ * panel can show the order exactly as it was filled out.
+ */
+function buildTemplateSnapshot(markup: string, values: Record<string, string>): string {
+  const host = document.createElement("div");
+  host.innerHTML = markup;
+
+  host.querySelectorAll("input, textarea, select").forEach((field, index) => {
+    const value = values[templateFieldKey(field, index)] ?? "";
+    if (field instanceof HTMLTextAreaElement) {
+      field.textContent = value;
+    } else if (field instanceof HTMLSelectElement) {
+      Array.from(field.options).forEach((option) => {
+        if (value && option.value === value) option.setAttribute("selected", "");
+        else option.removeAttribute("selected");
+      });
+    } else if (field instanceof HTMLInputElement) {
+      if (field.type === "checkbox" || field.type === "radio") {
+        if (value) field.setAttribute("checked", "");
+        else field.removeAttribute("checked");
+      } else {
+        field.setAttribute("value", value);
+      }
+    }
+  });
+
+  return host.innerHTML;
+}
+
 export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
   const [orderType, setOrderType] = useState("Outbound Referral");
   const [patient, setPatient] = useState(PATIENT.name);
@@ -336,12 +427,26 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
   const [ndc, setNdc] = useState("");
   const [modifiers, setModifiers] = useState("");
   const [template, setTemplate] = useState("");
-  const [customCptCode, setCustomCptCode] = useState("");
+  const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
   const [contactSource, setContactSource] = useState<"NPI" | "Contact List">("NPI");
   const [contacts, setContacts] = useState("");
   const [attachments, setAttachments] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [includePdf, setIncludePdf] = useState(false);
   const [includeLogo, setIncludeLogo] = useState(false);
+  const templateRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const templateHasForm = TEMPLATES_WITH_FORM.includes(template);
+  // The template is raw markup, so its values are mirrored into state as they are edited.
+  const syncTemplateValues = () => setTemplateValues(readTemplateValues(templateRef.current));
+
+  // Prototype only tracks the file names; nothing is read or uploaded.
+  const addFiles = (files: FileList | null) => {
+    const names = [...(files ?? [])].map((file) => file.name);
+    if (names.length === 0) return;
+    setUploadedFiles((current) => [...new Set([...current, ...names])]);
+  };
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -353,6 +458,10 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
 
   const completeOrder = () => {
     if (requiresAuthorization) {
+      // Reading the template again on submit covers values typed before the first sync.
+      const filled = templateHasForm
+        ? { ...templateValues, ...readTemplateValues(templateRef.current) }
+        : templateValues;
       const selectedCode =
         orderType === "DME"
           ? hcpcs
@@ -361,7 +470,7 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
             : orderType === "Procedures & Injections"
               ? procedureInjection
               : orderType === "Custom"
-                ? customCptCode
+                ? filled.cpt ?? ""
                 : procedure;
       const id = `drawer-${Date.now()}`;
       const title =
@@ -370,6 +479,26 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
         procedureInjection.replace(/^[^\s]+\s+[—-]\s+/, "") ||
         specialty ||
         `${orderType} Order`;
+
+      // A custom order has no CPT to track, so the authorization carries its template and
+      // the drawer fields instead.
+      const customOrder =
+        orderType === "Custom"
+          ? {
+              templateName: template,
+              templateHtml: templateHasForm ? buildTemplateSnapshot(SURGERY_ORDER_CONTENT, filled) : "",
+              orderType,
+              fields: [
+                { label: "Order Type", value: orderType },
+                { label: "Related Appointment", value: appointment },
+                { label: "Referral Request Type", value: requestType },
+                { label: "Include contacts from", value: contacts ? contactSource : "" },
+                { label: "Contacts", value: contacts },
+                { label: "Include chart note PDF", value: includePdf ? "Yes" : "" },
+              ].filter((field) => field.value),
+              attachments: [attachments, ...uploadedFiles].filter(Boolean),
+            }
+          : undefined;
 
       window.dispatchEvent(
         new CustomEvent(ORDER_AUTHORIZATIONS_EVENT, {
@@ -385,7 +514,9 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
                   insurance: payer || PATIENT.insurance,
                 },
                 provider: provider || PROVIDER.display,
+                facility: facility || undefined,
                 assignedTo: assignedTo || "Unassigned",
+                customOrder,
                 orders: [
                   {
                     id,
@@ -759,22 +890,23 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
                   "Surgery Order",
                   "Return to Work / School Form",
                 ]}
-                onChange={setTemplate}
+                onChange={(value) => {
+                  setTemplate(value);
+                  setTemplateValues({});
+                }}
               />
               <div
-                onChange={(event) => {
-                  const target = event.target;
-                  if (!(target instanceof HTMLSelectElement)) return;
-                  if (target.dataset.field === "cpt") setCustomCptCode(target.value);
-                }}
+                ref={templateRef}
+                onInput={syncTemplateValues}
+                onChange={syncTemplateValues}
                 className={
-                  template === "Surgery Order V3" || template === "Surgery Order" || template === "Surgical Order v2"
+                  templateHasForm
                     ? `rounded-[3px] border border-[#ededed] bg-white p-4 ${TEMPLATE_FORM_CLASS}`
                     : "flex min-h-[88px] items-center justify-center rounded-[3px] border border-[#ededed]"
                 }
               >
-                {template === "Surgery Order V3" || template === "Surgery Order" || template === "Surgical Order v2" ? (
-                  <div dangerouslySetInnerHTML={{ __html: SURGERY_ORDER_CONTENT }} />
+                {templateHasForm ? (
+                  <TemplateMarkup key={template} html={SURGERY_ORDER_CONTENT} />
                 ) : (
                   <p className="font-body text-[13px] text-[#8a8a8a]">Select a template to fill in the order details</p>
                 )}
@@ -911,13 +1043,32 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
             <Toggle label="Include site logo" on={includeLogo} onToggle={() => setIncludeLogo((value) => !value)} />
           </div>
 
-          <div className="mt-4 flex flex-col items-center justify-center rounded-[3px] border border-dashed border-[#d9d9d9] bg-white px-4 py-7">
+          <div
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              addFiles(event.dataTransfer.files);
+            }}
+            className="mt-4 flex flex-col items-center justify-center rounded-[3px] border border-dashed border-[#d9d9d9] bg-white px-4 py-7"
+          >
             <div className="flex items-center gap-2">
               <Icon name="cloud_upload" size={20} className="text-[#1132ee]" />
               <span className="font-body text-[14px] font-medium text-[#1a1a1a]">Drop Files Here</span>
               <span className="font-body text-[14px] text-[#404040]">Or</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="application/pdf"
+                className="hidden"
+                onChange={(event) => {
+                  addFiles(event.target.files);
+                  event.target.value = "";
+                }}
+              />
               <button
                 type="button"
+                onClick={() => fileInputRef.current?.click()}
                 className="rounded-full border border-[#c4c4c4] bg-white px-3 py-[3px] font-body text-[13px] text-[#303030]"
               >
                 Browse Files
@@ -926,7 +1077,29 @@ export default function NewOrderDrawer({ onClose }: { onClose: () => void }) {
             <p className="mt-2.5 font-body text-[11px] text-[#8a8a8a]">PDF files only (max. 4.2MB each)</p>
           </div>
 
-          <p className="mt-5 text-center font-body text-[14px] text-[#8a8a8a]">No attachments uploaded yet</p>
+          {uploadedFiles.length === 0 ? (
+            <p className="mt-5 text-center font-body text-[14px] text-[#8a8a8a]">No attachments uploaded yet</p>
+          ) : (
+            <ul className="mt-4 flex flex-col gap-1.5">
+              {uploadedFiles.map((name) => (
+                <li
+                  key={name}
+                  className="flex items-center gap-2 rounded-[3px] border border-[#ededed] bg-white px-3 py-2"
+                >
+                  <Icon name="description" size={18} className="shrink-0 text-[#1132ee]" />
+                  <span className="min-w-0 flex-1 truncate font-body text-[13px] text-[#303030]">{name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setUploadedFiles((current) => current.filter((entry) => entry !== name))}
+                    aria-label={`Remove ${name}`}
+                    className="flex size-6 items-center justify-center rounded-full text-[#666666] hover:bg-black/5"
+                  >
+                    <Icon name="close" size={16} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <h3 className={`${sectionTitleClass} mb-2 mt-6`}>Authorization</h3>
           <div className="flex flex-col items-start gap-3">

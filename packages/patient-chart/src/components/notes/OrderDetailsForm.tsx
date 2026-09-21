@@ -1,8 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Icon from "../Icon";
-import { useAssigneeGroups } from "../../assigneeGroups";
-import { AssigneePickerPopover } from "../AssigneePicker";
 import { useNoteReadOnly } from "./readOnly";
 import type { OrderDetailField, PickedOrder } from "./OrderPickerModal";
 
@@ -228,7 +226,56 @@ function timelineIcon(kind: AuthTimelineAction["kind"]) {
   return { name: "edit", className: "text-[#f59e0b]" };
 }
 
-function AuthActivityTimeline({ entries }: { entries: AuthTimelineEntry[] }) {
+/** Keeps an order's authorization timeline in step with the tracker. */
+export function useAuthTimeline(order: PickedOrder): AuthTimelineEntry[] {
+  const [entries, setEntries] = useState<AuthTimelineEntry[]>(() => loadAuthTimeline(order));
+
+  useEffect(() => {
+    function refresh(event?: Event) {
+      const detail = event
+        ? (
+            event as CustomEvent<{
+              orderIds?: string[];
+              authNumber?: string;
+              timeline?: AuthTimelineEntry[];
+              byOrderId?: Record<string, AuthTimelineEntry[] | undefined>;
+              byAuthNumber?: Record<string, AuthTimelineEntry[] | undefined>;
+            }>
+          ).detail
+        : undefined;
+      const fromEvent = timelineFromUnknown(detail?.timeline);
+      const matchesOrder =
+        detail?.orderIds?.includes(order.id) ||
+        (order.associatedOrderIds ?? []).some((id) => detail?.orderIds?.includes(id));
+      const matchesNumber = Boolean(order.authNumber && detail?.authNumber === order.authNumber);
+      const fromSnapshot = uniqueTimeline([
+        ...timelineFromUnknown(detail?.byOrderId?.[order.id]),
+        ...(order.associatedOrderIds ?? []).flatMap((id) => timelineFromUnknown(detail?.byOrderId?.[id])),
+        ...timelineFromUnknown(order.authNumber ? detail?.byAuthNumber?.[order.authNumber] : []),
+      ]);
+      if ((matchesOrder || matchesNumber) && fromEvent.length > 0) {
+        setEntries(fromEvent);
+        return;
+      }
+      if (fromSnapshot.length > 0) {
+        setEntries(fromSnapshot);
+        return;
+      }
+      setEntries(loadAuthTimeline(order));
+    }
+    refresh();
+    window.addEventListener(AUTH_TIMELINE_EVENT, refresh);
+    window.addEventListener(ORDER_AUTH_STATE_EVENT, refresh);
+    return () => {
+      window.removeEventListener(AUTH_TIMELINE_EVENT, refresh);
+      window.removeEventListener(ORDER_AUTH_STATE_EVENT, refresh);
+    };
+  }, [order]);
+
+  return entries;
+}
+
+export function AuthActivityTimeline({ entries }: { entries: AuthTimelineEntry[] }) {
   const newestFirst = [...entries].reverse();
   return (
     <div className={ROW}>
@@ -280,7 +327,7 @@ const ROUTE_OPTIONS = ["IM", "IV", "PO", "Intra-articular"];
 const MODIFIER_OPTIONS = ["50", "LT", "RT", "59"];
 const HCPCS_OPTIONS = ["L0180 - Cervical, multiple post collar", "L0120 - Cervical, flexible, non-adjustable", "E0114 - Crutches, underarm, pair"];
 const ICD10_OPTIONS = ["M25.561", "M25.551", "M25.552", "S83.511A"];
-const ASSIGNEE_OPTIONS = [
+export const ASSIGNEE_OPTIONS = [
   "Ashton Roy",
   "Ashton Lee",
   "Bailey Moon",
@@ -305,7 +352,7 @@ const ASSIGNEE_OPTIONS = [
   "Natasha Smith",
   "Ronald Regin",
 ];
-const INSURANCE_OPTIONS = [
+export const INSURANCE_OPTIONS = [
   "Priority Health",
   "California Blue Shield",
   "Self-pay",
@@ -388,11 +435,10 @@ function codedValue(order: PickedOrder) {
   return order.code ? `${order.code} - ${name}` : name;
 }
 
-function Dropdown({
+export function Dropdown({
   value,
   placeholder,
   options,
-  groupOptions,
   disabled,
   muted = false,
   compact = false,
@@ -401,7 +447,6 @@ function Dropdown({
   value: string;
   placeholder: string;
   options: string[];
-  groupOptions?: string[];
   disabled: boolean;
   muted?: boolean;
   compact?: boolean;
@@ -409,25 +454,21 @@ function Dropdown({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  // Passing groupOptions marks this as an assignee field, which uses the shared picker.
-  const isAssignee = Boolean(groupOptions);
 
   useEffect(() => {
-    if (!open || isAssignee) return;
+    if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open, isAssignee]);
+  }, [open]);
 
   const catalog = options;
 
   return (
     <div ref={rootRef} className={`relative min-w-0 ${compact ? "w-fit max-w-full" : "flex-1"}`}>
       <button
-        ref={triggerRef}
         type="button"
         disabled={disabled}
         aria-expanded={open}
@@ -443,19 +484,7 @@ function Dropdown({
         </span>
         <Icon name="arrow_drop_down" size={18} className={`shrink-0 ${muted ? "text-[#c4c4c4]" : "text-[#8a8a8a]"}`} />
       </button>
-      {open && isAssignee ? (
-        <AssigneePickerPopover
-          anchorRef={triggerRef}
-          selected={value ? [value] : []}
-          individuals={options}
-          onSelect={(name) => {
-            onChange(name);
-            setOpen(false);
-          }}
-          onDismiss={() => setOpen(false)}
-        />
-      ) : null}
-      {open && !isAssignee ? (
+      {open ? (
         <div
           className={`absolute left-0 top-[calc(100%+4px)] z-20 overflow-hidden rounded-md bg-white shadow-[0_4px_16px_rgba(0,0,0,0.16)] ${
             compact ? "w-max min-w-[240px] max-w-[420px]" : "right-0 min-w-full"
@@ -865,6 +894,7 @@ function RecipientPicker({
 export default function OrderDetailsForm({
   order,
   relatedOrders,
+  authGrouping = "inline",
   onRequestAuthorization,
   onSendToRecipient,
   onRequiresAuthorizationChange,
@@ -876,6 +906,11 @@ export default function OrderDetailsForm({
 }: {
   order: PickedOrder;
   relatedOrders: PickedOrder[];
+  /**
+   * "external" hands the flag and grouping controls to the surrounding list, and "hidden" drops
+   * the authorization section entirely because the request itself owns those fields.
+   */
+  authGrouping?: "inline" | "external" | "hidden";
   onRequestAuthorization: () => void;
   onSendToRecipient: () => void;
   onRequiresAuthorizationChange: (value: boolean) => void;
@@ -895,9 +930,8 @@ export default function OrderDetailsForm({
   }) => void;
 }) {
   const readOnly = useNoteReadOnly();
-  const groupOptions = useAssigneeGroups();
   const coded = codedValue(order);
-  const [authTimeline, setAuthTimeline] = useState<AuthTimelineEntry[]>(() => loadAuthTimeline(order));
+  const authTimeline = useAuthTimeline(order);
   const [authSectionOpen, setAuthSectionOpen] = useState(order.requiresAuthorization);
   const savedValue = (label: string) =>
     order.authDetailFields?.find((field) => field.label === label)?.value ?? "";
@@ -965,48 +999,6 @@ export default function OrderDetailsForm({
       return `${recipient.name} (NPI: ${recipient.npi})${channels.length ? ` · ${channels.join(", ")}` : ""}`;
     })
     .join("; ");
-
-  useEffect(() => {
-    function refresh(event?: Event) {
-      const detail = event
-        ? (
-            event as CustomEvent<{
-              orderIds?: string[];
-              authNumber?: string;
-              timeline?: AuthTimelineEntry[];
-              byOrderId?: Record<string, AuthTimelineEntry[] | undefined>;
-              byAuthNumber?: Record<string, AuthTimelineEntry[] | undefined>;
-            }>
-          ).detail
-        : undefined;
-      const fromEvent = timelineFromUnknown(detail?.timeline);
-      const matchesOrder =
-        detail?.orderIds?.includes(order.id) ||
-        (order.associatedOrderIds ?? []).some((id) => detail?.orderIds?.includes(id));
-      const matchesNumber = Boolean(order.authNumber && detail?.authNumber === order.authNumber);
-      const fromSnapshot = uniqueTimeline([
-        ...timelineFromUnknown(detail?.byOrderId?.[order.id]),
-        ...(order.associatedOrderIds ?? []).flatMap((id) => timelineFromUnknown(detail?.byOrderId?.[id])),
-        ...timelineFromUnknown(order.authNumber ? detail?.byAuthNumber?.[order.authNumber] : []),
-      ]);
-      if ((matchesOrder || matchesNumber) && fromEvent.length > 0) {
-        setAuthTimeline(fromEvent);
-        return;
-      }
-      if (fromSnapshot.length > 0) {
-        setAuthTimeline(fromSnapshot);
-        return;
-      }
-      setAuthTimeline(loadAuthTimeline(order));
-    }
-    refresh();
-    window.addEventListener(AUTH_TIMELINE_EVENT, refresh);
-    window.addEventListener(ORDER_AUTH_STATE_EVENT, refresh);
-    return () => {
-      window.removeEventListener(AUTH_TIMELINE_EVENT, refresh);
-      window.removeEventListener(ORDER_AUTH_STATE_EVENT, refresh);
-    };
-  }, [order]);
 
   useEffect(() => {
     const fields: OrderDetailField[] = [
@@ -1425,6 +1417,8 @@ export default function OrderDetailsForm({
         </div>
       </div>
 
+      {authGrouping === "hidden" ? null : (
+      <>
       <div className={ROW}>
         <button
           type="button"
@@ -1439,43 +1433,53 @@ export default function OrderDetailsForm({
           />
           Submit an Authorization Request
         </button>
-        <label className="flex shrink-0 items-center gap-2 pt-1.5">
-          <input
-            type="checkbox"
-            checked={order.requiresAuthorization}
-            disabled={readOnly}
-            onChange={(event) => {
-              const checked = event.target.checked;
-              onRequiresAuthorizationChange(checked);
-              if (checked) setAuthSectionOpen(true);
-            }}
-            className="size-4 accent-[#1132ee]"
-          />
-          <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
-        </label>
+        {authGrouping === "inline" ? (
+          <label className="flex shrink-0 items-center gap-2 pt-1.5">
+            <input
+              type="checkbox"
+              checked={order.requiresAuthorization}
+              disabled={readOnly}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                onRequiresAuthorizationChange(checked);
+                if (checked) setAuthSectionOpen(true);
+              }}
+              className="size-4 accent-[#1132ee]"
+            />
+            <span className="font-body text-[14px] text-[#303030]">Requires Authorization</span>
+          </label>
+        ) : (
+          <span className="shrink-0 pt-1.5 font-body text-[13px] leading-[18px] text-[#8a8a8a]">
+            {order.requiresAuthorization
+              ? `In authorization request ${order.authGroupNumber ?? 1}`
+              : "No authorization requested"}
+          </span>
+        )}
       </div>
       {order.requiresAuthorization && authSectionOpen ? (
         <>
-          <div className={ROW}>
-            <NestedLabel tooltip={ASSOCIATE_ORDERS_TOOLTIP}>
-              Add orders to this authorization request
-            </NestedLabel>
-            <div className="flex min-w-0 flex-1 items-start pt-0.5">
-              <MultiSelectDropdown
-                selectedIds={associatedIds}
-                placeholder={
-                  relatedOrders.length === 0 ? "No other orders on this visit" : "Select an order"
-                }
-                options={relatedOrders.map((entry) => ({
-                  id: entry.id,
-                  label: `${entry.title} · Created on ${entry.createdAt}`,
-                }))}
-                disabled={readOnly || relatedOrders.length === 0}
-                muted={relatedOrders.length === 0}
-                onChange={onAssociateOrder}
-              />
+          {authGrouping === "inline" ? (
+            <div className={ROW}>
+              <NestedLabel tooltip={ASSOCIATE_ORDERS_TOOLTIP}>
+                Add orders to this authorization request
+              </NestedLabel>
+              <div className="flex min-w-0 flex-1 items-start pt-0.5">
+                <MultiSelectDropdown
+                  selectedIds={associatedIds}
+                  placeholder={
+                    relatedOrders.length === 0 ? "No other orders on this visit" : "Select an order"
+                  }
+                  options={relatedOrders.map((entry) => ({
+                    id: entry.id,
+                    label: `${entry.title} · Created on ${entry.createdAt}`,
+                  }))}
+                  disabled={readOnly || relatedOrders.length === 0}
+                  muted={relatedOrders.length === 0}
+                  onChange={onAssociateOrder}
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
           <div className={ROW}>
             <NestedLabel tooltip={INSURANCE_TOOLTIP}>
               Insurance
@@ -1501,7 +1505,6 @@ export default function OrderDetailsForm({
               value={order.assignedTo && order.assignedTo !== "Unassigned" ? order.assignedTo : ""}
               placeholder="Assign to..."
               options={ASSIGNEE_OPTIONS}
-              groupOptions={groupOptions}
               disabled={readOnly}
               compact
               onChange={onAssignedToChange}
@@ -1557,12 +1560,14 @@ export default function OrderDetailsForm({
           <AuthActivityTimeline entries={authTimeline} />
         </>
       ) : null}
+      </>
+      )}
 
       <div className="flex w-full items-center gap-4 pt-4">
         <span className="font-body text-[12px] text-[#8a8a8a]">Created by Ruzbeh Irani</span>
         {!readOnly && (
           <div className="flex items-center gap-4">
-            {order.requiresAuthorization && (
+            {order.requiresAuthorization && authGrouping !== "hidden" && (
               <button
                 type="button"
                 onClick={onRequestAuthorization}

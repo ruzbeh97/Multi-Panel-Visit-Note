@@ -64,7 +64,6 @@ export const SURGERY_ORDER_CONTENT = `
 </div>
 <h3 class="tpl-heading">CPT / ICD Description:</h3>
 <div class="tpl-field" contenteditable="false"><textarea rows="4" placeholder="Enter text"></textarea></div>
-<div class="tpl-auth" contenteditable="false"><label><input type="checkbox" /><span>Requires Authorization</span></label></div>
 <p><br></p>
 `.trim();
 

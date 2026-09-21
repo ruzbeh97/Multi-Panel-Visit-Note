@@ -5,9 +5,51 @@ import Section from "./Section";
 import { useNoteReadOnly } from "./readOnly";
 import OrderPickerModal, { type OrderDetailField, type OrderKind, type PickedOrder } from "./OrderPickerModal";
 import OrderDetailsForm from "./OrderDetailsForm";
-import { CASE, CURRENT_VISIT_NOTE_ID, PATIENT, PROVIDER, VISIT_NOTE_ORDERS } from "../../data/chart";
-import { DEFAULT_NOTE_VISIT_ID, useNoteStore, usePastNoteSource } from "./noteStore";
+import { CURRENT_VISIT_NOTE_ID, VISIT_NOTE_ORDERS } from "../../data/chart";
+import { useNoteStore, usePastNoteSource } from "./noteStore";
 import { useOptionalSnippetEffects } from "./snippets/SnippetEffectsContext";
+import {
+  ORDER_AUTH_STATE_EVENT,
+  type AuthDetailPatch,
+  linkedOrderIds,
+  loadStoredOrders,
+  orderStatusChipClass,
+  publishAuthorizations,
+  storeOrders,
+  withAuthGroupNumbers,
+  withLinkedAssignee,
+  withLinkedAuthDetails,
+  withLinkedAuthorization,
+  withLinkedInsurance,
+  withRequestedAuthorization,
+  withSentToRecipient,
+  withTrackerAuthStates,
+} from "./orderAuthorization";
+import {
+  AUTH_VERSION_HINTS,
+  AuthBundleBoard,
+  AuthSelectionList,
+  AuthVersionSwitch,
+  createOrderAuthHandlers,
+  useAuthUxVersion,
+  type AuthUxVersion,
+} from "./OrderAuthVariants";
+
+// The authorization model lives in its own module now; other components still reach it here.
+export {
+  ORDER_AUTHORIZATIONS_EVENT,
+  ORDER_AUTH_STATE_EVENT,
+  linkedOrderIds,
+  orderStatusChipClass,
+  publishAuthorizations,
+  withAuthGroupNumbers,
+  withLinkedAssignee,
+  withLinkedAuthDetails,
+  withLinkedAuthorization,
+  withLinkedInsurance,
+  withRequestedAuthorization,
+  withSentToRecipient,
+} from "./orderAuthorization";
 
 const ICON_TONES = {
   blue: "text-[#1132ee]",
@@ -17,377 +59,6 @@ const ICON_TONES = {
 
 const CARRY_DISABLED_MESSAGE =
   "Can't carry forward — the current note has no Orders section to import into.";
-
-function uniqueIds(ids: string[]) {
-  return [...new Set(ids)];
-}
-
-export const ORDER_AUTHORIZATIONS_EVENT = "patient-chart:order-authorizations";
-export const ORDER_AUTH_STATE_EVENT = "patient-chart:order-auth-state";
-
-const ORDERS_STORAGE_KEY = "patient-chart:note-orders";
-const ORDER_AUTH_STORAGE_KEY = "prior-auth:order-records";
-
-function ordersStorageKey(visitId: string) {
-  return visitId === DEFAULT_NOTE_VISIT_ID ? ORDERS_STORAGE_KEY : `${ORDERS_STORAGE_KEY}:${visitId}`;
-}
-
-const TRACKER_CHIP_STATES = new Set([
-  "Needs Authorization",
-  "Auth Requested",
-  "Authorized",
-  "Ready To Schedule",
-  "Scheduled",
-  "Schedule Attempt 1",
-  "Schedule Attempt 2",
-  "Schedule Attempt 3",
-  "Archived",
-]);
-
-// The prototype has no backend, so the working note survives a refresh via localStorage.
-function loadStoredOrders(visitId: string): PickedOrder[] {
-  try {
-    const raw = window.localStorage.getItem(ordersStorageKey(visitId));
-    const parsed = raw ? JSON.parse(raw) : null;
-    return Array.isArray(parsed) ? (parsed as PickedOrder[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function storeOrders(visitId: string, orders: PickedOrder[]) {
-  try {
-    window.localStorage.setItem(ordersStorageKey(visitId), JSON.stringify(orders));
-  } catch {
-    // Storage can be unavailable in private browsing; the note still works in memory.
-  }
-}
-
-type OrderAuthorizationGroup = {
-  id: string;
-  patient: {
-    name: string;
-    dob: string;
-    mrn: string;
-    insurance: string;
-  };
-  provider: string;
-  caseName: string;
-  assignedTo: string;
-  authNumber: string;
-  startDate: string;
-  endDate: string;
-  authNotes: string;
-  orders: Array<{
-    id: string;
-    title: string;
-    code: string;
-    trackingType: "Units";
-    units: string;
-    details: OrderDetailField[];
-  }>;
-};
-
-function groupAssignedTo(orders: PickedOrder[]): string {
-  const assigned = orders
-    .map((entry) => entry.assignedTo?.trim())
-    .filter((value): value is string => Boolean(value && value !== "Unassigned"));
-  return assigned.length > 0 ? [...new Set(assigned)].join(", ") : "Unassigned";
-}
-
-function groupInsurance(orders: PickedOrder[]): string {
-  const selected = orders
-    .map((entry) => entry.insurance?.trim())
-    .filter((value): value is string => Boolean(value));
-  return selected[0] || PATIENT.insurance;
-}
-
-function firstFilled(orders: PickedOrder[], key: "authNumber" | "startDate" | "endDate" | "authNotes"): string {
-  for (const entry of orders) {
-    const value = entry[key];
-    if (typeof value === "string" && value.trim()) return value;
-  }
-  return "";
-}
-
-function authorizationGroups(orders: PickedOrder[]): OrderAuthorizationGroup[] {
-  const eligible = orders.filter((order) => order.requiresAuthorization);
-  const byId = new Map(eligible.map((order) => [order.id, order]));
-  const visited = new Set<string>();
-  const groups: OrderAuthorizationGroup[] = [];
-
-  for (const order of eligible) {
-    if (visited.has(order.id)) continue;
-
-    const component: PickedOrder[] = [];
-    const queue = [order.id];
-    while (queue.length > 0) {
-      const id = queue.shift();
-      if (!id || visited.has(id)) continue;
-      const current = byId.get(id);
-      if (!current) continue;
-      visited.add(id);
-      component.push(current);
-
-      for (const linkedId of current.associatedOrderIds ?? []) {
-        if (byId.has(linkedId) && !visited.has(linkedId)) queue.push(linkedId);
-      }
-      for (const candidate of eligible) {
-        if ((candidate.associatedOrderIds ?? []).includes(id) && !visited.has(candidate.id)) {
-          queue.push(candidate.id);
-        }
-      }
-    }
-
-    const ids = component.map((entry) => entry.id).sort();
-    groups.push({
-      id: ids.join("--"),
-      patient: {
-        name: PATIENT.name,
-        dob: PATIENT.dob,
-        mrn: PATIENT.mrn,
-        insurance: groupInsurance(component),
-      },
-      provider: PROVIDER.display,
-      caseName: CASE.name,
-      assignedTo: groupAssignedTo(component),
-      authNumber: firstFilled(component, "authNumber"),
-      startDate: firstFilled(component, "startDate"),
-      endDate: firstFilled(component, "endDate"),
-      authNotes: firstFilled(component, "authNotes"),
-      orders: component.map((entry) => ({
-        id: entry.id,
-        title: entry.title,
-        code: entry.cptCode || entry.code || "",
-        trackingType: "Units",
-        units: entry.cptUnits ?? (entry.code === "J1010" ? "40" : ""),
-        details: entry.authDetailFields ?? [],
-      })),
-    });
-  }
-
-  return groups;
-}
-
-// A group keeps the number it was first given, so later authorizations become 2, 3, and so on
-// even when earlier groups grow, shrink, or get removed. A standalone order that requires
-// authorization counts as its own group.
-export function withAuthGroupNumbers(orders: PickedOrder[]): PickedOrder[] {
-  const assigned = new Map<string, number>();
-  let highest = orders.reduce((max, entry) => Math.max(max, entry.authGroupNumber ?? 0), 0);
-
-  for (const group of authorizationGroups(orders)) {
-    const existing = group.orders
-      .map((entry) => orders.find((candidate) => candidate.id === entry.id)?.authGroupNumber)
-      .filter((value): value is number => typeof value === "number");
-    const number = existing.length > 0 ? Math.min(...existing) : (highest += 1);
-    for (const entry of group.orders) assigned.set(entry.id, number);
-  }
-
-  if (assigned.size === 0) return orders;
-  return orders.map((entry) => {
-    const number = assigned.get(entry.id);
-    return number && number !== entry.authGroupNumber ? { ...entry, authGroupNumber: number } : entry;
-  });
-}
-
-export function linkedOrderIds(orders: PickedOrder[], sourceId: string) {
-  const source = orders.find((entry) => entry.id === sourceId);
-  const ids = new Set<string>([sourceId, ...(source?.associatedOrderIds ?? [])]);
-  for (const entry of orders) {
-    if ((entry.associatedOrderIds ?? []).includes(sourceId)) ids.add(entry.id);
-  }
-  return [...ids];
-}
-
-function trackerFieldsByOrderId(): Map<
-  string,
-  {
-    state?: string;
-    insurance?: string;
-    authNumber?: string;
-    startDate?: string;
-    endDate?: string;
-    authNotes?: string;
-  }
-> {
-  try {
-    const raw = window.localStorage.getItem(ORDER_AUTH_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (!Array.isArray(parsed)) return new Map();
-    const fields = new Map<
-      string,
-      {
-        state?: string;
-        insurance?: string;
-        authNumber?: string;
-        startDate?: string;
-        endDate?: string;
-        authNotes?: string;
-      }
-    >();
-    for (const record of parsed as Array<{
-      state?: string;
-      payer?: { name?: string };
-      authNumber?: string;
-      startDate?: string;
-      endDate?: string;
-      authNotes?: string;
-      orderCpts?: Array<{ orderId?: string }>;
-    }>) {
-      for (const cpt of record.orderCpts ?? []) {
-        if (!cpt.orderId) continue;
-        fields.set(cpt.orderId, {
-          state: record.state,
-          insurance: record.payer?.name,
-          authNumber: record.authNumber,
-          startDate: record.startDate,
-          endDate: record.endDate,
-          authNotes: record.authNotes,
-        });
-      }
-    }
-    return fields;
-  } catch {
-    return new Map();
-  }
-}
-
-function withTrackerAuthStates(orders: PickedOrder[]): PickedOrder[] {
-  const fields = trackerFieldsByOrderId();
-  if (fields.size === 0) return orders;
-  return orders.map((entry) => {
-    if (!entry.requiresAuthorization || entry.status === "Draft") return entry;
-    const next = fields.get(entry.id);
-    if (!next) return entry;
-    const patched: PickedOrder = {
-      ...entry,
-      status: next.state && next.state !== entry.status ? next.state : entry.status,
-      insurance: next.insurance ?? entry.insurance,
-      authNumber: next.authNumber ?? entry.authNumber,
-      startDate: next.startDate ?? entry.startDate,
-      endDate: next.endDate ?? entry.endDate,
-      authNotes: next.authNotes ?? entry.authNotes,
-    };
-    return patched;
-  });
-}
-
-export function withRequestedAuthorization(orders: PickedOrder[], ids: string[]) {
-  const submit = new Set(ids);
-  return orders.map((entry) => {
-    if (!submit.has(entry.id) || !entry.requiresAuthorization) return entry;
-    const nextStatus = TRACKER_CHIP_STATES.has(entry.status) ? entry.status : "Needs Authorization";
-    return {
-      ...entry,
-      status: nextStatus,
-      insurance: entry.insurance || PATIENT.insurance,
-    };
-  });
-}
-
-export function withSentToRecipient(orders: PickedOrder[], ids: string[]) {
-  const submit = new Set(ids);
-  return orders.map((entry) =>
-    submit.has(entry.id)
-      ? {
-          ...entry,
-          sent: true,
-          // Non-auth orders do not need a separate tracker state.
-          status: entry.requiresAuthorization ? entry.status : "Sent",
-        }
-      : entry,
-  );
-}
-
-export function publishAuthorizations(orders: PickedOrder[]) {
-  const submitted = orders.filter((order) => order.status !== "Draft");
-  window.dispatchEvent(
-    new CustomEvent(ORDER_AUTHORIZATIONS_EVENT, {
-      detail: { source: "visit-note", groups: authorizationGroups(submitted) },
-    }),
-  );
-}
-
-export function orderStatusChipClass(status: string) {
-  if (status === "Sent" || status === "Authorized" || status === "Scheduled" || status === "Ready To Schedule") {
-    return "bg-[#e6f4ea] text-[#137333]";
-  }
-  if (status === "Draft") {
-    return "bg-[rgba(17,50,238,0.08)] text-[#1132ee]";
-  }
-  return "bg-[#ececec] text-[#5f5f5f]";
-}
-
-export function withLinkedAssignee(orders: PickedOrder[], sourceId: string, assignedTo: string): PickedOrder[] {
-  const linkedIds = new Set(linkedOrderIds(orders, sourceId));
-  return orders.map((entry) => (linkedIds.has(entry.id) ? { ...entry, assignedTo } : entry));
-}
-
-export function withLinkedInsurance(orders: PickedOrder[], sourceId: string, insurance: string): PickedOrder[] {
-  const linkedIds = new Set(linkedOrderIds(orders, sourceId));
-  return orders.map((entry) => (linkedIds.has(entry.id) ? { ...entry, insurance } : entry));
-}
-
-type AuthDetailPatch = Pick<PickedOrder, "authNumber" | "startDate" | "endDate" | "authNotes">;
-
-export function withLinkedAuthDetails(orders: PickedOrder[], sourceId: string, patch: AuthDetailPatch): PickedOrder[] {
-  const linkedIds = new Set(linkedOrderIds(orders, sourceId));
-  return orders.map((entry) => (linkedIds.has(entry.id) ? { ...entry, ...patch } : entry));
-}
-
-export function withLinkedAuthorization(
-  orders: PickedOrder[],
-  sourceId: string,
-  patch: Partial<Pick<PickedOrder, "requiresAuthorization" | "associatedOrderIds">>,
-): PickedOrder[] {
-  // Clearing the checkbox drops the order out of its authorization group, in both
-  // directions, so the group's shared flag can't immediately re-check it.
-  if (patch.requiresAuthorization === false) {
-    return orders.map((entry) => {
-      if (entry.id === sourceId) {
-        return { ...entry, ...patch, requiresAuthorization: false, associatedOrderIds: [] };
-      }
-      const associated = entry.associatedOrderIds ?? [];
-      if (!associated.includes(sourceId)) return entry;
-      return { ...entry, associatedOrderIds: associated.filter((id) => id !== sourceId) };
-    });
-  }
-
-  const selectedPartnerIds = patch.associatedOrderIds;
-  const next = orders.map((entry) => {
-    if (entry.id === sourceId) return { ...entry, ...patch };
-    if (!selectedPartnerIds) return entry;
-
-    const withoutSource = (entry.associatedOrderIds ?? []).filter((id) => id !== sourceId);
-    return {
-      ...entry,
-      associatedOrderIds: selectedPartnerIds.includes(entry.id)
-        ? uniqueIds([...withoutSource, sourceId])
-        : withoutSource,
-    };
-  });
-  const source = next.find((entry) => entry.id === sourceId);
-  if (!source) return next;
-
-  const partnerIds = source.associatedOrderIds ?? [];
-  const linkedIds = new Set<string>([sourceId, ...partnerIds]);
-  for (const entry of next) {
-    if ((entry.associatedOrderIds ?? []).includes(sourceId)) linkedIds.add(entry.id);
-  }
-
-  const anyRequiresAuth = [...linkedIds].some(
-    (id) => next.find((entry) => entry.id === id)?.requiresAuthorization,
-  );
-
-  if (!anyRequiresAuth) return next;
-
-  return next.map((entry) => {
-    if (!linkedIds.has(entry.id)) return entry;
-    const updated = entry.requiresAuthorization ? entry : { ...entry, requiresAuthorization: true };
-    return updated;
-  });
-}
 
 type NoteOrder = PickedOrder;
 
@@ -659,7 +330,10 @@ export default function OrdersSection() {
     return signedVisitOrders(pastNoteId);
   });
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [authVersion, setAuthVersion] = useAuthUxVersion();
   const addOrderRef = useRef<HTMLButtonElement>(null);
+  // Read-only copies of a note have no authorization controls, so they always draw V1.
+  const version: AuthUxVersion = readOnly ? "V1" : authVersion;
 
   const setOrders: typeof setOrdersState = (update) => {
     setOrdersState((current) => {
@@ -721,8 +395,19 @@ export default function OrdersSection() {
     return () => window.removeEventListener(ORDER_AUTH_STATE_EVENT, applyAuthState);
   }, []);
 
+  // V2 and V3 move flagging and grouping out of the order form, so they drive the model
+  // through these instead of the per-row callbacks V1 uses.
+  const authHandlers = createOrderAuthHandlers(setOrders, readOnly);
+
   return (
-    <Section title="Orders">
+    <Section
+      title="Orders"
+      action={
+        readOnly ? undefined : (
+          <AuthVersionSwitch value={authVersion} onChange={setAuthVersion} />
+        )
+      }
+    >
       <div className="flex w-full flex-col items-start gap-2">
         <div className="flex w-full items-center justify-between gap-3">
           <h2 className="font-body text-[24px] font-bold leading-none text-black">Orders</h2>
@@ -760,6 +445,17 @@ export default function OrdersSection() {
           )}
         </div>
 
+        {version === "V1" ? null : (
+          <p className="w-full font-body text-[13px] leading-[18px] text-[#8a8a8a]">
+            {AUTH_VERSION_HINTS[version]}
+          </p>
+        )}
+
+        {version === "V2" ? (
+          <AuthSelectionList orders={orders} handlers={authHandlers} />
+        ) : version === "V3" ? (
+          <AuthBundleBoard orders={orders} handlers={authHandlers} />
+        ) : (
         <div className="flex w-full flex-col items-start">
           {orders.map((order) => (
             <OrderRow
@@ -837,6 +533,7 @@ export default function OrdersSection() {
             />
           ))}
         </div>
+        )}
       </div>
       {pickerOpen && (
         <OrderPickerModal

@@ -13,18 +13,21 @@ export function headingId(title: string, readOnly = false) {
   return `${readOnly ? "past-note" : "note"}-${slug}`;
 }
 
-export function SectionHeading({ title }: { title: string }) {
+export function SectionHeading({ title, action }: { title: string; action?: ReactNode }) {
   const readOnly = useNoteReadOnly();
   return (
     <div
       id={headingId(title, readOnly)}
       data-note-heading="section"
       data-note-title={title}
-      className="flex w-full scroll-mt-6 items-center justify-center gap-[127px] py-1"
+      className={`flex w-full scroll-mt-6 items-center justify-center py-1 ${
+        action ? "gap-4" : "gap-[127px]"
+      }`}
     >
       <div className="flex flex-1 items-center gap-2">
         <h1 className="flex-1 font-body text-[34px] font-bold leading-none text-black">{title}</h1>
       </div>
+      {action}
     </div>
   );
 }
@@ -105,10 +108,18 @@ export function Block({ children }: { children: ReactNode }) {
   return <div className="flex w-full flex-col items-start gap-6">{children}</div>;
 }
 
-export default function Section({ title, children }: { title: string; children: ReactNode }) {
+export default function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <div className="flex w-full flex-col items-start gap-6">
-      <SectionHeading title={title} />
+      <SectionHeading title={title} action={action} />
       {children}
     </div>
   );
